@@ -15,6 +15,8 @@ check_PROGRAMS = dumpmem testrig testtrn testbcd testfreq listrigs testloc @RIGM
 
 rigctl_SOURCES = rigctl.c dumpcaps.c
 
+tsctl_SOURCES = tsctl.c dumpcaps.c
+
 EXTRA_PROGRAMS = rigmatrix testts2k 
 
 # all the programs need this
@@ -33,6 +35,7 @@ rigctl_LDFLAGS = @BACKENDLNK@
 rotctl_LDFLAGS = @ROT_BACKENDLNK@
 # added by kd7eni
 testts2k_LDFLAGS = @BACKENDLNK@
+tsctl_LDFLAGS = @BACKENDLNK@
  
 # temporary hack
 testbcd_LDFLAGS = -dlpreopen self
@@ -52,6 +55,7 @@ rotctl_DEPENDENCIES = $(DEPENDENCIES) @ROT_BACKENDEPS@
 rigmatrix_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 # added by kd7eni
 testts2k_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+tsctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 #rigcmd_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 
 rigmatrix.html: rigmatrix_head.html rigmatrix listrigs

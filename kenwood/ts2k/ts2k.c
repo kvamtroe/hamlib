@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.2 2003-02-25 06:00:59 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.3 2003-02-26 19:00:49 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -192,84 +192,89 @@ const struct rig_caps ts2k_caps = {
 		RIG_FLT_END,
 	},
 	priv: (void *)&ts2k_priv_caps,
+	rig_init: ts2k_init,
+/*
+ * stuff I've written--kd7eni
+ */
+
 /* ts2k */
 // Temporary!  We might be able to use priv.  Until I sort that out, I just
 // added a new stucture.  Locally nothing should be affected.
 
 //	pm: (ts2k_pm_t *) &ts2k_pm,
 	pm: NULL,
-//	rig_init: ts2k_init,
-	rig_open: ts2k_open,
-	rig_close: ts2k_pm_close,
-	set_tone: ts2k_set_tone,
-	get_tone: ts2k_get_tone,
-	set_ctcss: ts2k_set_ctcss,
-	get_ctcss: ts2k_get_ctcss,
-	get_dcd: ts2k_get_dcd,
-	set_freq: ts2k_set_freq,
-	get_freq: ts2k_get_freq,
-	get_func: ts2k_get_func,
-	set_func: ts2k_set_func,
-	get_info: ts2k_get_info,
-	get_level: ts2k_get_level,
-	set_level: ts2k_set_level,
-	get_mem: ts2k_get_mem,
+
+	set_freq: ts2k_set_freq,	// 
+	get_freq: ts2k_get_freq,	// "if;", "oi;"
+	get_mem: ts2k_get_mem,		// "qr;"=memo
 	set_mem: ts2k_set_mem,
-	get_mode: ts2k_get_mode,
+	get_mode: ts2k_get_mode,	// "md;"
 	set_mode: ts2k_set_mode,
-	get_powerstat: ts2k_get_powerstat,
-	set_powerstat: ts2k_set_powerstat,
-	get_ptt: ts2k_get_ptt,
-	set_ptt: ts2k_set_ptt,
-	reset: ts2k_reset,
-	send_morse: ts2k_send_morse,
-	get_trn: ts2k_get_trn,
-	set_trn: ts2k_set_trn,
-/*
-*/
-	set_vfo: ts2k_set_vfo,
+	get_ptt: ts2k_get_ptt,		// "tx;"
+	set_ptt: ts2k_set_ptt,		// "rx;"
+	set_vfo: ts2k_set_vfo,		// "ts;"=REV, 
 	get_vfo: ts2k_get_vfo,
-	vfo_op: ts2k_vfo_op,
-/*
- * stuff I've written--kd7eni
- */
-	scan:		ts2k_scan,
-	get_channel:	ts2k_get_channel,
-	set_channel:	ts2k_set_channel,
+	rig_open: ts2k_open,		// calls ts2k_pm_init in ts2k_menu.c
+	rig_close: ts2k_pm_close,	// ts2k_menu.c
+
+/* Untested */
+	get_tone:	ts2k_get_tone,
+	get_ctcss:	ts2k_get_ctcss,
 	get_dcs:	ts2k_get_dcs,
-	set_dcs:	ts2k_set_dcs,
-	get_parm:	ts2k_get_parm,
-	set_parm:	ts2k_set_parm,
-	get_rit:	ts2k_get_rit,
+	get_rit:	ts2k_get_rit,		// "rc;", "rd;", "rt;", "ru;"
 	set_rit:	ts2k_set_rit,
-	get_rptr_offs:	ts2k_get_rptr_offs,
-	set_rptr_offs:	ts2k_set_rptr_offs,
-	get_rptr_shift:	ts2k_get_rptr_shift,
-	set_rptr_shift:	ts2k_set_rptr_shift,
-	get_split:	ts2k_get_split,
-	set_split:	ts2k_set_split,
-	get_split_freq:	ts2k_get_split_freq,
-	set_split_freq:	ts2k_set_split_freq,
-	get_split_mode:	ts2k_get_split_mode,
-	set_split_mode:	ts2k_set_split_mode,
-	get_ts:		ts2k_get_ts,
-	set_ts:		ts2k_set_ts,
-	get_xit:	ts2k_get_xit,
+	get_xit:	ts2k_get_xit,		// "xt;"
 	set_xit:	ts2k_set_xit,
-/* comming soon... */
-//	get_tone_sql:	ts2k_get_tone_sql,
-//	set_tone_sql:	ts2k_set_tone_sql,
-//	decode_event:	ts2k_decode_event,	/* highest */
+	get_rptr_offs:	ts2k_get_rptr_offs,	// "os;"
+	get_rptr_shift:	ts2k_get_rptr_shift,
+	set_rptr_offs:	ts2k_set_rptr_offs,
+	set_rptr_shift:	ts2k_set_rptr_shift,
+	get_tone_sql:	ts2k_get_tone_sql,	// "to;"
+	get_ctcss_sql:	ts2k_get_ctcss_sql,	// "ct;" 
+	get_dcs_sql:	ts2k_get_dcs_sql,	// "dq;"
+	set_tone_sql:	ts2k_set_tone_sql,
+	set_ctcss_sql:	ts2k_set_ctcss_sql,
+	set_dcs_sql:	ts2k_set_dcs_sql,
+	set_tone:	ts2k_set_tone,		// "tn;"
+	set_ctcss:	ts2k_set_ctcss,		// "cn;"
+	set_dcs:	ts2k_set_dcs,		// "qc;"
+
+/* comming soon... */	/* highest */
+//	get_split:	ts2k_get_split,
+//	set_split:	ts2k_set_split,
+//	get_split_freq:	ts2k_get_split_freq,
+//	set_split_freq:	ts2k_set_split_freq,
+//	get_split_mode:	ts2k_get_split_mode,
+//	set_split_mode:	ts2k_set_split_mode,
+//	get_channel:	ts2k_get_channel,	// "qr;", ...
+//	set_channel:	ts2k_set_channel,
+//	reset:		ts2k_reset,		// "sr;"
+//	get_info:	ts2k_get_info,		// "ty;"=firmware, "id;"=019=ts2k
+//	scan:		ts2k_scan,		// "sc;"
+//	get_ts:		ts2k_get_ts,
+//	vfo_op:		ts2k_vfo_op,
+//	set_ts:		ts2k_set_ts,
 //	get_conf:	ts2k_get_conf,
 //	set_conf:	ts2k_set_conf,
-//	get_ant:	ts2k_get_ant,
+//	get_ant:	ts2k_get_ant,		// "ac;"=tune, "an;"=ant
 //	set_ant:	ts2k_set_ant,
+//	send_morse:	ts2k_send_morse,	// "ks;"=speed, "ky;"=code
+//	send_dtmf:	ts2k_send_dtmf,		// "td;"
 //	recv_dtmf:	ts2k_recv_dtmf,		/* possible? */
-//	get_ctcss_sql:	ts2k_get_ctcss_sql,
-//	set_ctcss_sql:	ts2k_set_ctcss_sql,
-//	get_dcs_sql:	ts2k_get_dcs_sql,
-//	set_dcs_sql:	ts2k_set_dcs_sql,
-//	send_dtmf:	ts2k_send_dtmf,		/* lowest */
+//	get_trn:	ts2k_get_trn,
+//	set_trn:	ts2k_set_trn,
+//	get_level:	ts2k_get_level,
+//	set_level:	ts2k_set_level,
+//	get_func:	ts2k_get_func,
+//	set_func:	ts2k_set_func,
+//	get_parm:	ts2k_get_parm,
+//	set_parm:	ts2k_set_parm,
+//	get_powerstat:	ts2k_get_powerstat,	// "ps;"
+//	set_powerstat:	ts2k_set_powerstat,
+//	get_dcd:	ts2k_get_dcd,
+//	decode_event:	ts2k_decode_event,
+	/* lowest */
+
 /* and never... */
 //	set_bank:				/* not needed */
 /*
@@ -769,22 +774,13 @@ int ts2k_set_mode(RIG * rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
  */
 int ts2k_get_mode(RIG * rig, vfo_t vfo, rmode_t * mode, pbwidth_t * width)
 {
-	int retval, skip;
-	vfo_t vorig;
+	STDPARAM;	// define skip, vorig, retval
 	union {
 		TS2K_MD_T md;
 		TS2K_FW_T fw;
 	} param;
 
-	skip = (vfo & RIG_VFO_CURR);
-
-	// Set correct VFO
-	if( !skip ) {
-		retval = rig_get_vfo(rig, &vorig);
-		CHKERR(retval);
-		retval = rig_set_vfo(rig, vfo);
-		CHKERR(retval);
-	}
+	TESTVFO(skip);		// semicolon optional
 
 	retval = ts2k_g_md(rig, &param.md);
 	CHKERR(retval);
@@ -810,10 +806,7 @@ int ts2k_get_mode(RIG * rig, vfo_t vfo, rmode_t * mode, pbwidth_t * width)
 
 	*width = RIG_PASSBAND_NORMAL;	// FIXME:
 
-	if( !skip ) {
-		retval = rig_set_vfo(rig, vorig);
-		CHKERR(retval);
-	}
+	RESETVFO(skip);		// semicolon optional
 
 	return RIG_OK;
 }
@@ -878,16 +871,10 @@ int ts2k_set_ptt(RIG * rig, vfo_t vfo, ptt_t ptt)
  */
 int ts2k_get_ptt(RIG * rig, vfo_t vfo, ptt_t * ptt)
 {
-	int retval, skip;
-	vfo_t vorig;
+	STDPARAM;
 	TS2K_IF_T param;
 
-	skip = (vfo & RIG_VFO_CURR) || (vfo & RIG_MEM_CURR);
-
-	if( !skip ) {
-		retval = rig_get_vfo(rig, &vorig);
-		CHKERR(retval);
-	}
+	TESTVFO(skip);
 
 	retval = ts2k_g_if(rig, &param);
 	CHKERR(retval);
@@ -901,10 +888,7 @@ int ts2k_get_ptt(RIG * rig, vfo_t vfo, ptt_t * ptt)
 		return -RIG_EINTERNAL;	// or rig
 	}
 
-	if( !skip ) {
-		retval = rig_set_vfo(rig, vorig);
-		CHKERR(retval);
-	}
+	RESETVFO(skip);
 
 	return RIG_OK;
 }
@@ -941,7 +925,98 @@ int ts2k_get_powerstat(RIG * rig, powerstat_t * status)
  */
 int ts2k_reset(RIG * rig, reset_t reset)
 {
-	return -RIG_ENIMPL;
+	int i;
+	union {
+		TS2K_SA_S_T sa;
+
+		TS2K_FR_T fr;
+		TS2K_SC_T sc;
+		TS2K_DC_T dc;
+		TS2K_SB_T sb;
+		TS2K_SR_T sr;
+		TS2K_QR_T qr;
+	} param;
+
+	switch(reset) {
+	case RIG_RESET_VFO:
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": Performing VFO Reset.\n\n");
+		param.sr.p1 = 1;
+		ts2k_s_sr(rig, &param.sr);
+		break;
+
+	case RIG_RESET_MASTER:
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": Performing Master Reset.\n\n");
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": Change Menu(56) to proper speed and cycle power.\n");
+		param.sr.p1 = 2;
+		ts2k_s_sr(rig, &param.sr);
+		break;
+
+	case RIG_RESET_MCALL:	// mem clear
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": Not available.  Do Master reset instead.\n");
+		return -RIG_ENAVAIL; break;
+
+	case RIG_RESET_SOFT:
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": Performing Soft Reset.\n\n");
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tSending single \';\' to rig to ensure reply.\n"
+			"\t\tThis won't work if you're in TNC mode.\n"
+			"\t\tIf so, set Menu(55) to Off and try again.\n"
+			"\t\tMenu(56) is the baud rate.\n");
+		ts2k_transaction(rig, ";", 1, NULL, NULL);
+		usleep( 100000 );	// 0.2 sec
+
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tTurning ON Subreceiver.\n");
+		param.sb.p1 = 1; ts2k_s_sb(rig, &param.sb);
+		usleep( 100000 );	// 0.1 sec
+
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tTurning off SAT.\n");
+		param.sa.p2 = 0;
+		param.sa.p1 = 0; ts2k_s_sa(rig, &param.sa);
+		usleep( 100000 );	// 0.1 sec
+
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tTurning off QuickMemory.\n");
+		param.qr.p2 = 0;
+		param.qr.p1 = 0; ts2k_s_qr(rig, &param.qr);
+		usleep( 100000 );	// 0.1 sec
+
+		// Do both Sub and Main
+		for(i=0; i<2; i++) {
+
+		param.dc.p2 = i;	// Select Main/Sub
+		param.dc.p1 = i; ts2k_s_dc(rig, &param.dc);
+		
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tTurning off Scan modes.\n");
+		param.sc.p1 = 0; ts2k_s_sc(rig, &param.sc);
+		
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\tTurning off Memory/Call/Split modes.\n");
+		param.fr.p1 = 0; ts2k_s_fr(rig, &param.fr);
+		}
+
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\n\tWell, that's enough for me.  Anything else\n"
+			"\tand you might as well just do a VFO reset.\n\n");
+		break;
+
+	case RIG_RESET_NONE:
+		return RIG_OK; break;
+
+	default:
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			": Invalid reset type.\n");
+		return -RIG_EINVAL; break;
+	}
+
+	return RIG_OK;
 }
 
 /*
@@ -1066,6 +1141,7 @@ int ts2k_get_mem(RIG * rig, vfo_t vfo, int *ch)
 }
 
 /*
+ *	status:	untested
  */
 const char *ts2k_get_info(RIG * rig)
 {
@@ -1073,18 +1149,15 @@ const char *ts2k_get_info(RIG * rig)
 }
 
 /*
+ *	status:	untested
  */
 rig_model_t probe_ts2k(port_t * port)
 {
 	return -RIG_ENIMPL;
 }
 
-int ts2k_get_rit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
-{
-	return -RIG_ENIMPL;
-}
-
 /*
+ *	status:	untested
  */
 int ts2k_get_dcd(RIG * rig, vfo_t vfo, dcd_t * dcd)
 {
@@ -1092,28 +1165,186 @@ int ts2k_get_dcd(RIG * rig, vfo_t vfo, dcd_t * dcd)
 }
 
 /*
-*/
-int ts2k_get_xit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
-{
-	return ts2k_get_rit(rig, vfo, rit);
-}
-
+ *	status:	untested
+ */
 int ts2k_set_rit(RIG * rig, vfo_t vfo, shortfreq_t rit)
 {
-	return -RIG_ENIMPL;
-}
+	STDPARAM;
+	union {
+		TS2K_RD_S_T rd;
+		TS2K_RU_S_T ru;	// 'nuther TS2K bug or manual error
+		TS2K_RC_T rc;
+		TS2K_RT_T rt;
+	} param;
 
-int ts2k_set_xit(RIG * rig, vfo_t vfo, shortfreq_t rit)
-{
-	return ts2k_set_rit(rig, vfo, rit);
-}
+	// VFO doesn't really apply, except it's unavailable for Sub.
+	TESTVFO2(skip);	// original vfo contents destroyed.
 
-int ts2k_get_ts(RIG * rig, vfo_t vfo, shortfreq_t * ts)
-{
-	return -RIG_ENIMPL;
+	switch(vfo) {
+
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_AB:
+	case RIG_VFO_BA:
+		if(rit != 0) {
+			if(rit < 0) {
+				param.rd.p1 = -rit;	// absolute value
+				retval = ts2k_s_rd(rig, &param.rd);
+			} else {
+				param.ru.p1 = rit;	// rd/ru identical
+				retval = ts2k_s_ru(rig, &param.ru);
+			}
+			CHKERR(retval);
+			param.rt.p1 = 1;	// XIT mode on.
+		} else {
+			param.rt.p1 = 0;	// XIT mode off.
+		}
+		retval = ts2k_s_rt(rig, &param.rt);	// send on/off to rig
+		CHKERR(retval);
+
+		break;
+
+	default:
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			": RIT available only on Main.\n");
+		RESETVFO(skip);
+		return -RIG_ENAVAIL;
+	}
+
+	RESETVFO(skip);
+
+	return retval;
+
 }
 
 /*
+ * Much more complex than it should be.  Hamlib should only
+ *	set the XIT/RIT offset here.  Instead it is turned
+ *	on/off too!
+ *
+ *	status:	untested
+ */
+int ts2k_set_xit(RIG * rig, vfo_t vfo, shortfreq_t rit)
+{
+	STDPARAM;
+	union {
+		TS2K_RD_S_T rd;
+		TS2K_RU_S_T ru;	// rigbug
+		TS2K_RC_T rc;
+		TS2K_XT_T xt;
+	} param;
+
+	// VFO doesn't really apply, except it's unavailable for Sub.
+	TESTVFO2(skip);	// original vfo contents destroyed.
+
+	switch(vfo) {
+
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_AB:
+	case RIG_VFO_BA:
+		if(rit != 0) {
+			if(rit < 0) {
+				param.rd.p1 = -rit;	// absolute value
+				retval = ts2k_s_rd(rig, &param.rd);
+			} else {
+				param.ru.p1 = rit;	// rd/ru identical
+				retval = ts2k_s_ru(rig, &param.ru);
+			}
+			CHKERR(retval);
+			param.xt.p1 = 1;	// XIT mode on.
+		} else {
+			param.xt.p1 = 0;	// XIT mode off.
+		}
+		retval = ts2k_s_xt(rig, &param.xt);	// send on/off to rig
+		CHKERR(retval);
+
+		break;
+
+	default:
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			": XIT available only on Main.\n");
+		RESETVFO(skip);
+		return -RIG_ENAVAIL;
+	}
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_xit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
+{
+	STDPARAM;
+	TS2K_IF_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_if(rig, &param);
+	CHKERR(retval);
+
+	if((param.p5 == 0) || (vfo & RIG_CTRL_SUB)) {
+		*rit = 0;	// Just do it Hamlib's way.
+	} else {
+		*rit = param.p3;	// Actual value even zero!
+	}
+
+	RESETVFO(skip);
+
+	return retval;
+
+}
+
+/*
+ * RigBug:  XIT/RIT only on Main but displays as set
+ *	on Sub.  This is wrong!
+ *
+ *	status:	untested
+ */
+int ts2k_get_rit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
+{
+	STDPARAM;
+	TS2K_IF_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_if(rig, &param);
+	CHKERR(retval);
+
+	if((param.p4 == 0) || (vfo & RIG_CTRL_SUB)) {
+		*rit = 0;	// Just do it Hamlib's way.
+	} else {
+		*rit = param.p3;	// Actual value even zero!
+	}
+
+	RESETVFO(skip);	
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_ts(RIG * rig, vfo_t vfo, shortfreq_t * ts)
+{
+	STDPARAM;
+	TS2K_TS_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_ts(rig, &param);
+	*ts = param.p1;
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
  */
 int ts2k_set_ts(RIG * rig, vfo_t vfo, shortfreq_t ts)
 {
@@ -1121,90 +1352,478 @@ int ts2k_set_ts(RIG * rig, vfo_t vfo, shortfreq_t ts)
 }
 
 /*
+ *	status:	untested
+ */
+int ts2k_set_tone_sql(RIG *rig, vfo_t vfo, tone_t state)
+{
+	STDPARAM;
+	TS2K_TO_T param;
+
+	TESTVFO(skip);
+
+	param.p1 = (state == 0)? 0: 1;	// 0 = off;
+	retval = ts2k_s_to(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/**
+ * \brief Turn on/off ctcss squelch.
+ *
+ *	status:	untested
+ */
+int ts2k_set_ctcss_sql(RIG *rig, vfo_t vfo, tone_t state)
+{
+	STDPARAM;
+	TS2K_CT_T param;
+
+	TESTVFO(skip);
+
+	param.p1 = (state == 0)? 0: 1;	// 0 = off;
+	retval = ts2k_s_ct(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_set_dcs_sql(RIG *rig, vfo_t vfo, tone_t state)
+{
+	STDPARAM;
+	TS2K_DQ_T param;
+
+	TESTVFO(skip);
+
+	param.p1 = (state == 0)? 0: 1;	// 0 = off;
+	retval = ts2k_s_dq(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_tone_sql(RIG *rig, vfo_t vfo, tone_t *state)
+{
+	STDPARAM;
+	TS2K_TO_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_to(rig, &param);
+	*state = param.p1;	// 0 = off;
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_ctcss_sql(RIG *rig, vfo_t vfo, tone_t *state)
+{
+	STDPARAM;
+	TS2K_CT_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_ct(rig, &param);
+	*state = param.p1;	// 0 = off;
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_dcs_sql(RIG *rig, vfo_t vfo, tone_t *state)
+{
+	STDPARAM;
+	TS2K_DQ_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_dq(rig, &param);
+	*state = param.p1;	// 0 = off;
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/**
+ * \brief Set tone (rig tx tone, repeater rx tone)
+ *
+ *	status: untested
+ */
+int ts2k_set_tone(RIG * rig, vfo_t vfo, tone_t tone)
+{
+	STDPARAM;
+	int i, low_idx, hi_idx, t;
+	TS2K_TN_T param;
+
+	TESTVFO(skip);
+
+	hi_idx = (sizeof(ts2k_ctcss_list) / sizeof(int)) - 1;
+	low_idx = i = 0;
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		"\t: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+	while( ts2k_ctcss_list[hi_idx] == 0 )
+		hi_idx--;	// one or two zeros at end
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		"\t:B: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+
+	i = hi_idx;
+	// do a "fast" search through 38 variable. Hi!
+	while(low_idx < hi_idx) {
+		i = low_idx + (hi_idx - low_idx)/2;	// mid index
+		if(ts2k_ctcss_list[i] < tone)
+			low_idx = i;
+		else if(ts2k_ctcss_list[i] > tone)
+			hi_idx = i+1;	// +1 is a kludge
+		else {			// exact match!
+			low_idx = hi_idx = ++i;	// ++ is a kludge
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\t:exact: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+			break;
+		}
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			"\t:M: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+	}
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		"\t:E: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+	
+	if(low_idx < hi_idx) {
+		// midpoint between hi/low
+		t = ts2k_ctcss_list[low_idx] +
+			(ts2k_ctcss_list[hi_idx] - ts2k_ctcss_list[low_idx])/2;
+		if(tone < t)
+			i = low_idx;
+		else
+			i = hi_idx;
+	}
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		"\t: Done: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+	param.p1 = i;	// only the index is sent to rig
+	retval = ts2k_s_tn(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/**
+ * \brief Set tone (rig tx tone, repeater rx tone)
+ *
+ *	status: untested
  */
 int ts2k_set_ctcss(RIG * rig, vfo_t vfo, tone_t tone)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	int i, low_idx, hi_idx, t;
+	TS2K_CN_T param;
+
+	TESTVFO(skip);
+
+	hi_idx = (sizeof(ts2k_ctcss_list) / sizeof(int)) - 1;
+	low_idx = i = 0;
+
+	while( ts2k_ctcss_list[hi_idx] == 0 )
+		hi_idx--;	// one or two zeros at end
+
+	i = hi_idx;
+	// do a "fast" search through 38 variable. Hi!
+	while(low_idx < hi_idx) {
+		i = low_idx + (hi_idx - low_idx)/2;	// mid index
+		if(ts2k_ctcss_list[i] < tone)
+			low_idx = i;
+		else if(ts2k_ctcss_list[i] > tone)
+			hi_idx = i+1;
+		else {			// exact match!
+			low_idx = hi_idx = i;
+			break;
+		}
+	}
+
+	if(low_idx < hi_idx) {
+		// midpoint between hi/low
+		t = ts2k_ctcss_list[low_idx] +
+			(ts2k_ctcss_list[hi_idx] - ts2k_ctcss_list[low_idx])/2;
+		if(tone < t)
+			i = low_idx;
+		else
+			i = hi_idx;
+	}
+
+	param.p1 = i;	// only the index is sent to rig
+	retval = ts2k_s_cn(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
-/*
- */
-int ts2k_get_ctcss(RIG * rig, vfo_t vfo, tone_t * tone)
-{
-	return -RIG_ENIMPL;
-}
-
-int ts2k_set_tone(RIG * rig, vfo_t vfo, tone_t tone)
-{
-	return -RIG_ENIMPL;
-}
-
-int ts2k_get_tone(RIG * rig, vfo_t vfo, tone_t * tone)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
-int ts2k_get_dcs(RIG * rig, vfo_t vfo, tone_t * tone)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
+/**
+ * \brief Set dcs tone
+ *
+ *	status: untested
  */
 int ts2k_set_dcs(RIG * rig, vfo_t vfo, tone_t tone)
 {
-	return -RIG_ENIMPL;
-}
+	STDPARAM;
+	int i, low_idx, hi_idx, t;
+	TS2K_QC_T param;
 
-/* Rig truncates in kHz(50) steps, so we don't. */
-int ts2k_get_rptr_offs(RIG * rig, vfo_t vfo, shortfreq_t * rptr_offs)
-{
-	return -RIG_ENIMPL;
-}
+	TESTVFO(skip);
 
-/* Rig truncates in kHz(50) steps, so we don't. */
-int ts2k_set_rptr_offs(RIG * rig, vfo_t vfo, shortfreq_t rptr_offs)
-{
-	return -RIG_ENIMPL;
+	hi_idx = (sizeof(ts2k_dcs_list) / sizeof(int)) - 1;
+	low_idx = i = 0;
+
+	while( ts2k_dcs_list[hi_idx] == 0 )
+		hi_idx--;	// one or two zeros at end
+
+	i = hi_idx;
+	// do a "fast" search through 38 variable. Hi!
+	while(low_idx < hi_idx) {
+		i = low_idx + (hi_idx - low_idx)/2;	// mid index
+		if(ts2k_dcs_list[i] < tone)
+			low_idx = i;
+		else if(ts2k_dcs_list[i] > tone)
+			hi_idx = i+1;
+		else {			// exact match!
+			low_idx = hi_idx = i;
+			break;
+		}
+	}
+
+	if(low_idx < hi_idx) {
+		// midpoint between hi/low
+		t = ts2k_dcs_list[low_idx] +
+			(ts2k_dcs_list[hi_idx] - ts2k_dcs_list[low_idx]) / 2;
+		if(tone < t)
+			i = low_idx;
+		else
+			i = hi_idx;
+	}
+
+	param.p1 = i;	// only the index is sent to rig
+	retval = ts2k_s_qc(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
 /*
+ * \brief Get ctcss (rig rx tone, repeater tx tone)
+ *	to \a nearest value in tenths of Hz.
+ *
+ *	status:	untested
+ */
+int ts2k_get_ctcss(RIG * rig, vfo_t vfo, tone_t * tone)
+{
+	STDPARAM;
+	TS2K_CN_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_cn(rig, &param);
+	*tone = ts2k_ctcss_list[param.p1 - 1];
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ * \brief Set tone (rig tx tone, repeater rx tone)
+ *	to \a nearest value in tenths of Hz.
+ *
+ *	status:	untested
+ */
+int ts2k_get_tone(RIG * rig, vfo_t vfo, tone_t * tone)
+{
+	STDPARAM;
+	TS2K_TN_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_tn(rig, &param);
+	*tone = ts2k_ctcss_list[param.p1 - 1];
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_dcs(RIG * rig, vfo_t vfo, tone_t * tone)
+{
+	STDPARAM;
+	TS2K_QC_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_qc(rig, &param);
+	*tone = ts2k_dcs_list[param.p1 - 1];
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_rptr_offs(RIG * rig, vfo_t vfo, shortfreq_t * rptr_offs)
+{
+	STDPARAM;
+	TS2K_OF_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_of(rig, &param);
+	*rptr_offs = param.p1;
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_set_rptr_offs(RIG * rig, vfo_t vfo, shortfreq_t rptr_offs)
+{
+	STDPARAM;
+	TS2K_OF_T param;
+
+	TESTVFO(skip);
+
+	param.p1 = rptr_offs;
+	retval = ts2k_s_of(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/*
+ *	status:	untested
  */
 int ts2k_get_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t * rptr_shift)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_OS_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_os(rig, &param);
+	*rptr_shift = ts2k_shift_list[param.p1];
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_set_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t rptr_shift)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_OS_T param;
+
+	TESTVFO(skip);
+
+	switch(rptr_shift) {
+
+	case RIG_RPT_SHIFT_NONE:	param.p1 = 0; break;
+	case RIG_RPT_SHIFT_PLUS:	param.p1 = 1; break;
+	case RIG_RPT_SHIFT_MINUS:	param.p1 = 2; break;
+	case RIG_RPT_SHIFT_1750:	param.p1 = 3; break;
+
+	default:
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			": Invalid Repeater Shift.\n");
+		retval = rig_set_vfo(rig, vorig);
+		return -RIG_EINVAL;
+	}
+	retval = ts2k_s_os(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_get_split(RIG * rig, vfo_t vfo, split_t * split)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_TN_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_tn(rig, &param);
+	*split = param.p1;
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_set_split(RIG * rig, vfo_t vfo, split_t split)
 {
 	return -RIG_ENIMPL;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_get_split_freq(RIG * rig, vfo_t vfo, freq_t * tx_freq)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_IF_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_if(rig, &param);
+	*tx_freq = param.p1;
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_set_split_freq(RIG * rig, vfo_t vfo, freq_t tx_freq)
 {
 	return -RIG_ENIMPL;
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_set_split_mode(RIG * rig,
 			vfo_t vfo, rmode_t txmode, pbwidth_t txwidth)
@@ -1212,13 +1831,27 @@ int ts2k_set_split_mode(RIG * rig,
 	return -RIG_ENIMPL;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_get_split_mode(RIG * rig,
 			vfo_t vfo, rmode_t * txmode, pbwidth_t * txwidth)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_MD_T param;
+
+	TESTVFO(skip);
+
+	retval = ts2k_g_md(rig, &param);
+	*txmode = param.p1;
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_get_channel(RIG * rig, channel_t * chan)
 {
@@ -1226,6 +1859,7 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_set_channel(RIG * rig, channel_t * chan)
 {
@@ -1233,18 +1867,23 @@ int ts2k_set_channel(RIG * rig, channel_t * chan)
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 {
 	return -RIG_ENIMPL;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t val)
 {
 	return -RIG_ENIMPL;
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * val)
 {
@@ -1252,6 +1891,7 @@ int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * val)
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 {
@@ -1259,17 +1899,24 @@ int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 }
 
 /*
+ *	status:	untested
  */
 int ts2k_get_func(RIG * rig, vfo_t vfo, setting_t func, int *status)
 {
 	return -RIG_ENIMPL;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_get_parm(RIG * rig, setting_t parm, value_t * val)
 {
 	return -RIG_ENIMPL;
 }
 
+/*
+ *	status:	untested
+ */
 int ts2k_set_parm(RIG * rig, setting_t parm, value_t val)
 {
 	return -RIG_ENIMPL;

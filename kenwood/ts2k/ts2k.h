@@ -2,7 +2,7 @@
  *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.1.2.2 2003-02-25 06:01:00 dedmons Exp $
+ *		$Id: ts2k.h,v 1.1.2.3 2003-02-26 19:00:52 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -23,6 +23,32 @@
 /*
  * created from kenwood.h	--Dale kd7eni
  */
+
+/* Convience Macros */
+#define CHKERR(_e)	if( (_e) != RIG_OK) return -RIG_EINVAL
+#define STDPARAM	int retval; vfo_t vorig; int skip
+#define TESTVFO(_s)	\
+	_s = (vfo & RIG_VFO_CURR); \
+	vorig = 0; \
+	if( ! _s ) { \
+		retval = rig_get_vfo(rig, &vorig); \
+		CHKERR(retval); \
+		retval = rig_set_vfo(rig, vfo); \
+		CHKERR(retval); \
+	}
+
+// destroys orig vfo!  use only if *Real* vfo required!
+#define TESTVFO2(_s)	\
+	TESTVFO(_s) else { \
+		retval = rig_get_vfo(rig, &vfo); \
+		CHKERR(retval);	\
+	}
+
+#define RESETVFO(_s)	\
+	if( !skip ) { \
+		retval = rig_set_vfo(rig, vorig); \
+		CHKERR(retval); \
+	}
 
 #include <hamlib/rig.h>
 #define _TS_LABEL
@@ -128,18 +154,15 @@ extern int ts2k_cleanup(RIG *rig);
 
 extern const int ts2k_ctcss_list[];
 
-int ts2k_get_ctcss(RIG *rig, vfo_t vfo, tone_t *tone);
 int ts2k_get_dcd(RIG *rig, vfo_t vfo, dcd_t *dcd);
 int ts2k_get_freq(RIG *rig, vfo_t vfo, freq_t *freq);
 int ts2k_get_func(RIG *rig, vfo_t vfo, setting_t func, int *status);
 int ts2k_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val);
 const char* ts2k_get_info(RIG *rig);
-int ts2k_get_mem(RIG *rig, vfo_t vfo, int *ch);
 int ts2k_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width);
 int ts2k_get_powerstat(RIG *rig, powerstat_t *status);
 int ts2k_get_ptt(RIG *rig, vfo_t vfo, ptt_t *ptt);
-int ts2k_get_tone(RIG *rig, vfo_t vfo, tone_t *tone);
-int ts2k_get_Tones(RIG *rig, vfo_t vfo, tone_t *tone, const char *ct);
+//int ts2k_get_Tones(RIG *rig, vfo_t vfo, tone_t *tone, const char *ct);
 int ts2k_get_trn(RIG *rig, int *trn);
 int ts2k_get_vfo(RIG *rig, vfo_t *vfo);
 int ts2k_reset(RIG *rig, reset_t reset);
@@ -148,7 +171,6 @@ int ts2k_set_ctcss(RIG *rig, vfo_t vfo, tone_t tone);
 int ts2k_set_freq(RIG *rig, vfo_t vfo, freq_t freq);
 int ts2k_set_func(RIG *rig, vfo_t vfo, setting_t func, int status);
 int ts2k_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val);
-int ts2k_set_mem(RIG *rig, vfo_t vfo, int ch);
 int ts2k_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
 int ts2k_set_powerstat(RIG *rig, powerstat_t status);
 int ts2k_set_ptt(RIG *rig, vfo_t vfo, ptt_t ptt);
@@ -169,12 +191,20 @@ int ts2k_scan_off(RIG *rig);
 int ts2k_set_basic(RIG *rig, vfo_t vfo);
 int ts2k_get_channel(RIG *rig, channel_t *chan); 
 int ts2k_set_channel(RIG *rig, channel_t *chan); 
+int ts2k_get_ctcss(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_set_ctcss(RIG *rig, vfo_t vfo, tone_t tone);
+int ts2k_get_ctcss_sql(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_set_ctcss_sql(RIG *rig, vfo_t vfo, tone_t tone);
 int ts2k_get_ctrl(RIG *rig, char *dc_buf, int dc_len);
 int ts2k_set_ctrl(RIG *rig, int ptt, int ctrl);
 int ts2k_vfo_ctrl(RIG *rig, vfo_t vfo);
 int ts2k_get_dcs(RIG *rig, vfo_t vfo, tone_t *tone); 
 int ts2k_set_dcs(RIG *rig, vfo_t vfo, tone_t  tone); 
+int ts2k_get_dcs_sql(RIG *rig, vfo_t vfo, tone_t *tone); 
+int ts2k_set_dcs_sql(RIG *rig, vfo_t vfo, tone_t  tone); 
 int ts2k_get_int(char *c, int i);
+int ts2k_get_mem(RIG *rig, vfo_t vfo, int *ch);
+int ts2k_set_mem(RIG *rig, vfo_t vfo, int ch);
 int ts2k_sat_off(RIG *rig, vfo_t vfo);
 int ts2k_sat_on(RIG *rig, vfo_t vfo);
 int ts2k_open(RIG *rig);
@@ -189,10 +219,13 @@ int ts2k_set_rptr_shift(RIG *rig, vfo_t vfo, rptr_shift_t  shift);
 int ts2k_get_split(RIG *rig, vfo_t vfo, split_t *split);
 int ts2k_set_split(RIG *rig, vfo_t vfo, split_t  split);
 int ts2k_get_split_freq(RIG *rig, vfo_t vfo, freq_t *tx_freq);
-int ts2k_set_split_freq(RIG *rig, vfo_t vfo, freq_t  tx_freq);
-
+int ts2k_set_split_freq(RIG *, vfo_t, freq_t);
 int ts2k_get_split_mode(RIG *, vfo_t, rmode_t *, pbwidth_t *);
 int ts2k_set_split_mode(RIG *, vfo_t, rmode_t, pbwidth_t); 
+int ts2k_get_tone(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_set_tone(RIG *rig, vfo_t vfo, tone_t tone);
+int ts2k_get_tone_sql(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_set_tone_sql(RIG *rig, vfo_t vfo, tone_t tone);
 int ts2k_get_ts(RIG *, vfo_t, shortfreq_t *);
 int ts2k_set_ts(RIG *, vfo_t, shortfreq_t);
 int ts2k_get_xit(RIG *, vfo_t, shortfreq_t *);
@@ -348,9 +381,9 @@ static const int ts2k_ctcss_list[] = {
 	670, 719, 744, 770, 797, 825, 854, 885, 915, 948,
 	974, 1000, 1035, 1072, 1109, 1148, 1188, 1230, 1273, 1318,
 	1365, 1413, 1462, 1514, 1567, 1622, 1679, 1738, 1799, 1862,
-	1928, 2035, 2107, 2181, 2257, 2336, 2418, 2503,	// 17500,
+	1928, 2035, 2107, 2181, 2257, 2336, 2418, 2503,	17500,
 	/* Note: 17500 is not available as ctcss, only tone. --kd7eni */
-	0,
+	0
 };
 
 #define cmd_trm(rig) ((struct ts2k_priv_caps *)(rig)->caps->priv)->cmdtrm

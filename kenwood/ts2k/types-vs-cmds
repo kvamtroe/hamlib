@@ -33,7 +33,7 @@
 	s ai, an, bc, fr, ft, lm, md, os, pb, pi, pm,   , rm,   , sc, sr,
 	  ss, to
 	r sm, sq
-	a ai, an, bc, fr, ft, lm, md, os, pb,   , pm, rd,   , ru, sc,   ,
+	a ai, an, bc, fr, ft, lm, md, os, pb,   , pm, rd,   , ru(bug), sc,   ,
 	  ss, to
 
 // TYPE05, 15 (15)

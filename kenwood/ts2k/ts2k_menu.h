@@ -26,8 +26,6 @@
 #define TS2K_ENFORCE_PM
 #define TS2K_PM_AUTO_INIT
 
-#define CHKERR(e) if(e != RIG_OK) return -RIG_EINVAL
-
 // sub-menu defines
 #define MENU_A	1
 #define MENU_B	2
