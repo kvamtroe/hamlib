@@ -203,6 +203,7 @@ typedef signed long int vfo_t;	// changed to signed to match Stephane's
 #ifdef _RIG_NEWVFO_PART_3
 
 struct channel {
+	struct channel *next;	// allow complex channel lists --Dale
 	int channel_num;
 	int bank_num;
 	vfo_t vfo;
@@ -210,7 +211,7 @@ struct channel {
 	freq_t freq;
 	rmode_t mode;
 	pbwidth_t width;
-	vfo_t tx_vfo;	// This may not stay 
+	vfo_t tx_vfo;	// obsolete
 	freq_t tx_freq;
 	rmode_t tx_mode;
 	pbwidth_t tx_width;
@@ -224,11 +225,11 @@ struct channel {
 	value_t levels[RIG_SETTING_MAX];
 	tone_t tone;		/* added --Dale kd7eni */
 	tone_t tone_sql;	/* tone => tx, ctcss => rx */
-	tone_t ctcss_tone;
+	tone_t ctcss_tone;	// obsolete
 	tone_t ctcss;
 	tone_t ctcss_sql;
 	tone_t dcs;
-	tone_t dcs_code;
+	tone_t dcs_code;	// obsolete
 	tone_t dcs_sql;
 	scan_t scan;
 	int scan_group;		/* added, I use this often --kd7eni */

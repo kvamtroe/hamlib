@@ -5,13 +5,13 @@
  */
 
 /*
- * This file implements (eventually) every command available to the ts2k.
+ * This file implements (almost) every command available to the ts2k.
  *	Most used functions will be implemented first.  All parameters are
  *	placed in a struct and #defines make using them transparent.  I've
  *	categorized all commands and assigned a type# to each uniq class of
  *	parameters.  Unique commands are handled case by case.
  *
- *	The menu commands are not handled here yet.
+ *	The menu "ex;" commands are not handled here yet.
  */
 
 /*
@@ -35,7 +35,7 @@
  * The ts2k_s_typeNN() is used for setting the parameters
  *	of a command whose Set format is typeNN.
  *
- *	The ts2k_g_typeNN() is used to "get" a specifice
+ *	The ts2k_g_typeNN() is used to "get" a specific
  *	command from the rig.  The "get" is used only if
  *	the "Read" command is type08 which is the two
  *	ascii command characters followed by a semicolon.
@@ -71,8 +71,7 @@ int ts2k_g_type01(RIG *rig, ts2k_type01_t *p, char *cmd)
  */
 int ts2k_s_type02(RIG *rig, ts2k_type02_t *p, char *cmd)
 {
-	TS2K_A_DATA(TS2K_FA_SIZE);
-	//anslen = sprintf(ans, "%s%011lu;", cmd, p->p1);	// eleven "el"
+	TS2K_A_DATANR(TS2K_FA_SIZE);
 	anslen = sprintf(ans, "%s%011llu;", cmd, p->p1);	// eleven "el"
 	return TS2K_SEND;
 }
@@ -339,7 +338,7 @@ int ts2k_g_type15(RIG *rig, ts2k_type15_t *p, char *cmd)
 
 /*
  * ts2k_?_type16()
- *	status:	s=unchecked; g=unchecked
+ *	status:	s=unchecked; g=buggy
  *	format:	{CMD, BIN, INT3, END}
  */
 int ts2k_s_type16(RIG *rig, ts2k_type16_t *p, char *cmd)
@@ -348,7 +347,7 @@ int ts2k_s_type16(RIG *rig, ts2k_type16_t *p, char *cmd)
 	/* FIXME: compiler warning on following statement */
 	anslen = sprintf(ans, "%s%c%03u;", cmd, \
 		(p->p1 > 0)? '1': '0', \
-		(p->p2 < 1000)? p->p2: 999);
+		(p->p2 > 999)? 999: p->p2);
 	return TS2K_SEND;
 }
 int ts2k_g_type16(RIG *rig, ts2k_type16_t *p, char *cmd)
@@ -777,8 +776,7 @@ int ts2k_g_type33(RIG *rig, ts2k_type33_t *p, char *cmd)
 	p->p10 = TS2K_CTOI(ans[i]);			i--;
 	p->p9 = TS2K_CTOI(ans[i]);			i--;
 	p->p8 = TS2K_CTOI(ans[i]);	ans[i] = '\0';	i -= 3;
-	p->p7 = atoi(&ans[i]);		ans[i] = '\0';	i--;
-	p->p6 =	0;	// Treat 6,7 as one parameter 
+	p->p6p7 = atoi(&ans[i]);		ans[i] = '\0';	i--;
 	p->p5 = TS2K_CTOI(ans[i]);	ans[i] = '\0';	i--;
 	p->p4 = TS2K_CTOI(ans[i]);	ans[i] = '\0';	i -= 6;
 	p->p3 = atoi(&ans[i]);		ans[i] = '\0';	i -= 4;
@@ -787,7 +785,6 @@ int ts2k_g_type33(RIG *rig, ts2k_type33_t *p, char *cmd)
 	return ret;
 }
 
-/* <---- Types from here down are in work. */
 /*
  * ts2k_?_type34()
  *	status:	s=unchecked; g=unchecked
@@ -795,21 +792,104 @@ int ts2k_g_type33(RIG *rig, ts2k_type33_t *p, char *cmd)
  *		INT2, INT2, INT3, BIN, INT1, LEN, 9, INT,
  *				INT2, INT1, TXT8, END}
  */
-// FIXME: memory read/write not implemented.
 int ts2k_s_type34(RIG *rig, ts2k_type34_t *p, char *cmd)
 {
-	TS2K_A_DATANR(TS2K_AI_SIZE);
-	TS2K_CMD2(cmd, TS2K_AI_SIZE);
-	ans[2] = TS2K_ITOC(p->p1);
-	return TS2K_SEND;
+	TS2K_A_DATA(TS2K_MW_SIZE);
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		":\tchan # = %i\n", p->p2p3);
+
+	anslen = sprintf(ans,
+		"%s"	// command
+		"%01u"	// p1
+		"%03u"	// p2p3	combined!
+		"%011llu"	// p4
+		"%01u"	// p5
+		"%01u"	// p6
+		"%01u"	// p7
+		"%02u"	// p8
+		"%02u"	// p9
+		"%03u"	// p10
+		"%01u"	// p11
+		"%01u"	// p12
+		"%09u"	// p13
+		"%02u"	// p14
+		"%01u"	// p15
+		"%-8s;",	// p16
+		cmd,
+		(p->p1 > 9)? 0:	p->p1,		// p1
+		(p->p2p3 > 999)? 000:	p->p2p3,	// p2p3
+		 p->p4,				// p4
+		(p->p5 > 9)? 0:		p->p5,	// p5
+		(p->p6 > 9)? 0:		p->p6,	// p6
+		(p->p7 > 9)? 0:		p->p7,	// p7
+		(p->p8 > 99)? 00:	p->p8,	// p8
+		(p->p9 > 9)? 0:		p->p9,	// p9
+		(p->p10 > 999)? 000:	p->p10,	// p10
+		(p->p11 > 9)? 0:	p->p11,	// p11
+		(p->p12 > 9)? 0:	p->p12,	// p12
+		(p->p13 > 999999999)? 000000000: p->p13,	// p13
+		(p->p14 > 9)? 0:	p->p14,	// p14
+		(p->p15 > 9)? 0:	p->p15,	// p15
+		//""	// debug
+		&p->p16[0]				// p16
+	);
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		":\tsending ans = %s, size = %i\n", ans, anslen);
+
+	//anslen++;
+	ret = TS2K_SEND;
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		":\tretmesssage = %s\n", rigerror(ret));
+
+	return ret;
 }
 int ts2k_g_type34(RIG *rig, ts2k_type34_t *p, char *cmd)
 {
-	TS2K_A_DATA(TS2K_AI_SIZE);
-	ret = TS2K_READ_08(rig, cmd);
-	p->p1 = TS2K_CTOI(ans[2]);
+	int i, j;
+	TS2K_A_DATA(TS2K_MR_SIZE);
+	char sdat[10];
+
+	// Request is not type08, unlike 99% of commands
+	sprintf(sdat, "%s%01i%03i;", cmd, p->p1, p->p2p3);
+	anslen = TS2K_MR_SIZE;
+	ret = TS2K_READ(rig, sdat, TS2K_MR_SIZE);
+
+rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		":\tchan # = %i\n", p->p2p3);
+
+	i = TS2K_MR_SIZE - 10;
+
+	// Remove semicolon from end
+	for(j=0; j<10; j++) {
+		if(ans[i+j] == ';') {
+			ans[i+j] = '\0';
+			break;
+		}
+	}
+rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		":\tans.CallSign = %s\n", &ans[i]);
+	strncpy(&p->p16[0], &ans[i], 9);ans[i] = '\0';	i --;
+	p->p15 = TS2K_CTOI(ans[i]); 			i -= 2;
+	p->p14 = atoi(&ans[i]); 	ans[i] = '\0';	i -= 9;
+	p->p13 = atoi(&ans[i]);	 			i--;
+	p->p12 = TS2K_CTOI(ans[i]); 	 		i--;
+	p->p11 = TS2K_CTOI(ans[i]); 	ans[i] = '\0';	i -= 3;
+	p->p10 = atoi(&ans[i]); 	ans[i] = '\0';	i -= 2;
+	p->p9 =  atoi(&ans[i]); 	ans[i] = '\0';	i -= 2;
+	p->p8 =  atoi(&ans[i]); 			i--;
+	p->p7 =  TS2K_CTOI(ans[i]); 			i--;
+	p->p6 =	 TS2K_CTOI(ans[i]); 			i--;
+	p->p5 =  TS2K_CTOI(ans[i]);	ans[i] = '\0';	i -= 11; 
+	p->p4 =  atoi(&ans[i]); 	ans[i] = '\0';	i -= 3;
+	p->p2p3 =  atoi(&ans[i]);  			i--;
+	p->p1 =	 TS2K_CTOI(ans[i]);
+
 	return ret;
 }
+// Whew!
 
 /************************** Specific commands *********************/
 
@@ -1555,7 +1635,7 @@ int ts2k_g_rl(RIG *rig, TS2K_RL_T *p)
 /* rm: Meter Scale */ 
 int ts2k_s_rm(RIG *rig, TS2K_RM_S_T *p)
 {
-	return ts2k_s_type34(rig, p, "rm");
+	return ts2k_s_type04(rig, p, "rm");
 }
 int ts2k_g_rm(RIG *rig, TS2K_RM_A_T *p)
 {
@@ -1891,4 +1971,4 @@ int ts2k_g_xt(RIG *rig, TS2K_XT_T *p)
 	return ts2k_g_type01(rig, p, "xt;");
 }
 
-// end
+// end, Finally!

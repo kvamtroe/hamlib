@@ -2,7 +2,7 @@
  *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.1.2.3 2003-02-26 19:00:52 dedmons Exp $
+ *		$Id: ts2k.h,v 1.1.2.4 2003-03-01 22:06:27 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -231,6 +231,9 @@ int ts2k_set_ts(RIG *, vfo_t, shortfreq_t);
 int ts2k_get_xit(RIG *, vfo_t, shortfreq_t *);
 int ts2k_set_xit(RIG *, vfo_t, shortfreq_t);
 /* Uniq Functions */
+int ts2k_uniq_GetMem(RIG *, channel_t *);
+int ts2k_uniq_PrintChan(RIG *, channel_t *);
+int ts2k_uniq_SetMem(RIG *, channel_t *);
 int ts2k_uniq_SetSimpleVfo(RIG *, vfo_t);
 int ts2k_uniq_GetSimpleVfo(RIG *, vfo_t *);
 int ts2k_uniq_SetTransceiver(RIG *, vfo_t);

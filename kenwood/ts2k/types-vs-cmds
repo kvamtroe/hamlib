@@ -112,7 +112,7 @@
 // TYPE16, 03 (3)
 	{ CMD, BIN, INT3, END },
 	s ag
-	r   , mr
+	r   , mr, mw
 	a ag
 
 // TYPE17, 02 (2)
@@ -218,13 +218,17 @@
 	a pk
 
 // TYPE33, 02 (2)
-	{ CMD, FREQ, INT4, LEN, 6, INT, BIN, BIN, INT3, BIN, INT1, INT1, INT1, INT1, INT1, INT2, INT1, END },
+	{ CMD, FREQ, INT4, LEN, 6, INT, BIN, BIN,
+		INT3, BIN, INT1, INT1, INT1, INT1,
+		INT1, INT2, INT1, END },
 	s 
 	r 
 	a if, oi
 
 // TYPE34, 01 (2)
-	{ CMD, BIN, INT3, FREQ, INT1, BIN, INT1, INT2, INT2, INT3, BIN, INT1, LEN, 9, INT, INT2, INT1, TXT8, END },
+	{ CMD, BIN, INT3, FREQ, INT1, BIN, INT1,
+		INT2, INT2, INT3, BIN, INT1, LEN, 9,
+		INT, INT2, INT1, TXT8, END },
 	s mw
 	r 
 	a mr

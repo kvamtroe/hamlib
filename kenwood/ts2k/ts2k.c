@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.4 2003-02-27 11:45:46 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.5 2003-03-01 22:06:25 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -245,10 +245,10 @@ const struct rig_caps ts2k_caps = {
 	set_split_freq:	ts2k_set_split_freq,
 	get_split_mode:	ts2k_get_split_mode,
 	set_split_mode:	ts2k_set_split_mode,
+	get_channel:	ts2k_get_channel,	// "qr;", ...
+	set_channel:	ts2k_set_channel,
 
 /* comming soon... */	/* highest */
-//	get_channel:	ts2k_get_channel,	// "qr;", ...
-//	set_channel:	ts2k_set_channel,
 //	get_info:	ts2k_get_info,		// "ty;"=firmware, "id;"=019=ts2k
 //	scan:		ts2k_scan,		// "sc;"
 //	get_ts:		ts2k_get_ts,
@@ -276,7 +276,7 @@ const struct rig_caps ts2k_caps = {
 	/* lowest */
 
 /* and never... */
-//	set_bank:				/* not needed */
+//	set_bank:		/* I abuse this for other purposes */
 /*
  * end ts2k
  */
@@ -1915,12 +1915,75 @@ int ts2k_get_split_mode(RIG * rig,
 
 /**
  * \brief Get a channel, which includes mode, memory
- *	offset, etc...
+ *	offset, etc...  This function calls other
+ *	routines which perform the actual operations.
  *
  *	status:	untested
  */
 int ts2k_get_channel(RIG * rig, channel_t * chan)
 {
+	STDPARAM;
+	vfo_t vfo;
+
+	skip = 1;	// don't reset VFO unless required.
+
+	vfo = chan->vfo;
+
+	rig_debug(RIG_DEBUG_ERR,__FUNCTION__": chan = %i\n", chan->channel_num);
+
+	switch(vfo) {
+	/* Simple Real Targets First */
+
+	/* Allow everything to do channel ops */
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_C:
+		return -RIG_ENIMPL;
+		break;
+
+	/* Of course, we Must do memory */
+	/* We set channel_num and set ->next to NULL */
+	case RIG_MEM_A:
+		retval = rig_get_mem(rig, RIG_MEM_A, &chan->channel_num);
+		chan->next = NULL;
+		return ts2k_uniq_GetMem(rig, chan);
+
+	case RIG_MEM_B:
+		return -RIG_ENIMPL;
+
+	case RIG_MEM_C:	// Indirect memory access
+		retval = rig_get_mem(rig, RIG_MEM_A, &chan->channel_num);
+		chan->next = NULL;
+		return ts2k_uniq_GetMem(rig, chan);
+		break;
+
+	/* and someday SAT memory */
+	case RIG_SAT_MEM:
+		return -RIG_ENIMPL;
+		break;
+
+	/* Fake Targets */
+
+	case RIG_VFO_CURR:	// maybe move above vfoa
+		return -RIG_ENIMPL;
+		break;
+
+	/* User responsible for setting ->channel_num and ->next! */
+	case RIG_VFO_MEM:	// Direct memory access
+		chan->next = NULL;	// debug
+		return ts2k_uniq_GetMem(rig, chan);
+		break;
+
+	/* Complex Real Targets Last */
+
+	default:
+		return -RIG_ENIMPL;
+		break;
+	}
+
+	RESETVFO(skip);
+
+	return RIG_OK;
 }
 
 /*
@@ -1928,7 +1991,68 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
  */
 int ts2k_set_channel(RIG * rig, channel_t * chan)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	vfo_t vfo;
+
+	skip = 1;	// don't reset VFO unless required.
+
+	vfo = chan->vfo;
+
+	rig_debug(RIG_DEBUG_ERR,__FUNCTION__": chan = %i\n", chan->channel_num);
+
+	switch(vfo) {
+	/* Simple Real Targets First */
+
+	/* Allow everything to do channel ops */
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_C:
+		return -RIG_ENIMPL;
+		break;
+
+	/* Of course, we Must do memory */
+	/* We set channel_num and set ->next to NULL */
+	case RIG_MEM_A:
+		retval = rig_get_mem(rig, RIG_MEM_A, &chan->channel_num);
+		chan->next = NULL;
+		return ts2k_uniq_SetMem(rig, chan);
+
+	case RIG_MEM_B:
+		return -RIG_ENIMPL;
+
+	case RIG_MEM_C:	// Indirect memory access
+		retval = rig_get_mem(rig, RIG_MEM_C, &chan->channel_num);
+		chan->next = NULL;
+		return ts2k_uniq_SetMem(rig, chan);
+		break;
+
+	/* and someday SAT memory */
+	case RIG_SAT_MEM:
+		return -RIG_ENIMPL;
+		break;
+
+	/* Fake Targets */
+
+	case RIG_VFO_CURR:	// maybe move above vfoa
+		return -RIG_ENIMPL;
+		break;
+
+	/* User responsible for setting ->channel_num and ->next! */
+	case RIG_VFO_MEM:	// Direct memory access
+		chan->next = NULL;	// debug
+		return ts2k_uniq_SetMem(rig, chan);
+		break;
+
+	/* Complex Real Targets Last */
+
+	default:
+		return -RIG_ENIMPL;
+		break;
+	}
+
+	RESETVFO(skip);
+
+	return RIG_OK;
 }
 
 /*
@@ -2347,6 +2471,263 @@ long int int_n(char *src, int cnt)
 	buf[cnt] = (char) 0;
 	return atol(buf);
 //	return atoi(buf);
+}
+
+/**
+ * \brief Get Rx/Tx pair from memory.  Address must
+ *	be set prior to call.  We are using the
+ *	chan memory pointer for direct access so VFO is
+ *	not used or required.  Other functions are
+ *	expected to handle the details.  Linked channels
+ *	are followed.  Split memories have the Tx
+ *	channel inserted as the next.  The original next
+ *	pointer is placed in the Tx chan.  The entire
+ *	memory may thus be placed into this structure
+ *	in one go.
+ *
+ *	Notes:	uses recursion
+ *		bank=0 for Rx, bank=1 for Tx
+ *
+ *	status:
+ */
+int ts2k_uniq_GetMem(RIG *rig, channel_t *chan)
+{
+	TS2K_MR_T param[2];
+	int retval, i, j, am_fm;
+	channel_t *p[2], *next;
+	vfo_t vfo;
+
+	rig_debug(RIG_DEBUG_ERR,__FUNCTION__": chan = %i\n", chan->channel_num);
+
+	if(chan == NULL)
+		return -RIG_EINVAL;	// Come on!  Give me *something*!
+
+	// FIXME: use caps to find memory bounds!
+	if(chan->channel_num >= 300)
+		return -RIG_EINVAL;	// Oops.
+
+	next = chan->next;	// simplify check at end
+	i = chan->channel_num;	// allow mem clear
+	vfo = chan->vfo;
+
+	/* Ensure we have Rx/Tx pairs */
+	p[0] = chan;
+	p[1] = calloc( 1, sizeof(channel_t));
+	if(p[1] == NULL)
+		return -RIG_ENOMEM;
+	memset(p[1], 0, sizeof(channel_t));
+	memset(chan, 0, sizeof(channel_t));
+	chan->channel_num = i;	// restore
+	chan->vfo = vfo;
+
+	/* Get Rx and Tx memory */
+	for(i=0; i<2; i++) {
+		param[i].p1 = i;
+		param[i].p2p3 = chan->channel_num;
+		retval = ts2k_g_mr(rig, &param[i]);
+		CHKERR(retval);
+
+		p[i]->freq = param[i].p4;
+		if(i==1) {
+			if(param[0].p4 == param[1].p4) {
+				p[0]->split = 0;
+				break;
+			} else {
+				p[0]->split = 1;
+				p[1]->split = 1;
+				p[1]->width = RIG_PASSBAND_NORMAL;
+				p[1]->ant = 0;
+				p[1]->next = p[0]->next;
+				p[0]->next = p[1];
+			}
+		}
+		p[i]->bank_num = param[i].p1;
+		p[i]->channel_num = param[i].p2p3;
+		// p4 set first
+		p[i]->mode = ts2k_mode_list[param[i].p5];
+			am_fm = (p[i]->mode == RIG_MODE_AM);
+			am_fm |= (p[i]->mode == RIG_MODE_FM);
+			j = (am_fm)? 1: 0;	// index for p14
+		p[i]->flags = (param[i].p6)? RIG_CHFLAG_SKIP: RIG_CHFLAG_NONE;
+
+		p[i]->tone_sql = (param[i].p7 == 1)? 1: 0;
+		p[i]->ctcss_sql = (param[i].p7 == 2)? 1: 0;
+		p[i]->dcs_sql = (param[i].p7 == 3)? 1: 0;
+
+		p[i]->tone = ts2k_ctcss_list[ param[i].p8 - 1 ];
+		p[i]->ctcss = ts2k_ctcss_list[ param[i].p9 - 1];
+		p[i]->dcs = ts2k_dcs_list[ param[i].p10 - 1 ];
+		p[i]->vfo |= (param[i].p11)? RIG_CTRL_REV: 0;	// use VFO for now
+		p[i]->rptr_shift = ts2k_shift_list[ param[i].p12 ];
+		p[i]->rptr_offs = param[i].p13;
+		p[i]->tuning_step = ts2k_steps[j][param[i].p14 - 1];
+		p[i]->scan_group = param[i].p15;
+		j = (MAXCHANDESC > 8)? 8: MAXCHANDESC;
+		strncpy(&p[i]->channel_desc[0], &param[i].p16[0], j);
+
+		p[i]->vfo |= RIG_VFO_MEM;
+	}
+	p[0]->width = RIG_PASSBAND_NORMAL;
+	p[0]->ant = 0;
+
+
+	if( ! p[0]->split ) {
+		free(p[1]);
+	}
+
+	// debug
+	ts2k_uniq_PrintChan(rig, p[0]);
+
+	/* use up all the stack space. hi! */
+	if(next != NULL)
+		return ts2k_uniq_GetMem(rig, next);
+
+	return RIG_OK;
+}
+
+/*
+ * \brief ts2k_uniq_SetMem() reads a list of channel_t
+ *	items.  If split is set the next pointer is
+ *	a second channel_t which is sent to the Tx
+ *	memory after the Rx memory is set.  The next
+ *	pointer of the Rx/Tx channel is tested for NULL
+ *	and we call this function recursively to process
+ *	the remaining channel_t's in the list.
+ *
+ *	status:	new
+ */
+int ts2k_uniq_SetMem(RIG *rig, channel_t *chan)
+{
+	TS2K_MW_T	param[2];
+	channel_t	*next, *p[2];
+	int		mem[2], i, t, j, retval, am_fm;
+
+	rig_debug(RIG_DEBUG_VERBOSE,__FUNCTION__": chan = %i\n", chan->channel_num);
+
+	if(chan == NULL)
+		return -RIG_EINVAL;	// Big Oops!
+
+	p[0] = chan;
+	p[1] = chan->next;
+
+	mem[0] = p[0]->channel_num;
+
+	// FIXME: use caps for limit
+	if(mem[0] > 300)	// 300 is ts2k Call on current
+		return -RIG_EINVAL;
+
+	if(chan->split) {	// Rx/Tx split pair
+		if(p[1] == NULL) {
+			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+				": Tx pointer is NULL but Split is set!\n");
+			return -RIG_EINVAL;	// No mem-mem split, yet.
+		}
+		mem[1] = p[1]->channel_num;
+		next = p[1]->next;
+		if(mem[0] != mem[1]) {
+			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+				": Tx channel different than Rx = %i\n", mem[0]);
+			return -RIG_EINVAL;	// No mem-mem split, yet.
+		}
+		t = 1;	// max index
+	} else {		// Single Rx
+		next = p[0]->next;
+		t = 0;
+	}
+
+	/* Loop once or twice for each memory */
+	for(i=0; i <= t; i++) {
+		rig_debug(RIG_DEBUG_VERBOSE,__FUNCTION__
+			": start loop p[%i]\n", i);
+
+		param[i].p1 = i;	// Select Rx/Tx (Rx *always* first!)
+		param[i].p2p3 = chan->channel_num;
+		param[i].p4 = p[i]->freq;
+		//ts2k_mode_list[param[i].p5] = p[i]->mode;	// FIXME:
+		//	am_fm = (p[i]->mode == RIG_MODE_AM);
+		//	am_fm |= (p[i]->mode == RIG_MODE_FM);
+		//	j = (am_fm)? 1: 0;	// index for p14
+
+		param[i].p6 = (p[i]->flags & RIG_CHFLAG_SKIP)? 1: 0;
+
+		// FIXME:
+		//param[i].p7 = p[i]->tone_sql = (param[i].p7 == 1)? 1: 0;
+		//param[i].p7 = p[i]->ctcss_sql = (param[i].p7 == 2)? 1: 0;
+		//param[i].p7 = p[i]->dcs_sql = (param[i].p7 == 3)? 1: 0;
+		//param[i].p8 = p[i]->tone = ts2k_ctcss_list[ param[i].p8 - 1 ];
+		//param[i].p9 = p[i]->ctcss = ts2k_ctcss_list[ param[i].p9 - 1];
+		//param[i].p10 = p[i]->dcs = ts2k_dcs_list[ param[i].p10 - 1 ];
+
+		param[i].p11 = ((p[i]->vfo & RIG_CTRL_REV) && !p[i]->split)?
+					1: 0;	// use VFO for now
+		// FIXME:
+		//param[i].p12 = p[i]->rptr_shift = ts2k_shift_list[ param[i].p12 ];
+		param[i].p13 = p[i]->rptr_offs;
+		// FIXME
+		//param[i].p14 = p[i]->tuning_step = ts2k_steps[j][param[i].p14 - 1];
+		param[i].p15 = p[i]->scan_group;
+		j = (MAXCHANDESC > 8)? 8: MAXCHANDESC;
+		strncpy(&param[i].p16[0], &p[i]->channel_desc[0], j);
+
+		rig_debug(RIG_DEBUG_VERBOSE,__FUNCTION__
+			": writing p[%i]\n", i);
+
+		retval = ts2k_s_mw(rig, &param[i]);
+		CHKERR(retval);
+
+	}
+
+	// continue down the list...
+	if(next != NULL)
+		return ts2k_uniq_SetMem(rig, next);
+
+	return RIG_OK;
+}
+
+/*
+ * Print a channel_t
+ */
+int ts2k_uniq_PrintChan(RIG *rig, channel_t *chan)
+{
+	
+	rig_debug(RIG_DEBUG_ERR, "\n");
+
+#define MSG(_a)	rig_debug(RIG_DEBUG_ERR, #_a " = %li\n", (long int)chan-> ## _a )
+
+	MSG(next);
+	MSG(channel_num);
+	MSG(bank_num);
+	MSG(vfo);
+	MSG(freq);
+	MSG(mode);
+	MSG(tx_vfo);
+	MSG(tx_freq);
+	MSG(tx_mode);
+	MSG(tx_width);
+	MSG(split);
+	MSG(rptr_shift);
+	MSG(rptr_offs);
+	MSG(tuning_step);	// Value wrong on GetMem
+	MSG(rit);
+	MSG(xit);
+	MSG(funcs);
+	//MSG(levels[0]);
+	MSG(tone);
+	MSG(tone_sql);
+	MSG(ctcss);
+	MSG(ctcss_sql);
+	MSG(dcs);
+	MSG(dcs_sql);
+	MSG(scan);
+	MSG(scan_group);
+	MSG(flags);
+	MSG(ext_levels);
+
+#undef MSG
+
+	rig_debug(RIG_DEBUG_ERR, "\n");
+
+	return RIG_OK;
 }
 
 /****************************************

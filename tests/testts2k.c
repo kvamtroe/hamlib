@@ -13,24 +13,27 @@
 #include <hamlib/rig.h>
 #include "misc.h"
 #include "tests.h"
+#include "../kenwood/ts2k/ts2k.h"
 
 #define LOG(msg)	fprintf(stderr, msg); fprintf(stdout, msg)
 
 int errcnt = 0, passcnt = 0, expecterr = 0;
 
-int testvfo(RIG * rig, vfo_t vfo);
-int testfreq(RIG * rig, vfo_t vfo, freq_t freq);
-int testmode(RIG * rig, vfo_t vfo, rmode_t mode);
-int testtone(RIG * rig, vfo_t vfo, tone_t tone);
-int testrptrshift(RIG * rig, vfo_t vfo, rptr_shift_t shift);
-int testrptroffs(RIG * rig, vfo_t vfo, shortfreq_t offset);
+int testvfo(RIG *, vfo_t);
+int testfreq(RIG *, vfo_t, freq_t);
+int testmode(RIG *, vfo_t, rmode_t);
+int testtone(RIG *, vfo_t, tone_t);
+int testrptrshift(RIG *, vfo_t, rptr_shift_t);
+int testrptroffs(RIG *, vfo_t, shortfreq_t);
+int testchan(RIG *, vfo_t vfo, channel_t *);
 
 int main(int argc, char *argv[])
 {
 	RIG *my_rig;		/* handle to rig (nstance) */
 	int retcode;		/* generic return code from functions */
 	rig_model_t myrig_model;
-
+	channel_t chantest;
+	vfo_t vfo;
 
 	printf("\n\t\tHamlib test: TS-2000\n\n");
 
@@ -234,6 +237,12 @@ int main(int argc, char *argv[])
 	testrptroffs(my_rig, RIG_VFO_A, kHz(600));
 	testrptroffs(my_rig, RIG_VFO_A, MHz(59));
 
+	LOG("\n/************* Channel Read/Write Test ***************/\n\n");
+
+	chantest.channel_num = 90;	// My test channel
+	vfo = RIG_VFO_MEM;		// Direct access.
+	testchan(my_rig, vfo, &chantest);
+
 	LOG("\n/******* Set State after Test **********/\n\n");
 
 // (: VFO we want after Testing.  :)
@@ -265,6 +274,8 @@ int testvfo(RIG * rig, vfo_t vfo)
 {
 	static int sretval, gretval;
 	static vfo_t vtmp;
+
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
 
 	sretval = rig_set_vfo(rig, vfo);
 	gretval = rig_get_vfo(rig, &vtmp);
@@ -301,6 +312,8 @@ int testfreq(RIG * rig, vfo_t vfo, freq_t freq)
 {
 	static int sretval, gretval;
 	static freq_t ftmp;
+
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
 
 	sretval = rig_set_freq(rig, vfo, freq);
 	gretval = rig_get_freq(rig, vfo, &ftmp);
@@ -339,6 +352,8 @@ int testmode(RIG * rig, vfo_t vfo, rmode_t mode)
 	static rmode_t mtmp;
 	static pbwidth_t pb = 0;
 
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
+
 	sretval = rig_set_mode(rig, vfo, mode, pb);
 	gretval = rig_get_mode(rig, vfo, &mtmp, &pb);
 
@@ -374,6 +389,8 @@ int testtone(RIG * rig, vfo_t vfo, tone_t tone)
 {
 	static int sretval, gretval;
 	static tone_t ttmp;
+
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
 
 	sretval = rig_set_tone(rig, vfo, tone);
 	gretval = rig_get_tone(rig, vfo, &ttmp);
@@ -411,6 +428,8 @@ int testrptrshift(RIG * rig, vfo_t vfo, rptr_shift_t shift)
 	static int sretval, gretval;
 	static rptr_shift_t stmp;
 
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
+
 	sretval = rig_set_rptr_shift(rig, vfo, shift);
 	gretval = rig_get_rptr_shift(rig, vfo, &stmp);
 
@@ -447,6 +466,8 @@ int testrptroffs(RIG * rig, vfo_t vfo, shortfreq_t offset)
 	static int sretval, gretval;
 	static shortfreq_t otmp;
 
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
+
 	sretval = rig_set_rptr_offs(rig, vfo, offset);
 	gretval = rig_get_rptr_offs(rig, vfo, &otmp);
 
@@ -477,3 +498,119 @@ int testrptroffs(RIG * rig, vfo_t vfo, shortfreq_t offset)
 
 	return RIG_OK;
 }
+
+int testchan(RIG * rig, vfo_t vfo, channel_t *chan)
+{
+	int sretval, gretval, chan_err;
+	channel_t ctmp;
+
+	fflush(stdout);	// maybe this'll work instead...
+	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
+
+	ctmp.vfo = chan->vfo = vfo;
+	ctmp.channel_num = chan->channel_num;
+
+	gretval = rig_get_channel(rig, chan);
+
+#define COPYCHAN(_a)	ctmp._a = chan->_a;
+
+	ctmp.next = NULL;	// debug
+//	COPYCHAN(next);
+	COPYCHAN(channel_num);
+	COPYCHAN(bank_num);
+	COPYCHAN(vfo);
+	COPYCHAN(freq);
+	COPYCHAN(mode);
+	COPYCHAN(tx_vfo);	// obsolete
+	COPYCHAN(tx_freq);
+	COPYCHAN(tx_mode);
+	COPYCHAN(tx_width);
+	COPYCHAN(split);
+	COPYCHAN(rptr_shift);
+	COPYCHAN(rptr_offs);
+	COPYCHAN(tuning_step);	// Value wrong on GetMem
+	COPYCHAN(rit);		// ENAVAIL
+	COPYCHAN(xit);		// ENAVAIL
+	COPYCHAN(funcs);
+	COPYCHAN(levels[0]);	// ENAVAIL
+	COPYCHAN(tone);
+	COPYCHAN(tone_sql);	// ENIMPL
+	COPYCHAN(ctcss);
+	COPYCHAN(ctcss_sql);	// ENIMPL
+	COPYCHAN(dcs);
+	COPYCHAN(dcs_sql);	// ENIMPL
+	COPYCHAN(scan);		// ENAVAIL
+	COPYCHAN(scan_group);
+	COPYCHAN(flags);
+	COPYCHAN(ext_levels);	// ENIMPL
+
+#undef COPYCHAN
+
+	sretval = rig_set_channel(rig, &ctmp);
+
+	vfo = vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
+
+	if (gretval != RIG_OK)
+		fprintf(stderr, __FUNCTION__
+			": rig_get_channel() failed: %s\n", rigerror(gretval));
+	if (sretval != RIG_OK)
+		fprintf(stderr, __FUNCTION__
+			": rig_set_channel() failed: %s\n", rigerror(sretval));
+
+	fprintf(stdout, "received\tmem = %i\n", (int)ctmp.channel_num);
+	fprintf(stdout, "sent\t\tmem = %i\n", (int)chan->channel_num);
+
+	chan_err = 0;
+
+#define TESTCHAN(_a)	chan_err |= chan->_a == ctmp._a
+	TESTCHAN(next);
+	TESTCHAN(channel_num);
+	TESTCHAN(bank_num);
+	TESTCHAN(vfo);
+	TESTCHAN(freq);
+	TESTCHAN(mode);
+//	TESTCHAN(tx_vfo);	// obsolete
+//	TESTCHAN(tx_freq);
+//	TESTCHAN(tx_mode);
+//	TESTCHAN(tx_width);
+	TESTCHAN(split);
+	TESTCHAN(rptr_shift);
+	TESTCHAN(rptr_offs);
+	TESTCHAN(tuning_step);	// Value wrong on GetMem
+//	TESTCHAN(rit);		// ENAVAIL
+//	TESTCHAN(xit);		// ENAVAIL
+	TESTCHAN(funcs);
+	//TESTCHAN(levels[0]);	// ENAVAIL
+	TESTCHAN(tone);
+//	TESTCHAN(tone_sql);	// ENIMPL
+	TESTCHAN(ctcss);
+//	TESTCHAN(ctcss_sql);	// ENIMPL
+	TESTCHAN(dcs);
+//	TESTCHAN(dcs_sql);	// ENIMPL
+//	TESTCHAN(scan);		// ENAVAIL
+	TESTCHAN(scan_group);
+	TESTCHAN(flags);
+//	TESTCHAN(ext_levels);	// ENIMPL
+#undef TESTCHAN
+
+	if (chan_err) {
+		errcnt++;
+		fprintf(stderr, "Channel Mismatch!\n");
+		fprintf(stderr, "\n\n/**** Received the Following Channel ****/\n");
+		ts2k_uniq_PrintChan(rig, chan);
+		fprintf(stderr, "\n\n/****** Sent the Following Channel ******/\n");
+		ts2k_uniq_PrintChan(rig, &ctmp);
+		fprintf(stderr, "\n/*************** Done *******************/\n");
+		LOG("Error!\n\n");
+	} else {
+		passcnt++;
+		fprintf(stdout, "Channel Correct.\n\n");
+	}
+
+	fprintf(stderr,
+		"#************** End of Command ***************\n\n");
+
+	return RIG_OK;
+}
+
+

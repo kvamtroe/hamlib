@@ -26,7 +26,7 @@
 // The following is based upon Hamlib and may be changed if desired.
 #define TS2K_READ_08(_r, _c)	ts2k_transaction((_r), (_c), 3, ans, &anslen)
 #define TS2K_READ(_r, _c, _s)	anslen=(_s); \
-					ts2k_transaction((_r), (_c), (_s), ans, &anslen)
+				ret = ts2k_transaction((_r), (_c), (_s), ans, &anslen)
 #define TS2K_SEND		ts2k_transaction(rig, ans, anslen-1, NULL, NULL)
 
 #define TS2K_A_DATA(_s)		char ans[_s]; int ret, anslen = (_s)
@@ -92,6 +92,7 @@ typedef struct { INT2 p1; INT1 p2;	} ts2k_type13_t;
 typedef struct { INT1 p1; INT2 p2;	} ts2k_type14_t;
 typedef struct { INT2 p1; INT2 p2;	} ts2k_type15_t;
 typedef struct { BIN p1; INT3 p2;	} ts2k_type16_t;
+typedef struct { BIN p1; INT3 p2p3;	} ts2k_type16r_t;
 typedef struct { INT3 p1; INT3 p2;	} ts2k_type17_t;
 typedef struct { INT1 p1; INT4 p2;	} ts2k_type18_t;
 typedef struct { INT1 p1; TXT p2[8];	} ts2k_type19_t;
@@ -121,15 +122,15 @@ typedef struct { FREQ p1; TXT p2[13];
 		 TXT p3[21]; TXT p4[6];		} ts2k_type32_t;
 // The following combines p6,p7 into just INT3 p7
 typedef struct { FREQ p1; INT4 p2; INT6 p3;
-		 BIN p4; BIN p5; INT1 p6; INT3 p7;
+		 BIN p4; BIN p5; INT3 p6p7;
 		 BIN p8; INT1 p9; INT1 p10;
 		 INT1 p11; INT1 p12; INT1 p13;
 		 INT2 p14; INT1 p15;		} ts2k_type33_t;
-typedef struct { BIN p1; INT3 p2; FREQ p3;
-		 INT1 p4; BIN p5; INT1 p6;
-		 INT2 p7; INT2 p8; INT3 p9;
-		 BIN p10; INT1 p11; INT9 p12;
-		 INT2 p13; INT1 p14; TXT p15[9];	} ts2k_type34_t;
+typedef struct { BIN p1; INT3 p2p3; FREQ p4;
+		 INT1 p5; BIN p6; INT1 p7;
+		 INT2 p8; INT2 p9; INT3 p10;
+		 BIN p11; INT1 p12; INT9 p13;
+		 INT2 p14; INT1 p15; TXT p16[9];	} ts2k_type34_t;
 
 #define TS2K_AC_T	ts2k_type23_t
 #define TS2K_AC_R_T	ts2k_type08_t
@@ -224,7 +225,7 @@ typedef struct { BIN p1; INT3 p2; FREQ p3;
 #define TS2K_ML_R_T	ts2k_type08_t
 #define TS2K_MO_T	ts2k_type01_t
 #define TS2K_MR_T	ts2k_type34_t
-#define TS2K_MR_R_T	ts2k_type16_t
+#define TS2K_MR_R_T	ts2k_type16r_t
 #define TS2K_MU_T	ts2k_type27_t
 #define TS2K_MU_R_T	ts2k_type08_t
 #define TS2K_MW_T	ts2k_type34_t
@@ -275,7 +276,7 @@ typedef struct { BIN p1; INT3 p2; FREQ p3;
 #define TS2K_RG_R_T	ts2k_type08_t
 #define TS2K_RL_T	ts2k_type05_t
 #define TS2K_RL_R_T	ts2k_type08_t
-#define TS2K_RM_S_T	ts2k_type34_t
+#define TS2K_RM_S_T	ts2k_type04_t
 #define TS2K_RM_R_T	ts2k_type08_t
 #define TS2K_RM_A_T	ts2k_type18_t
 #define TS2K_RT_T	ts2k_type01_t
@@ -387,6 +388,7 @@ typedef struct { BIN p1; INT3 p2; FREQ p3;
 #define TS2K_ML_SIZE	7
 #define TS2K_MO_SIZE	5
 #define TS2K_MR_SIZE	51
+#define TS2K_MR_R_SIZE	8
 #define TS2K_MU_SIZE	14
 #define TS2K_MW_SIZE	51
 #define TS2K_NB_SIZE	5
