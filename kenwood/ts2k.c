@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
  *
- *		$Id: ts2k.c,v 1.5.2.1 2002-07-06 16:48:46 dedmons Exp $
+ *		$Id: ts2k.c,v 1.5.2.2 2002-07-10 20:28:01 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -22,18 +22,11 @@
  */
 
 /*
- * This code is has been substatiantially altered from the original
+ * This code is has been substantially altered from the original
  * author's.  Also, many new functions have been added and are
  * (C) Copyrighted 2002 by Dale E. Edmons (KD7ENI).  The license
  * is unchanged, and fitness disclaimers still apply.  The file
  * kenwwood.c was the original source.		--Dale
- */
-
-/*
- * Note:  We don't currently call using the rig->caps.  If anything
- *	but a ts2k_xxxx() function is used we'll likely fail.
- *	This will get fixed next time I'm "in the zone".
- *						--Dale
  */
 
 #ifdef HAVE_CONFIG_H
@@ -70,6 +63,7 @@
 #include <misc.h>
 
 /* Moved all const stuff to ts2k.h where it wants to be. */
+#undef _ENABLE_PTT_CTRL
 
 /**
  * kenwood_transaction
@@ -246,403 +240,24 @@ ts2k_transaction(RIG * rig, const char *cmdstr, int cmd_len,
  */
 int ts2k_set_vfo(RIG * rig, vfo_t vfo)
 {
-	unsigned char cmdbuf[10];
-	int ptt, ctrl, v, cmd_len, retval;
-	static int sat_on;	// temporary! to be removed!
-	char vfo_function;
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		  ": vfo = %s\n", strvfo(vfo));
 
-	// trivial case, but needs checked if enabled
-/*//	if( (vfo == RIG_CTRL_MODE(RIG_CTRL_MAIN,RIG_VFO_ALL))
-//		|| (vfo == RIG_CTRL_MODE(RIG_CTRL_SUB,RIG_VFO_ALL)) ) {
-//		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ \
-//			  ": Geez, you can't set *all* VFO's!\n");
-//		return -RIG_EINVAL;
-//	}
-*/
-	cmd_len = 10;
-	ptt = ctrl = v = 0;
-
-	// be optimistic (and ensure initialization)
-	retval = RIG_OK;
-
-	// Main/Sub Active Transceiver
-	switch (vfo) {
-	case RIG_VFO_A:
-	case RIG_VFO_B:
-	case RIG_VFO_AB:	// split
-	case RIG_VFO_BA:
-	case RIG_CTRL_SAT:	// FIXME: Not even close to correct
-	case RIG_VFO_MAIN:
-	case RIG_VFO_MEM_A:
-	case RIG_VFO_CALL_A:
-		ctrl = TS2K_CTRL_ON_MAIN;	// FIXME : these are independent!
-		ptt = TS2K_PTT_ON_MAIN;
-		break;
-	case RIG_VFO_C:
-	case RIG_VFO_SUB:
-	case RIG_VFO_MEM_C:
-	case RIG_VFO_CALL_C:
-		ctrl = TS2K_CTRL_ON_SUB;
-		ptt = TS2K_PTT_ON_SUB;
-		break;
-
-	default:
-		break;
-	}
-
-	// set now so "ft...;" and "fr...;" don't fail
-	retval = ts2k_set_ctrl(rig, ptt, ctrl);
-	if (retval != RIG_OK)
-		return -RIG_EINVAL;
-
-	// check if we need to skip the remainder
-	v = (vfo == RIG_VFO_SUB)
-	    || (vfo == RIG_VFO_MAIN)
-	    || (vfo == RIG_VFO_CURR)
-	    || (vfo == RIG_VFO_VFO)
-//                  || (vfo == RIG_VFO_ALL)         // yea, I know
-	    /* bit mask checks */
-	    || (vfo & RIG_CTRL_SAT)	// "fr...;", "ft...;" won't do!
-	    ;
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ \
-		  ": starting check.... vfo = 0x%X, v=%d\n", vfo, v);
-
-	if (!v) {		// start check
-
-		// FIXME: this is a speed-up kludge but won't *always* work!
-		if (sat_on) {
-			retval = ts2k_sat_off(rig, vfo);	// we gotta do it.
-			if (retval != RIG_OK)
-				return retval;
-			sat_on = 0;
-		}
-		// RX Active Tuning
-		switch (vfo) {
-		case RIG_VFO_AB:	// TX is opposite
-		case RIG_VFO_A:
-		case RIG_VFO_C:
-			vfo_function = '0';
-			break;
-		case RIG_VFO_BA:	// TX is opposite
-		case RIG_VFO_B:
-			vfo_function = '1';
-			break;
-		case RIG_VFO_MEM_A:
-		case RIG_VFO_MEM_C:
-			vfo_function = '2';
-			break;
-		case RIG_VFO_CALL_A:
-		case RIG_VFO_CALL_C:
-			vfo_function = '3';
-			break;
-
-		default:
-			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-				  ": unsupported VFO %u\n", vfo);
-			return -RIG_EINVAL;
-			break;
-		}
-
-		// ack_len is tmp
-		cmd_len =
-		    sprintf(cmdbuf, "fr%c%s", vfo_function, cmd_trm(rig));
-
-		/* set RX VFO */
-		retval =
-		    ts2k_transaction(rig, cmdbuf, cmd_len, NULL, NULL);
-		if (retval != RIG_OK)
-			return -RIG_EINVAL;
-
-		// TX Active tuning
-		switch (vfo) {
-		case RIG_VFO_A:
-		case RIG_VFO_C:
-		case RIG_VFO_BA:	// opposite of above
-			vfo_function = '0';
-			break;
-		case RIG_VFO_AB:	// opposite of above
-		case RIG_VFO_B:
-			vfo_function = '1';
-			break;
-		case RIG_VFO_MEM_A:
-		case RIG_VFO_MEM_C:	// FIXME: need to handle vfo/mem split
-			vfo_function = '2';
-			break;
-		case RIG_VFO_CALL_A:
-		case RIG_VFO_CALL_C:
-			vfo_function = '3';
-			break;
-
-		default:
-			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-				  ": unsupported VFO %u\n", vfo);
-			return -RIG_EINVAL;
-		}
-
-		/* set TX VFO */
-		cmdbuf[1] = 't';
-
-		// removing this causes split to not function!!!!
-		cmd_len =
-		    sprintf(cmdbuf, "ft%c%s", vfo_function, cmd_trm(rig));
-
-		retval =
-		    ts2k_transaction(rig, cmdbuf, cmd_len, NULL, NULL);
-		if (retval != RIG_OK)
-			return retval;
-
-	} else {		// Check further for special modes not using "fr...;", "ft...;"
-		if (vfo & RIG_CTRL_SAT) {	// test the SAT bit
-			retval = ts2k_sat_on(rig, vfo);
-			if (retval != RIG_OK)
-				return retval;
-			sat_on = 1;
-		} else {
-			rig_debug(RIG_DEBUG_ERR, __FUNCTION__ \
-				  ": VFO not changed, only PTT/CTRL\n");
-		}
-	}
-/*
- * FIXME: some items like scan, satellite need checked and turned off here.
- *	I've got a simple kludge to turn SAT *off* but it wants to be done
- *	here.  It's a bit expensive though and I'm trying to find a better
- *	way to do SAT as well as others.  ts2k_sat_off() reads the current,
- *	sets it off, then writes it back so the user selected stuff don't
- *	change unexpectedly.  Now, SAT won't get turned off if first turned
- *	on via the front panel.  MEM and SCAN have similar quirks.
- *							--Dale
- */
-	return retval;
-}
-
-/* we just turn SAT on here. It'll take some doing to run it! */
-int ts2k_sat_on(RIG * rig, vfo_t vfo)
-{
-	char cmd[20], ack[20];
-	int acklen;
-
-	acklen = 20;
-
-	if (!(vfo & RIG_CTRL_SAT))
-		return -RIG_EINTERNAL;	// All right.  Who called us!?
-
-//       cmdlen = sprintf(cmd, "sa%07u;", 0);    // Initial string to modify
-	acklen = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
-
-	// Sat mode ON
-	ack[2] = '1';		// Everything below is *nice*, this is *required*
-
-	goto STest;		// testing
-
-/* cmd is already full of '0's, but we set them again explicitly */
-	// SAT_VFO or SAT_MEM?
-	if (vfo & RIG_CTRL_MEM)
-		ack[8] = '1';	// sat mem ch 0-9
-	else
-		ack[8] = '0';	// sat vfo
-
-	/* Main or Sub as uplink? */
-	// Note: if both are set, Main is still uplink
-	if (vfo & RIG_CTRL_MAIN) {
-		ack[4] = '0';	// sat main=uplink
-	} else if (vfo & RIG_CTRL_SUB) {
-		ack[4] = '1';	// sat sub=uplink
-	}
-	// FIXME: Add Sat Trace here!
-
-	// Trace REV
-	if (vfo & RIG_CTRL_REV)
-		ack[7] = '1';	// sat trace REV 
-	else
-		ack[7] = '0';
-
-	// CTRL to main or sub?
-	if ((vfo & RIG_VFO_CTRL) && (vfo & RIG_CTRL_SUB))
-		ack[5] = '1';	// sat CTRL on sub
-	else
-		ack[5] = '0';	// sat CTRL on main
-
-      STest:
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ \
-		  ": sat = %s, vfo = 0x%X\n", cmd, vfo);
-	// of coure, this is *required* too!
-	return ts2k_transaction(rig, ack, acklen, NULL, NULL);
-}
-
-int ts2k_sat_off(RIG * rig, vfo_t vfo)
-{
-	char cmd[20], ack[20];
-	int cmdlen, acklen, retval;
-
-	acklen = 10;
-
-	cmdlen = sprintf(cmd, "sa;");
-	retval = ts2k_transaction(rig, cmd, cmdlen, ack, &acklen);
-	if (retval != RIG_OK)
-		return retval;
-
-	ack[2] = '0';
-	cmdlen = 20;
-	return ts2k_transaction(rig, ack, acklen, NULL, NULL);
+// Tesing new function without replacing old stuff!
+	return ts2k_uniq_SwitchVfo(rig, vfo);
 }
 
 /*
  * ts2k_get_vfo
  *
- *	status:	works perfect for implemented modes!  --Dale
- *		code's getting a little ugly.  okay, real ugly.
- *		Almost completely rewritten.
+ *	status:	works perfect for all modes!  --Dale
+ *		Completely rewritten.
  *		TS2000 only
  */
 int ts2k_get_vfo(RIG * rig, vfo_t * vfo)
 {
-	char ack[50], r_vfo, ctrl_ptt[20];
-	int acklen, retval, tmp;
-	vfo_t cv;
-
-	if (rig == NULL)
-		return -RIG_EINTERNAL;
-
-	// Check which receiver so VFO_C may be detected (PTT/CTRL)
-
-	retval = ts2k_get_ctrl(rig, ctrl_ptt, (int) 20);
-	if (retval != RIG_OK)
-		return -RIG_EINVAL;
-//       rig_debug(RIG_DEBUG_ERR, __FUNCTION__": PTT/CTRL is %s\n", ctrl_ptt);
-
-	/* For various reasons we must check SAT first. (RIG BUG) */
-	acklen = 50;
-	retval = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
-	if (retval == RIG_OK) {
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": SAT=%s\n", ack);
-		if (ack[2] == '1') {
-			cv = RIG_CTRL_SAT;
-			cv |= (ack[4] == '0') ? RIG_CTRL_MAIN : RIG_CTRL_SUB;	// Uplink
-			cv |= (ack[4] == '0') ? RIG_VFO_PTT : 0;
-			cv |= (ack[5] == '0') ? RIG_VFO_CTRL : 0;
-			cv |= (ack[6] == '1') ? RIG_CTRL_SPLIT : 0;
-			cv |= (ack[7] == '1') ? RIG_CTRL_REV : 0;	// Trace reverse
-			cv |= (ack[8] == '1') ? RIG_CTRL_MEM : 0;	// Trace reverse
-
-			*vfo = cv;
-
-			return RIG_OK;	// Nothing left to do.
-		}		// otherwise, continue checks...
-	} else {
-		return retval;
-	}
-
-	/* For similar reasons, we must check scan next. */
-	acklen = 50;
-	retval = ts2k_transaction(rig, "sc;", 3, ack, &acklen);
-	if (retval == RIG_OK) {
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": SCAN=%s\n", ack);
-		if (ack[2] != '0') {
-
-		}		// continue checks
-	} else {
-		return retval;
-	}
-
-
-	/* query RX VFO */
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		  ": sending fr; cmd/checking SAT.  Expect TIMEDOUT if in SAT mode!\n");
-	acklen = 50;
-	retval = ts2k_transaction(rig, "fr;", 3, ack, &acklen);
-
-	/* "fr;" fails in satellite mode; interesting... */
-	if (retval != RIG_OK) {
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": kenwood/ts2k.c\n"
-			  "FIXME: ts2k.c,\tThis timeout cannot be prevented.\n");
-		tmp = retval;
-		return tmp;	// return original "fr;" error!
-	}
-//       rig_debug(RIG_DEBUG_ERR, __FUNCTION__": checking fr; cmd.\n");
-	r_vfo = ack[2];
-
-	//if (acklen != 4 || ack[1] != 'R') {
-	if (ack[1] != 'R') {
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-			  ": unexpected answer %s, "
-			  "len=%u\n", ack, acklen);
-		return -RIG_ERJCTED;
-	}
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": sending ft; cmd.\n");
-	acklen = 50;
-	retval = ts2k_transaction(rig, "ft;", 3, ack, &acklen);
-	if (retval != RIG_OK)
-		return retval;
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": checking ft; cmd.\n");
-	if (ack[2] == r_vfo) {	// check most common first
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": Non-Split.\n");
-
-		/* TODO: replace 0,1,2,.. constants by defines */
-		/* FIXME: return based on RIG_PTT_ON_???? or RIG_CTRL_ON_????
-		 * may be different.  We need to specify actual status.
-		 * Right now we pretend things are simpler. --kd7eni
-		 */
-		switch (ack[2]) {
-		case '0':
-			if (ctrl_ptt[3] == '0')	// we use CTRL as Active Transceiver
-				*vfo = RIG_VFO_A;
-			else if (ctrl_ptt[3] == '1')
-				*vfo = RIG_VFO_C;
-			else {	// "There be errors here!"
-				rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-					  ": VFO1 on erroneous xcvr %c\n",
-					  ack[2]);
-				return -RIG_EPROTO;
-			}
-			break;
-		case '1':
-			// only valid on Main--no checks required.
-			*vfo = RIG_VFO_B;
-			break;
-		case '2':
-			if (ctrl_ptt[3] == '0')	// we use CTRL as Active Transceiver. 
-				*vfo = RIG_VFO_MEM_A;
-			else if (ctrl_ptt[3] == '1')
-				*vfo = RIG_VFO_MEM_C;
-			else
-				return -RIG_EPROTO;
-			break;
-		case '3':
-			if (ctrl_ptt[3] == '0')	// we use CTRL as current
-				*vfo = RIG_VFO_CALL_A;
-			else if (ctrl_ptt[3] == '1')	// we use CTRL as current
-				*vfo = RIG_VFO_CALL_C;
-			else
-				return -RIG_EPROTO;
-			break;
-
-		default:	// Different or newer rig types...
-			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-				  ": unsupported VFO %c\n", ack[2]);
-			return -RIG_EPROTO;
-
-		}		// end switch
-	} else {		// end rx == tx; start split checks. 
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": Split.\n");
-
-		/* FIXME: during MEM/CALL scan, things change and this occurs! */
-
-		if (r_vfo == '0' && ack[2] == '1')
-			*vfo = RIG_VFO_AB;
-		else if (r_vfo == '1' && ack[2] == '0')
-			*vfo = RIG_VFO_BA;
-		else {		// FIXME: need vfo <--> mem split
-			rig_debug(RIG_DEBUG_ERR,
-				  __FUNCTION__
-				  ":FIXME: vfo<->mem split! -kd7eni!\n");
-			return -RIG_EPROTO;
-		}
-	}
-
-	return RIG_OK;
+// the following is the new vfo function
+	return ts2k_uniq_GetVfo(rig, vfo);
 }
 
 /*
@@ -650,41 +265,91 @@ int ts2k_get_vfo(RIG * rig, vfo_t * vfo)
  * Assumes rig!=NULL
  *
  *	status:	correctly sets FA, FB, FC	--Dale
+ *		Cannot handle anything but VFOA-C.  Broken!
+ *		Being rewritten.
  */
 int ts2k_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 {
 	unsigned char freqbuf[16];
-	int freq_len, ack_len = 0, retval;
+	int freq_len, ack_len = 0, retval, spcl, ptt_ctrl, scan;
 	char vfo_letter;
 
-	/*
-	 * better FIXME: vfo==RIG_VFO_CURR
-	 */
 	if (vfo == RIG_VFO_CURR) {
 		retval = rig_get_vfo(rig, &vfo);
 		if (retval != RIG_OK)
 			return retval;
 	}
 
-	switch (vfo) {
-	case RIG_VFO_A:
-		vfo_letter = 'A';
-		break;
-	case RIG_VFO_B:
-		vfo_letter = 'B';
-		break;
-	case RIG_VFO_C:
-		vfo_letter = 'C';
-		break;
-	default:
-		rig_debug(RIG_DEBUG_ERR,
-			  "ts2k_set_freq: unsupported VFO %u\n", vfo);
-		return -RIG_EINVAL;
+	if(vfo == RIG_VFO_VFO) {
+		retval = ts2k_set_basic(rig, RIG_VFO_VFO);
 	}
-	freq_len = sprintf(freqbuf, "F%c%011Lu;", vfo_letter, freq);
 
-	ack_len = 14;
-	retval = ts2k_transaction(rig, freqbuf, freq_len, NULL, NULL);
+	// Save PTT/CTRL bits as an int
+	ptt_ctrl = (int) (vfo & (RIG_VFO_PTT | RIG_VFO_CTRL));
+	// Mask out PTT/CTRL for easier handling
+	vfo = vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
+
+	/* Special Cases */
+	spcl = (vfo & RIG_CTRL_SAT);
+	spcl |= (vfo & RIG_CTRL_MEM);
+
+	/* VFO scan is just like a vfo except it changes! */
+	scan = (vfo & RIG_CTRL_SCAN)
+		& !(vfo & RIG_CTRL_MEM) & !(vfo & RIG_CTRL_SAT);
+
+	if(!spcl || scan) {
+		/* We just mask scan and blaze forward */
+		vfo = vfo & ~RIG_CTRL_SCAN;
+
+		switch (vfo) {
+		case RIG_VFO_A:
+		case RIG_VFO_AB:
+			vfo_letter = 'a';
+			break;
+		case RIG_VFO_B:
+		case RIG_VFO_BA:
+			vfo_letter = 'b';
+			break;
+		case RIG_VFO_C:
+			vfo_letter = 'c';
+			break;
+
+		/* Any other VFO minor is caught here */
+		default:
+			rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+				  ": unsupported VFO = %s\n", strvfo(vfo));
+			return -RIG_EINVAL;
+		}
+		freq_len = sprintf(freqbuf, "f%c%011u;", vfo_letter, (unsigned) freq);
+
+		ack_len = 14;
+		retval = ts2k_transaction(rig, freqbuf, freq_len, NULL, NULL);
+	} else {
+		if(vfo & RIG_CTRL_SAT) {	// Sat before MEM!
+		/* Note: The memory BUG below doesn't apply in SAT mode.  It
+		 *	seems when they got here it wasn't Monday or Friday!
+		 */
+		
+		} else if(vfo & RIG_CTRL_MEM) {
+		/* TS-2000 BUG!  You know that great BIG frequency tuning knob
+		 *	on the front of the rig?  It seems Kenwood forgot to
+		 *	include the ability to turn this knob.  "bu;", isn't 
+		 *	it; "ru;" isn't it; "ch0;" isn't it.  There is not a
+		 *	bloody command to control the knob!  The direct entry
+		 *	panel is simulated by "fa;", "fb;", "fc;" but we can't
+		 *	turn the knob.  The only real problem this creates is
+		 *	when doing temporary frequency changes in memory mode.
+		 *	Thus, we disallow it completely, even though you can
+		 *	do it on the front panel!  There is no "fa;" equivalent
+		 *	for temporary memory changes so none are allowed!
+		 *
+		 *	Sat must be checked first because it may be in mem mode
+		 *	also.
+		 */
+			retval = -RIG_ENAVAIL;	// But, should be!
+		}
+		retval = -RIG_EINTERNAL;	// Something bad is wrong.
+	}
 
 	return retval;
 }
@@ -708,25 +373,42 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 
 //      caps = rig->caps;
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
 		  ": checking rig's vfo = 0x%X, mask = 0x%X\n", vfo,
 		  RIG_VFO_TEST(vfo));
 //      if( RIG_VFO_TEST(vfo) || (vfo & ~*caps->vfo_all))       // check caps?
 	if (!RIG_VFO_TEST(vfo))
 		return -RIG_EINVAL;
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": getting rig's vfo\n");
 	getvfo = (RIG_VFO_CURR == vfo) \
-	    |(RIG_VFO_VFO == vfo) | (RIG_VFO_MEM == vfo);
+	    | (RIG_VFO_VFO == vfo) | (RIG_VFO_MEM == vfo);
 
 	if (getvfo) {
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": getting exact vfo\n");
 		retval = rig_get_vfo(rig, &vtmp);
-		if (retval != RIG_OK)
+		if (retval != RIG_OK) {
+			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+				": error getting rig's vfo\n");
 			return retval;
+		}
 		vfo = vtmp;	// change the Arg on the Stack
+		// removing previous line is a wicked bug to fix
 	}
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": vfo = %s\n", strvfo(vfo));
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": vtmp = %s\n", strvfo(vtmp));
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": setting tmp vfo\n");
+// FIXME:  The following hack removes the CTRL/PTT bits 'cause nothing's written for 'em
+	vfo = vfo & ~(RIG_VFO_CTRL | RIG_VFO_PTT);
+	vtmp = vtmp & ~(RIG_VFO_CTRL | RIG_VFO_PTT);
+
+// TODO: How do we handle scans?  Right now we abort
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		": checking scan... (vfo & RIG_CTRL_SCAN) = %0x\n",
+			vfo & RIG_CTRL_SCAN);
+	if(vfo & RIG_CTRL_SCAN)
+		return -RIG_EINVAL;	// Can't hit a moving target yet!
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": setting tmp vfo\n");
 	retval = rig_set_vfo(rig, vfo);
 	if (retval != RIG_OK)
 		return retval;
@@ -745,12 +427,14 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 		retval = ts2k_transaction(rig, "if;", 3, ack, &acklen);
 		if (retval == RIG_OK)
 			*freq = (int) int_n(tmp, &ack[2], 11);
+		else
+			return retval;
 		break;
 	}
 
 	/* restore original VFO */
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": setting orig vfo\n");
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": setting orig vfo\n");
 
 	rig_set_vfo(rig, vtmp);	// Error not detected here!
 
@@ -1173,7 +857,7 @@ int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * val)
 int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 {
 	unsigned char fctbuf[16], ackbuf[16];
-	int fct_len, ack_len = 16, reply;
+	int fct_len, ack_len = 16;
 
 	/* Optimize:
 	 *   sort the switch cases with the most frequent first
@@ -1653,7 +1337,8 @@ int ts2k_set_mem(RIG * rig, vfo_t vfo, int ch)
 /*
  * kenwood_get_mem
  * Assumes rig!=NULL
- */ int ts2k_get_mem(RIG * rig, vfo_t vfo,
+ */
+int ts2k_get_mem(RIG * rig, vfo_t vfo,
 		     int *ch)
 {
 	unsigned char membuf[50];
@@ -1875,12 +1560,15 @@ int int_n(char *tmp, char *src, const int cnt)
  *		"dc01;"	PTT on main; CTRL on sub 
  *		"dc10;"	PTT on sub; CTRL both on main
  *		"dc11;"	PTT && CTRL both on sub
+ *
+ *	status:	obsolete, use ts2k_uniq_GetCtrl()
  */
 int ts2k_get_ctrl(RIG * rig, char *dc_buf, int dc_len)	// use this when static removed.
 {
-	static int retval;
-	dc_len = 16;
-	//      rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": getting PTT/CTRL bytes\n");
+	int retval;
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": getting PTT/CTRL bytes\n");
+
 	retval = ts2k_transaction(rig, "dc;", 3, dc_buf, &dc_len);
 	if (retval != RIG_OK) {
 		rig_debug(RIG_DEBUG_VERBOSE,
@@ -1888,10 +1576,10 @@ int ts2k_get_ctrl(RIG * rig, char *dc_buf, int dc_len)	// use this when static r
 			  ": error: retval=%u, dc_buf=%s\n",
 			  retval, dc_buf); return retval;
 	}
-//      rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": returning %u PTT/CTRL bytes\n", dc_len);
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": returning %u PTT/CTRL bytes\n", dc_len);
 
-	return RIG_OK;		// use this when static variable removed and all other code changed.
-//      return dc_buf;
+	return RIG_OK;
 }
 
 /* NOTE: PTT/CTRL enable is set only if ptt != 0 (or ctrl) */
@@ -2105,9 +1793,12 @@ int ts2k_get_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t * rptr_shift)
 	case '2':
 		*rptr_shift = RIG_RPT_SHIFT_PLUS;
 		break;
-	case '3':
-		*rptr_shift = RIG_RPT_SHIFT_1750;
-		break;
+
+// TODO: FIXME: Help!  I didn't make this up, really!
+//	case '3':
+//		*rptr_shift = RIG_RPT_SHIFT_1750;	// "They're comming to take me away--ha, ha!"
+//		break;
+
 	default:
 		return -RIG_EINVAL;
 		break;
@@ -2364,22 +2055,7 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 }
 
 /*
- * ts2k_set_channel()	Here I read a channel_t and memory data.  I'm
- *	assuming this is correct.  Anyway, this is a useful function.
- *	The only quirk is that the TS-2000 saves both TX as well
- *	as RX data separately.  This function can easily be modified
- *	to write as if there were 600 memories but that would lead
- *	to confusion and the rig certainly don't operate that way.
- *	I hope to channel_t *chan changed to channel_t *chan[2].
- *	(As well as vfo_t too.)  Much thanks to Stephane for already
- *	having the most important stuff working from the start
- *	(mostly anyway).
- *
- *	From here on out I'm gonna try to use hamlib-1.1.0.pdf
- *	for the design document and hopefully I'll know which way
- *	to go when things aren't the way they should be.  We'll
- *	see how things go.
- *						--Dale kd7e
+ * ts2k_set_channel()
  */
 int ts2k_set_channel(RIG * rig, channel_t * chan)
 {
@@ -2403,12 +2079,7 @@ int ts2k_set_channel(RIG * rig, channel_t * chan)
 	char *p16;		// 8 char + 1 null byte
 	ack_len = 10;
 	/*
-	 * Write everthing in order.  We only set things that
-	 * the rig actually puts in memory.  This way, a set
-	 * followed by a get will match exactly.  Otherwise,
-	 * we'll have to fudge and won't know when we have
-	 * a valid save.  (FIXME: delete all this useless
-	 * comment stuff after the code is working. --Dale)
+	 * Write everthing in order.
 	 */
 	/* FIXME: we are required to have RX/TX match */
 	if (chan->freq != chan->tx_freq)
@@ -2570,12 +2241,17 @@ int ts2k_get_split_mode(RIG * rig,
 }
 
 /*
- *	status:	new
+ *	status:	new/broken
  */
 int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 {
 	int retval;
 	vfo_t v;
+
+// This is for testing new ts2k_uniq_SetScan() function.
+// It should do the right thing, but last two parameters are ignored.
+	return ts2k_uniq_SetScan(rig, vfo);
+
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": starting...\n");
 	if (vfo == RIG_VFO_CURR) {
 		retval = rig_get_vfo(rig, &v);
@@ -2583,7 +2259,7 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 	} else
 		v = vfo;
 	// hopefully, this'll work.  rig does nothing if already in scan!
-	retval = ts2k_scan_off(rig);
+	retval = ts2k_uniq_ScanOff(rig, vfo);
 	CHKERR(retval);
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": got VFO = %x\n", v);
 	// set proper vfo first (already done?)
@@ -2609,12 +2285,12 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 	}
 
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": VFO set!\n");
-	retval = ts2k_scan_off(rig);
+	retval = ts2k_uniq_ScanOff(rig, vfo);
 	CHKERR(retval);
 	switch (scan) {
 
 	case RIG_SCAN_STOP:
-		return ts2k_scan_off(rig);
+		return ts2k_uniq_ScanOff(rig, vfo);
 		break;
 	case RIG_SCAN_PROG:
 		if (ch < 290)
@@ -2625,7 +2301,7 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 	case RIG_SCAN_MEM:
 		/* nobreak */
 	case RIG_SCAN_VFO:
-		return ts2k_scan_on(rig, '1');	// Look Ma, I'm scanning!
+		return ts2k_uniq_ScanOn(rig, vfo);	// Look Ma, I'm scanning!
 		break;
 	case RIG_SCAN_SLCT:
 		/* nobreak */
@@ -2636,34 +2312,6 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 			  __FUNCTION__ ": scan 'defaulted'\n");
 		return -RIG_ENIMPL;	// unimplemented, but valid scan
 	}
-}
-
-int ts2k_scan_on(RIG * rig, char sc)
-{
-	char cmd[] = "sc0;", ack[10];
-	int retval, acklen;
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": turning scan on\n");
-	cmd[2] = sc;
-	retval = ts2k_transaction(rig, cmd, 4, NULL, NULL);
-	CHKERR(retval);
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": turned scan on\n");
-	// force reply when turning scan on
-	if (sc != '0') {
-		cmd[2] = ';';
-		cmd[3] = '\0';
-		retval = ts2k_transaction(rig, cmd, 3, ack, &acklen);
-		CHKERR(retval);
-		if (ack[2] != sc)
-			return -RIG_EINVAL;
-	}
-
-	return RIG_OK;
-}
-
-int ts2k_scan_off(RIG * rig)
-{
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": turning scan off\n");
-	return ts2k_scan_on(rig, '0');
 }
 
 
@@ -2750,20 +2398,80 @@ int ts2k_set_parm(RIG * rig, setting_t parm, value_t val)
 }
 
 /*
+ * ts2k_set_basic(RIG *rig, vfo_t vfo)
+ *
+ *	Check vfo and change to a simpler mode on the vfo specified.
+ *
+ *	TS-2000 Only
+ */
+int ts2k_set_basic(RIG *rig, vfo_t vfo)
+{
+	char ack[20], tmp[20];
+	int retval, acklen, tmplen, Sub, Main;
+//	vfo_t vtmp;
+
+	Sub = Main = 0;	// 0 == don't clear
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": checking SAT\n");
+
+/* SAT prevents everything else! */
+	acklen = 20;
+	retval = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
+	CHKERR(retval);
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": SAT = %s\n", ack);
+	if(ack[2] == '1' && !(vfo & RIG_CTRL_SAT)) {
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": turning SAT off\n");
+		ack[2] = '0'; ack[9] = ';'; ack[10] = '\0';
+
+		retval = ts2k_transaction(rig, ack, acklen+1, NULL, NULL);
+		CHKERR(retval);
+	}
+
+/* Now, set VFOA, VFOC, or both depending on vfo. Nothing fancy allowed. */
+	if(vfo & RIG_CTRL_SAT) {
+		Sub = Main = 1;
+	}
+	if(vfo & RIG_CTRL_MAIN) {
+		Main = 1;
+	}
+	if(vfo & RIG_CTRL_SUB) {
+		Sub = 1;
+	}
+
+	if(Main) {	// Force VFOA
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Setting VFOA\n");
+		retval = ts2k_set_ctrl(rig, 0, TS2K_CTRL_ON_MAIN);
+		acklen = 20;
+		retval = ts2k_transaction(rig, "fr0;", 3, NULL, NULL);
+		CHKERR(retval);
+		acklen = 20;
+		retval = ts2k_transaction(rig, "ft0;", 3, NULL, NULL);
+		CHKERR(retval);
+	}
+
+	if(Sub) {	// Force VFOC
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Setting VFOC\n");
+		retval = ts2k_set_ctrl(rig, 0, TS2K_CTRL_ON_SUB);
+		acklen = 20;
+		retval = ts2k_transaction(rig, "fr0;", 3, NULL, NULL);
+		CHKERR(retval);
+		acklen = 20;
+		retval = ts2k_transaction(rig, "ft0;", 3, NULL, NULL);
+		CHKERR(retval);
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Set VFOC\n");
+	}
+
+	return RIG_OK;
+}
+
+/*
  * ts2k_save_channel() (rig_save_channel() doesn't call us! don't write either)
  *
- *	Here we save any channel.  The channel is any tuned frequency
- *	and any combination of vfo's etc....  If we have a regular
- *	memory channel, it is saved/restored as-is and is given the
- *	channel number it is addressed with and bank is 0.  If it
- *	is just a tuned frequency, we issue a bank number and also a
- *	channel number and store them.  Later they may be retreived
- *	by using this bank and channel number.
 int ts2k_save_channel(RIG *rig, chan_t *ch)
 {
 	
 }
 int ts2k_restore_channel(){}
+ This part awaiting Hamlib changes
  */
 
 /* The following are "so-to-be" functions:
@@ -2779,7 +2487,593 @@ int ts2k_menu_list(){}
  * end TODO list
  */
 
+/********************************************************************************
+ *			Redesigned and/or New functions				*
+ ********************************************************************************/
+
+/*
+ * ts2k_uniq_GetCtrl()	Read rig and return the RIG_VFO_PTT and RIG_VFO_CTRL
+ *			bits in a vfo_t.
+ */
+int ts2k_uniq_GetCtrl(RIG *rig, vfo_t *vfo)
+{
+	int retval, acklen;
+	char ack[10];
+
+	acklen = 10;
+	retval = ts2k_transaction(rig, "dc;", 3, ack, &acklen);
+	CHKERR(retval);
+
+	*vfo = ((ack[2] == '0')? RIG_VFO_PTT : 0) | ((ack[3] == '0')? RIG_VFO_CTRL : 0);
+
+	return RIG_OK;
+}
+
+/*
+ * ts2k_uniq_SetCtrl()	Set rig PTT/CTRL based on vfo_t bits.
+ */
+int ts2k_uniq_SetCtrl(RIG *rig, vfo_t vfo)
+{
+	int cmdlen;
+	char cmd[10];
+
+	cmdlen = sprintf(cmd, "dc%c%c;",
+			(vfo & RIG_VFO_PTT)? '0': '1' , (vfo & RIG_VFO_CTRL)? '0': '1');
+
+//	if(cmdlen == 0)		// memory check; enable this when all is well
+//		return -RIG_EINTERNAL;
+
+	cmdlen = 10;
+	return ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+}
+
+/*
+ * ts2k_uniq_GetVfo()	Get the actual vfo_t built from reading rig
+ */
+int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
+{
+	int i, retval, acklen, txlen, rxlen;
+	char ack[60], tx[10], rx[10];
+	vfo_t cv;	// current vfo
+
+	if(rig == NULL || vfo == NULL)
+		return -RIG_EINTERNAL;	// Somebody should have caught this before now!
+
+	cv = 0;
+	/* From Past experience, things can change on us.  Now we lock the controls! */
+	ts2k_uniq_LockPanel(rig);
+
+	retval = ts2k_uniq_GetCtrl(rig, &cv);
+	CHKERR(retval);
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": CTRL: cv=%s\n", strvfo(cv));
+
+	/* For various reasons we must check SAT first. (RIG BUG) */
+	acklen = 60;
+	retval = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
+	if (retval == RIG_OK) {
+		if (ack[2] == '1') {
+			cv |= RIG_CTRL_SAT;
+			cv |= (ack[4] == '0') ? RIG_CTRL_MAIN : RIG_CTRL_SUB;	// Uplink
+			cv |= (ack[4] == '0') ? RIG_VFO_PTT : 0;
+			cv |= (ack[5] == '0') ? RIG_VFO_CTRL : 0;
+			cv |= (ack[6] == '1') ? RIG_CTRL_SPLIT : 0;
+			cv |= (ack[7] == '1') ? RIG_CTRL_REV : 0;	// Trace reverse
+			cv |= (ack[8] == '1') ? RIG_CTRL_MEM : 0;
+
+			*vfo = cv;
+			rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+					": SAT: cv=%s\n", strvfo(cv));
+						
+			ts2k_uniq_UnlockPanel(rig);	// Oops!
+
+			return RIG_OK;	// Nothing left to do.
+		}		// otherwise, continue checks...
+	} else {
+		ts2k_uniq_UnlockPanel(rig);	// Oops!
+		return retval;
+	}
+
+	/* For similar reasons, we check scan next. */
+	acklen = 60;
+	retval = ts2k_transaction(rig, "sc;", 3, ack, &acklen);
+	if (retval == RIG_OK) {
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": SCAN=%s\n", ack);
+		if (ack[2] != '0') {
+			cv |= RIG_CTRL_SCAN;
+		}		// continue checks
+	} else {
+		ts2k_uniq_UnlockPanel(rig);	// Oops!
+		return retval;
+	}
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": SCAN: cv=%s\n", strvfo(cv));
+
+	/* We can always derive RIG_CTRL_MAIN/SUB from ts2k_uniq_GetCtrl() */
+	if(cv & RIG_VFO_CTRL)
+		cv |= RIG_CTRL_MAIN;
+	else
+		cv |= RIG_CTRL_SUB;
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": MAIN/SUB: cv=%s\n", strvfo(cv));
+
+	/* Now we read TX and RX and check for split, mem, etc... */
+	txlen = 10;
+	retval = ts2k_transaction(rig, "ft;", 3, tx, &txlen);
+	CHKERR(retval);
+
+	rxlen = 10;
+	retval = ts2k_transaction(rig, "fr;", 3, rx, &rxlen);
+	CHKERR(retval);
+
+	if(rx[2] != tx[2]) {
+		/* Before, I got fooled by scan here. */
+		/* Also, the panel is now locked.  Both were a pain. */
+		if(cv & ~RIG_CTRL_SCAN)
+			cv |= RIG_CTRL_SPLIT;
+		/* TODO: We might want to set split to show mem/call scan. */
+	}
+	if(rx[2] > tx[2]) {
+		cv |= RIG_CTRL_REV;
+	}
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": SPLIT: cv=%s\n", strvfo(cv));
+
+	/* We've already set split (if on) but much remains to be done... */
+	for(i=0; i<2; i++) {
+		switch( (i == 0)? rx[2] : tx[2] ) {
+		case '0':
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_A;
+			else if(cv & RIG_CTRL_SUB) cv |= RIG_VFO_C;
+			break;
+	
+		case '1':
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_B;
+			else if(cv & RIG_CTRL_SUB) {
+				ts2k_uniq_UnlockPanel(rig);	// Oops!
+				return -RIG_EPROTO;
+			}
+			break;
+	
+		case '2':
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_MEM_A;
+			else if(cv & RIG_CTRL_SUB) cv |= RIG_VFO_MEM_C;
+			break;
+	
+		case '3':
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_CALL_A;
+			else if(cv & RIG_CTRL_SUB) cv |= RIG_VFO_CALL_C;
+			break;
+	
+		default:
+			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+				": Unknown reply from rig: \'%s\'\n", rx);
+			ts2k_uniq_UnlockPanel(rig);	// Oops!
+			return -RIG_EPROTO;
+		}
+	}
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": cv=%s\n", strvfo(cv));
+	/* Unlock the panel now.  Evil User's have been prevented! */
+	for(i=10; (retval=ts2k_uniq_UnlockPanel(rig)) != RIG_OK; i++)
+		/* empty */ ;
+	*vfo = cv;	// This is fairly important.  Things break if its forgotten.
+
+	return retval;
+}
+
+/*
+ * ts2k_uniq_LockPanel()	We just send "lk11;" an hope...
+ */
+int ts2k_uniq_LockPanel(RIG *rig)
+{
+	return ts2k_transaction(rig, "lk11;", 5, NULL, NULL);
+}
+
+/*
+ * ts2k_uniq_UnlockPanel()	We just send "lk00;" an hope...
+ */
+int ts2k_uniq_UnlockPanel(RIG *rig)
+{
+	return ts2k_transaction(rig, "lk00;", 5, NULL, NULL);
+}
+
+/*
+ * ts2k_uniq_SetVfo()	We expect the rig to be in a reasonable state.
+ *	This routine is written to be called within ts2k_uniq_SwitchVfo().
+ *
+ *	Satellite and Scan have their own routines.
+ */
+int ts2k_uniq_SetVfo(RIG *rig, vfo_t vfo)
+{
+//	char cmd[20], ack[20];
+	int retval;//, cmdlen, acklen;
+
+	/* Sub/Main already correct.  Set VFO. */
+	retval = ts2k_uniq_SetMinor(rig, vfo);
+	CHKERR(retval);
+
+	/* Currently, everything is already done.  This routine just looks good.*/
+	return ts2k_uniq_SetMajor(rig, vfo);
+}
+
+/*
+ * ts2k_uniq_SwitchVfo()	This routine doesn't really turn modes
+ *	on.  It calls ts2k_uniq_SetVfo() for that function.
+ *
+ *	to_vfo *cannot* be RIG_VFO_CURR, RIG_VFO_VFO, or similar.
+ */
+int ts2k_uniq_SwitchVfo(RIG *rig, vfo_t vfo)
+{
+#define ACKLEN 60
+	vfo_t from_vfo, to_vfo, any_vfo;
+	int retval, acklen, to, from, any; 
+	char ack[ACKLEN];
+
+	if(rig == NULL)
+		return -RIG_EINTERNAL;	// Way late for this, so it's internal.
+
+	if(vfo == RIG_VFO_CURR)
+		return RIG_OK;		// We're always there!
+
+	if(vfo == RIG_VFO_VFO)
+		vfo = RIG_VFO_A;	// Testing
+//		return -RIG_ENIMPL;	// TODO: Force simple vfo.
+
+	to_vfo = vfo;
+
+/*
+ * The following is only if the from_vfo becomes unknown.
+ * (e.g. when we turn off SAT to do simpler stuff) 
+ */
+Recheck:	// Recursion like entry point.  Be careful!
+
+	/* This forces PTT/CTRL to match, but may change someday. */
+	if(to_vfo & RIG_CTRL_MAIN)
+		to_vfo |= (RIG_VFO_CTRL | RIG_VFO_PTT);
+	else
+		to_vfo = to_vfo & ~(RIG_VFO_CTRL | RIG_VFO_PTT);
+
+	retval = ts2k_uniq_SetCtrl(rig, to_vfo);	// SAT has its own PTT/CTRL
+	CHKERR(retval);
+
+	retval = ts2k_uniq_GetVfo(rig, &from_vfo);
+	CHKERR(retval);
+
+	/* Check the most obvious first. */
+	if(to_vfo == from_vfo)
+		return RIG_OK;
+
+	any_vfo = to_vfo | from_vfo;	// Hopefully, this will simplify checks.
+
+	/* Just like ts2k_uniq_GetVfo(), we check (order is important!):
+	 *	(first) SAT , SCAN, SPLIT, MEM, VFO (last)
+	 */
+	if(any_vfo & RIG_CTRL_SAT) {
+
+		/* This more properly belongs in ts2k_uniq_SetVfo() but it's trivial. */
+		if(to_vfo & RIG_CTRL_SCAN)
+			return -RIG_ENAVAIL;	// Maybe later we'll emulate it.
+
+		from = from_vfo & RIG_CTRL_SAT;
+		to = to_vfo & RIG_CTRL_SAT;
+
+		if(to && from)	// Both in SAT?  Simple!
+			return ts2k_uniq_SetSat(rig, to_vfo);	// Bypass ts2k_uniq_SetVfo()
+
+		if(from) {	// Fairly easy.  Turn SAT off and we're there.
+			retval = ts2k_uniq_SatOff(rig);
+			CHKERR(retval);
+			/*
+			 * Rig is in VFO on both transceivers now!
+			 * We must now Recheck as we don't know what
+			 * state VFO's are in (same when turning Scan off).
+			 * The TS2K's PTT/CTRL change to previous when
+			 * SAT is turned off.
+			 */
+			goto Recheck;
+		}
+
+		if(to) {	// Must turn off MEM & SCAN on Both Main & Sub
+			if(from_vfo & RIG_CTRL_SCAN) {
+				retval = ts2k_uniq_ScanOff(rig, RIG_CTRL_MAIN);
+				CHKERR(retval);
+				retval = ts2k_uniq_ScanOff(rig, RIG_CTRL_SUB);
+				CHKERR(retval);
+			}
+			if(from_vfo & RIG_CTRL_MEM) {
+				retval = ts2k_uniq_MemOff(rig, RIG_CTRL_MAIN);
+				CHKERR(retval);
+				retval = ts2k_uniq_MemOff(rig, RIG_CTRL_SUB);
+				CHKERR(retval);
+			}
+
+			/* No Recheck required. */
+			return ts2k_uniq_SetSat(rig, to_vfo);
+		}
+	}
+
+	/* Check Scan. */
+	if(any_vfo & RIG_CTRL_SCAN) {
+
+		to = to_vfo & RIG_CTRL_SCAN;
+		from = from_vfo & RIG_CTRL_SCAN;
+
+		if(from) {	// Scan must always be off, or nothing will change.
+			from_vfo = from_vfo & ~RIG_CTRL_SCAN;
+			retval = ts2k_uniq_ScanOff(rig, from_vfo);
+			CHKERR(retval);
+			//goto Recheck;	// This shouldn't be required.  Testing!
+		}
+
+		if(to) {	// Just set VFO and start scanning!
+			retval = ts2k_uniq_SetVfo(rig, to_vfo);
+			CHKERR(retval);
+				
+			return ts2k_uniq_SetScan(rig, to_vfo);
+		}
+	}
+
+	/* VFO, CALL, & MEM are all the same to us now. */
+	return ts2k_uniq_SetVfo(rig, to_vfo);
+
+#undef ACKLEN
+}
+
+/*
+ * Do nothing.  Later things may get moved here.
+ */
+int ts2k_uniq_SetMajor(RIG *rig, vfo_t vfo)
+{
+	return RIG_OK;
+}
+
+/*
+ * Send rig codes equivalent to VFO minor.  {like old rig_set_vfo()}
+ *	Rig Major codes must be properly set.
+ *	No fake VFO's allowed (e.g. RIG_VFO_CURR)
+ */
+int ts2k_uniq_SetMinor(RIG *rig, vfo_t vfo)
+{
+	char cmd[10] = "fr0;", tx, rx;
+	int retval, cmdlen;
+	vfo_t vtmp;
+
+	vtmp = (vfo & ~(RIG_CTRL_SCAN | RIG_VFO_PTT | RIG_VFO_CTRL));
+	switch(vtmp) {
+	case RIG_VFO_A:	/* no break */
+	case RIG_VFO_C:	rx = tx = '0'; break;
+
+	case RIG_VFO_B:	rx = tx = '1'; break;
+
+	case RIG_VFO_AB:
+			rx = '0'; tx = '1'; break;
+
+	case RIG_VFO_BA:
+			rx = '1'; tx = '0'; break;
+
+	case RIG_VFO_MEM_A:	/* no break */
+	case RIG_VFO_MEM_C:
+			rx = tx = '2'; break;
+
+	case RIG_VFO_CALL_A:	/* no break */
+	case RIG_VFO_CALL_C:
+			rx = tx = '3'; break;
+
+	default:
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": Using Default (VFOA) to process VFO = %s\n", strvfo(vfo));
+		rx = tx = '0'; break;
+	}
+
+	/* RX first, and TX only if RX != TX */
+	//cmd[0] = 'f'; cmd[1] = 'r';
+	cmd[1] = 'r'; cmd[2] = rx;
+	//cmd[3] = ';'; cmd[4] = '\0';
+	cmdlen = 5;
+
+	/* Rig sets RX=TX on this command */
+	retval = ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+	CHKERR(retval);
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": Sent fr%c; command.\n", rx);
+
+	/* We're split, so now we may change TX. */
+	cmd[1] = 't'; cmd[2] = tx;
+	
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": Sending fr%c; command.\n", tx);
+	return ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+}
+
+int ts2k_uniq_MemOn(RIG *rig, vfo_t vfo)
+{
+	return ts2k_uniq_SendVfo(rig, vfo, '2');
+}
+
+int ts2k_uniq_MemOff(RIG *rig, vfo_t vfo)
+{
+	/* This is VFOA on Main or VFOC on Sub. */
+	return ts2k_uniq_SendVfo(rig, vfo, '0');
+
+	/* Note: The rig returns to its previous state.  We force VFO. */
+}
+
+int ts2k_uniq_SendVfo(RIG *rig, vfo_t vfo, char v)
+{
+	int retval, cmdlen = 4;
+	char cmd[10] = "fr0;";
+
+	switch(vfo & (RIG_CTRL_MAIN | RIG_CTRL_SUB)) {
+	case RIG_CTRL_MAIN:
+		retval = ts2k_uniq_SetCtrl(rig, (RIG_VFO_PTT | RIG_VFO_CTRL)); break;
+	case RIG_CTRL_SUB:
+		retval = ts2k_uniq_SetCtrl(rig, 0); break;
+
+	default:
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": Sending VFO command to default transceiver.\n");
+		retval = RIG_OK;	// fake it.
+		break;
+	}
+	CHKERR(retval);
+
+	cmdlen = 4;
+	retval = ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+	CHKERR(retval);
+
+	cmd[1] = 't';
+	cmdlen = 4;
+	return ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+}
+
+/* No vfo_t since we can only split Main. */
+int ts2k_uniq_SplitVfo(RIG *rig, char rx, char tx)
+{
+	int retval, cmdlen;
+	char cmd[10];
+
+	retval = ts2k_uniq_SetCtrl(rig, (RIG_VFO_PTT | RIG_VFO_CTRL));
+	CHKERR(retval);
+
+	/* Set Rx first since rig will change Tx to match. */
+	cmdlen = sprintf(cmd, "fr%c;", rx);
+	retval = ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+	CHKERR(retval);
+
+	cmd[2] = 't';
+	return ts2k_transaction(rig, cmd, cmdlen, NULL, NULL);
+}
+
+int ts2k_uniq_SatOn(RIG *rig, vfo_t vfo)
+{
+	return -RIG_ENIMPL;
+}
+
+/* No vfo_t since we SAT applies to both Main and Sub. */
+int ts2k_uniq_SatOff(RIG * rig)
+{
+	char ack[20];
+	int acklen, retval;
+
+	acklen = 10;
+
+	retval = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
+	if (retval != RIG_OK)
+		return retval;
+
+	ack[2] = '0';	// Ascii number 0
+	ack[9] = ';';	// Note: we must truncate the name or errors occur!
+	ack[10] = '\0';	// null char, just in case...
+	acklen = 10;
+	return ts2k_transaction(rig, ack, acklen, NULL, NULL);
+}
+
+/* we just turn SAT on here. It'll take some doing to run it! */
+int ts2k_uniq_SetSat(RIG * rig, vfo_t vfo)
+{
+	char cmd[20], ack[20];
+	int acklen;
+
+	acklen = 20;
+
+	if (!(vfo & RIG_CTRL_SAT))
+		return -RIG_EINTERNAL;	// All right.  Who called us!?
+
+//       cmdlen = sprintf(cmd, "sa%07u;", 0);    // Initial string to modify
+	acklen = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
+
+	// Sat mode ON
+	ack[2] = '1';		// Everything below is *nice*, this is *required*
+	ack[9] = ';';		// Everything below is *nice*, this is *required*
+
+//	goto STest;		// testing
+
+/* cmd is already full of '0's, but we set them again explicitly */
+	// SAT_VFO or SAT_MEM?
+	if (vfo & RIG_CTRL_MEM)
+		ack[8] = '1';	// sat mem ch 0-9
+	else
+		ack[8] = '0';	// sat vfo
+
+	/* Main or Sub as uplink? */
+	// Note: if both are set, Main is still uplink
+	if (vfo & RIG_CTRL_MAIN) {
+		ack[4] = '0';	// sat main=uplink
+	} else if (vfo & RIG_CTRL_SUB) {
+		ack[4] = '1';	// sat sub=uplink
+	}
+	// FIXME: Add Sat Trace here!
+
+	// Trace REV
+	if (vfo & RIG_CTRL_REV)
+		ack[7] = '1';	// sat trace REV 
+	else
+		ack[7] = '0';
+
+	// CTRL to main or sub?
+	if ((vfo & RIG_VFO_CTRL) && (vfo & RIG_CTRL_SUB))
+		ack[5] = '1';	// sat CTRL on sub
+	else
+		ack[5] = '0';	// sat CTRL on main
+
+STest:	// FIXME: To be removed when testing is complete!
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		  ": Sending\tsat = %s,\n\t vfo = %s\n", cmd, strvfo(vfo));
+	// of course, this is *required* too!
+	return ts2k_transaction(rig, ack, acklen, NULL, NULL);
+}
+
+int ts2k_uniq_SendScan(RIG * rig, vfo_t vfo, char sc)
+{
+	char cmd[] = "sc0;", ack[10];
+	int retval, acklen;
+
+	switch(vfo & (RIG_CTRL_MAIN | RIG_CTRL_SUB)) {
+	case RIG_CTRL_MAIN:
+		retval = ts2k_uniq_SetCtrl(rig, (RIG_VFO_PTT | RIG_VFO_CTRL)); break;
+	case RIG_CTRL_SUB:
+		retval = ts2k_uniq_SetCtrl(rig, 0); break;
+
+	default:
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			": Warning: Scan set on default transceiver!\n");
+		retval = RIG_OK;	// fake it here too.
+	}
+	CHKERR(retval);
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		": turning scan %s\n", (sc==0)? "off" : "on");
+
+	cmd[2] = sc;
+	retval = ts2k_transaction(rig, cmd, 4, NULL, NULL);
+	CHKERR(retval);
+
+	return RIG_OK;
+}
+
+/*
+ *	status:	we just do mem/vfo scan on/off right now...
+ */
+int ts2k_uniq_SetScan(RIG *rig, vfo_t vfo)
+{
+	if(vfo & RIG_CTRL_SCAN)
+		return ts2k_uniq_ScanOn(rig, vfo);
+	else
+		return ts2k_uniq_ScanOff(rig, vfo);
+}
+
+int ts2k_uniq_ScanOn(RIG * rig, vfo_t vfo)
+{
+	return ts2k_uniq_SendScan(rig, vfo, '1');
+}
+
+int ts2k_uniq_ScanOff(RIG * rig, vfo_t vfo)
+{
+	return ts2k_uniq_SendScan(rig, vfo, '0');
+}
+
 #undef CHKERR
 #undef STUFF
+
+
 
 // End

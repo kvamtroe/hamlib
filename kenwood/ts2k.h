@@ -2,7 +2,7 @@
  *  Hamlib TS2000 backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.3.2.1 2002-07-06 16:51:17 dedmons Exp $
+ *		$Id: ts2k.h,v 1.3.2.2 2002-07-10 20:28:01 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -126,6 +126,7 @@ int int_n(char *tmp, char *src, int cnt);
 int ts2k_scan(RIG *rig, vfo_t vfo, scan_t scan, int ch);
 int ts2k_scan_on(RIG *rig, char ch);
 int ts2k_scan_off(RIG *rig);
+int ts2k_set_basic(RIG *rig, vfo_t vfo);
 int ts2k_get_channel(RIG *rig, channel_t *chan); 
 int ts2k_set_channel(RIG *rig, channel_t *chan); 
 int ts2k_get_ctrl(RIG *rig, char *dc_buf, int dc_len);
@@ -154,6 +155,27 @@ int ts2k_get_ts(RIG *rig, vfo_t vfo, shortfreq_t *ts);
 int ts2k_set_ts(RIG *rig, vfo_t vfo, shortfreq_t ts);
 int ts2k_get_xit(RIG *rig, vfo_t vfo, shortfreq_t *freq);
 int ts2k_set_xit(RIG *rig, vfo_t vfo, shortfreq_t  freq);
+/* Redsigned Functions */
+int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo);
+int ts2k_uniq_GetCtrl(RIG *rig, vfo_t *vfo);
+int ts2k_uniq_LockPanel(RIG *rig);
+int ts2k_uniq_MemOff(RIG *rig, vfo_t);
+int ts2k_uniq_MemOn(RIG *rig, vfo_t);
+int ts2k_uniq_SatOff(RIG *rig);
+int ts2k_uniq_SatOn(RIG *rig, vfo_t);
+int ts2k_uniq_SendScan(RIG *rig, vfo_t, char sc);
+int ts2k_uniq_SendVfo(RIG *rig, vfo_t, char v);
+int ts2k_uniq_SetCtrl(RIG *rig, vfo_t vfo);
+int ts2k_uniq_SetMajor(RIG *rig, vfo_t);
+int ts2k_uniq_SetMinor(RIG *rig, vfo_t);
+int ts2k_uniq_SetSat(RIG *rig, vfo_t);
+int ts2k_uniq_SetScan(RIG *rig, vfo_t);
+int ts2k_uniq_SetVfo(RIG *rig, vfo_t);
+int ts2k_uniq_ScanOff(RIG *rig, vfo_t);
+int ts2k_uniq_ScanOn(RIG *rig, vfo_t);
+int ts2k_uniq_SplitVfo(RIG *rig, char rx, char tx);
+int ts2k_uniq_SwitchVfo(RIG *rig, vfo_t);
+int ts2k_uniq_UnlockPanel(RIG *rig);
 
 /* end kd7eni functions */
 
