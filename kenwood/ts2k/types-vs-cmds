@@ -1,0 +1,237 @@
+/*
+ * ts2k_tscmd_lib.h	(C) 2002 by Dale E. Edmons.  All rights reserved.
+ */
+
+/* License: GNU Public License */
+
+
+//	type##, cmd count
+// TYPE00, 00	(my goof, available for new type)
+	{},
+// TYPE01, 44 (45)
+	{ CMD, BIN, END },
+	s am, ca, ch, cm, ct, dq, fs,   , lt, mf, mo, nb, nt, pa, pr, ps, rt,
+	            , sb, ts, tx  (typo),   , vr, vx, xt
+	r ag, ar, su
+	a am, ca,   , cm, ct, dq, fs, ky, lt, mf, mo, nb, nt,   , pr, ps, rt,
+	  rx  (typo), sb, ts, tx,       , ul,   , vx, xt
+
+// TYPE02, 06 (6)
+	{ CMD, FREQ, END },
+	s fa, fb, fc
+	r
+	a fa, fb, fc
+
+// TYPE03, (2)
+	{ CMD, HZ, END },
+	s rd, ru
+	r 
+	a 
+
+// TYPE04, 34 (33)
+	{ CMD, INT1, END },
+	s ai, an, bc, fr, ft, lm, md, os, pb, pi, pm,   , rm,   , sc, sr,
+	  ss, to
+	r sm, sq
+	a ai, an, bc, fr, ft, lm, md, os, pb,   , pm, rd,   , ru, sc,   ,
+	  ss, to
+
+// TYPE05, 15 (15)
+	{ CMD, INT2, END },
+	s cn, dn, ra, rl, sh, sl, st, td, tn, up
+	r 
+	a cn,   ,   , rl, sh, sl, st,   , tn,
+
+
+// TYPE06, 26 (27)
+	{ CMD, INT3, END },
+	s al, bp, cg, gt,   , ks, mc, mg, ml, nl, nr, pc, qc, rg, vg
+	r 
+	a al, bp, cg, gt, id, ks, mc, mg, ml, nl, nr, pc, qc, rg, vg
+
+
+// TYPE07, 02 (06)
+	{ CMD, INT4, END },
+	s fw, sd, vd
+	r 
+	a fw, sd, vd
+
+
+// TYPE08, 88 (90)
+	{ CMD, NONE, END },
+	s bd, bu, ci, qi, rc, ru (Alternate), rx, sv, up (Alternate)
+	r ac, ai, al, am, an, bc, bp, by, ca, cg, cm, cn, ct, dc, dq, fa, fb,
+	  fc, fd, fr, fs, ft, fw, gt, id, if, is, ks, ky, lk, lm, lt, mc, md,
+	  mf, mg, ml, mu, nb, nl, nr, nt, of, oi, os, pa, pb, pc, pl, pm, pr,
+	  ps, qc, qr, ra, rd, rg, rl, rm, rt, ru, sa, sb, sc, sd, sh, sl, ss,
+	  st, tc, ti, tn, to, ts, ty, vd, vg, vx, xt, dn(Alt format)
+	a
+
+// TYPE09, 04 (04)
+	{ CMD, BIN, BIN, END },
+	s   , dc,
+	r 
+	a by, dc, pa
+
+// TYPE10, (2)
+	{ CMD, SPC, BIN, END },
+	s tc
+	r 
+	a tc
+
+// TYPE11, 02 (4)
+	{ CMD, BIN, INT1, END },
+	s qr, sq
+	r 
+	a qr, sq
+
+// TYPE12, 02 (2)
+	{ CMD, INT1, INT1, END },
+	s lk
+	r 
+	a lk
+
+// TYPE13, (1)
+	{ CMD, INT2, INT1, END },
+	s 
+	r 
+	a ty
+
+// TYPE14, 01 (1)
+	{ CMD, INT1, INT2, END },
+	s 
+	r as
+	a 
+
+// TYPE15, 01 (1)
+	{ CMD, INT2, INT2, END },
+	s 
+	r 
+	a ra
+
+// TYPE16, 03 (3)
+	{ CMD, BIN, INT3, END },
+	s ag
+	r   , mr
+	a ag
+
+// TYPE17, 02 (2)
+	{ CMD, INT3, INT3, END },
+	s pl
+	r 
+	a pl
+
+// TYPE18, 01 (2)
+	{ CMD, INT1, INT4, END },
+	s 
+	r 
+	a rm, sm
+
+// TYPE19, (1)
+	{ CMD, INT1, TXT8, END },
+	s si
+	r 
+	a 
+
+// TYPE20, 02 (3)
+	{ CMD, BIN, BIN, BIN, END },
+	s ar,
+	r 
+	a ar, ti
+
+// TYPE21, 01 (1)
+	{ CMD, LEN, 8, SPCL, END },
+	s 
+	r 
+	a fd
+
+// TYPE22, 02 (2)
+	{ CMD, LEN, 9, INT, END },
+	s of
+	r 
+	a of
+
+// TYPE23, 02 (2)
+	{ CMD, BIN, BIN, INT1, END },
+	s ac
+	r 
+	a ac
+
+// TYPE24, 01 (1)
+	{ CMD, INT3, INT2, INT1, INT1, END },
+	s 
+	r ex
+	a 
+
+// TYPE25, 02 (2)
+	{ CMD, INT1, INT2, FREQ, INT1, END },
+	s as
+	r 
+	a as
+
+// TYPE26, 02 (2)
+	{ CMD, SPC, INT4, END },
+	s is
+	r 
+	a is
+
+// TYPE27, 02 (2)
+	{ CMD, LEN, 10, SPCL, END },
+	s mu
+	r 
+	a mu
+
+// TYPE27b, (2)
+	{ CMD, BIN, LEN, 10, SPCL, END },
+	s su
+	r 
+	a su
+
+// TYPE28, 01 (1)
+	{ CMD, BIN, LEN, 24, TXT, END },
+	s ky
+	r 
+	a 
+
+// TYPE29, (1)
+	{ CMD, BIN, INT1, BIN, BIN, BIN, BIN, BIN, END },
+	s sa
+	r 
+	a 
+
+// TYPE30, 02 (2)
+	{ CMD, INT3, INT2, INT1, INT1, LEN, 16, TXT, END },
+	s ex
+	r 
+	a ex
+
+// TYPE31, (1)
+	{ CMD, BIN, INT1, BIN, BIN, BIN, BIN, BIN, TXT8, END },
+	s 
+	r 
+	a sa
+
+// TYPE32, 01 (1)
+	{ CMD, FREQ, LEN, 12, TXT, LEN, 20, TXT, LEN, 5, TXT, END },
+	s 
+	r 
+	a pk
+
+// TYPE33, 02 (2)
+	{ CMD, FREQ, INT4, LEN, 6, INT, BIN, BIN, INT3, BIN, INT1, INT1, INT1, INT1, INT1, INT2, INT1, END },
+	s 
+	r 
+	a if, oi
+
+// TYPE34, 01 (2)
+	{ CMD, BIN, INT3, FREQ, INT1, BIN, INT1, INT2, INT2, INT3, BIN, INT1, LEN, 9, INT, INT2, INT1, TXT8, END },
+	s mw
+	r 
+	a mr
+
+// TYPE end
+	{}
+};
+
+#endif
+// End ts2k_types_lib.h
