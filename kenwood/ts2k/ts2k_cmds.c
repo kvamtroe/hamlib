@@ -794,55 +794,53 @@ int ts2k_g_type33(RIG *rig, ts2k_type33_t *p, char *cmd)
  */
 int ts2k_s_type34(RIG *rig, ts2k_type34_t *p, char *cmd)
 {
-	TS2K_A_DATA(TS2K_MW_SIZE);
+	// This test string has been verified to work!
+	char tstcmd[] = "mw009000145440000402292900002059950000005Dale;";
+//	char buf[20];
+	char buf[100];	// debugging
 
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
-		":\tchan # = %i\n", p->p2p3);
+#define SEND(_A_ , _B_, _M_)	anslen = sprintf(ans, _A_, ( _B_ > _M_)? _M_ : _B_); \
+			ret = ts2k_transaction(rig, ans, anslen, NULL, NULL); \
+			if(ret != RIG_OK) { \
+				ts2k_transaction(rig, ";", 1, NULL, NULL); \
+				return ret; \
+			}
 
-	anslen = sprintf(ans,
-		"%s"	// command
-		"%01u"	// p1
-		"%03u"	// p2p3	combined!
-		"%011llu"	// p4
-		"%01u"	// p5
-		"%01u"	// p6
-		"%01u"	// p7
-		"%02u"	// p8
-		"%02u"	// p9
-		"%03u"	// p10
-		"%01u"	// p11
-		"%01u"	// p12
-		"%09u"	// p13
-		"%02u"	// p14
-		"%01u"	// p15
-		"%-8s;",	// p16
-		cmd,
-		(p->p1 > 9)? 0:	p->p1,		// p1
-		(p->p2p3 > 999)? 000:	p->p2p3,	// p2p3
-		 p->p4,				// p4
-		(p->p5 > 9)? 0:		p->p5,	// p5
-		(p->p6 > 9)? 0:		p->p6,	// p6
-		(p->p7 > 9)? 0:		p->p7,	// p7
-		(p->p8 > 99)? 00:	p->p8,	// p8
-		(p->p9 > 9)? 0:		p->p9,	// p9
-		(p->p10 > 999)? 000:	p->p10,	// p10
-		(p->p11 > 9)? 0:	p->p11,	// p11
-		(p->p12 > 9)? 0:	p->p12,	// p12
-		(p->p13 > 999999999)? 000000000: p->p13,	// p13
-		(p->p14 > 9)? 0:	p->p14,	// p14
-		(p->p15 > 9)? 0:	p->p15,	// p15
-		//""	// debug
-		&p->p16[0]				// p16
-	);
+//	TS2K_A_DATA(TS2K_MW_SIZE);
+	TS2K_A_DATA(TS2K_MW_SIZE * 2);	// big buffer for debugging
 
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
-		":\tsending ans = %s, size = %i\n", ans, anslen);
+//	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+//		":\tchan # = %i\n", p->p2p3);
 
-	//anslen++;
-	ret = TS2K_SEND;
+// debug for above test string:	anslen = sprintf(ans, &tstcmd[0]);
 
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
-		":\tretmesssage = %s\n", rigerror(ret));
+// The following is ugly (lots of code and calls).
+// I'll do something better soon.  But, it Works!
+	ts2k_transaction(rig, cmd, 2, NULL, NULL);
+
+	SEND("%01u", p->p1,  9);	// P1	Rx/Tx
+	SEND("%03u", p->p2p3, 300);	// P2,P3, channel #
+	SEND("%011llu", p->p4, 99999999999);	// P4, freq
+	SEND("%01u", p->p5,  9);	// P5,
+	SEND("%01u", p->p6,  9);	// P6,
+	SEND("%01u", p->p7,  9);	// P7,
+	SEND("%02u", p->p8,  99);	// P8, tone
+	SEND("%02u", p->p9,  99);	// P9, ctcss
+	SEND("%03u", p->p10, 999);	// P10, dcs
+	SEND("%01u", p->p11, 9);	// P11, 
+	SEND("%01u", p->p12, 9);	// P12, 
+	SEND("%09u", p->p13, 999999999);// P13, offset freq
+	SEND("%02u", p->p14, 99);	// P14, 
+	SEND("%01u", p->p15, 9);	// P15, group
+
+#undef SEND
+
+	ts2k_transaction(rig, p->p16, 8, NULL, NULL);
+	ts2k_transaction(rig, ";", 1, NULL, NULL);
+
+/* Do NOT uncomment the following without rewriting the above! */
+//	anslen++;
+//	ret = TS2K_SEND;
 
 	return ret;
 }

@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.5 2003-03-01 22:06:25 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.6 2003-03-02 21:50:14 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -1426,49 +1426,7 @@ int ts2k_set_tone(RIG * rig, vfo_t vfo, tone_t tone)
 
 	TESTVFO(skip);
 
-	hi_idx = (sizeof(ts2k_ctcss_list) / sizeof(int)) - 1;
-	low_idx = i = 0;
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		"\t: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-	while( ts2k_ctcss_list[hi_idx] == 0 )
-		hi_idx--;	// one or two zeros at end
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		"\t:B: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-
-	i = hi_idx;
-	// do a "fast" search through 38 variable. Hi!
-	while(low_idx < hi_idx) {
-		i = low_idx + (hi_idx - low_idx)/2;	// mid index
-		if(ts2k_ctcss_list[i] < tone)
-			low_idx = i;
-		else if(ts2k_ctcss_list[i] > tone)
-			hi_idx = i+1;	// +1 is a kludge
-		else {			// exact match!
-			low_idx = hi_idx = ++i;	// ++ is a kludge
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-			"\t:exact: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-			break;
-		}
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-			"\t:M: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-	}
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		"\t:E: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-	
-	if(low_idx < hi_idx) {
-		// midpoint between hi/low
-		t = ts2k_ctcss_list[low_idx] +
-			(ts2k_ctcss_list[hi_idx] - ts2k_ctcss_list[low_idx])/2;
-		if(tone < t)
-			i = low_idx;
-		else
-			i = hi_idx;
-	}
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		"\t: Done: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
-	param.p1 = i;	// only the index is sent to rig
+	param.p1 = ts2k_uniq_tone2idx(tone);	// only the index is sent to rig
 	retval = ts2k_s_tn(rig, &param);
 
 	RESETVFO(skip);
@@ -1484,42 +1442,11 @@ int ts2k_set_tone(RIG * rig, vfo_t vfo, tone_t tone)
 int ts2k_set_ctcss(RIG * rig, vfo_t vfo, tone_t tone)
 {
 	STDPARAM;
-	int i, low_idx, hi_idx, t;
 	TS2K_CN_T param;
 
 	TESTVFO(skip);
 
-	hi_idx = (sizeof(ts2k_ctcss_list) / sizeof(int)) - 1;
-	low_idx = i = 0;
-
-	while( ts2k_ctcss_list[hi_idx] == 0 )
-		hi_idx--;	// one or two zeros at end
-
-	i = hi_idx;
-	// do a "fast" search through 38 variable. Hi!
-	while(low_idx < hi_idx) {
-		i = low_idx + (hi_idx - low_idx)/2;	// mid index
-		if(ts2k_ctcss_list[i] < tone)
-			low_idx = i;
-		else if(ts2k_ctcss_list[i] > tone)
-			hi_idx = i+1;
-		else {			// exact match!
-			low_idx = hi_idx = i;
-			break;
-		}
-	}
-
-	if(low_idx < hi_idx) {
-		// midpoint between hi/low
-		t = ts2k_ctcss_list[low_idx] +
-			(ts2k_ctcss_list[hi_idx] - ts2k_ctcss_list[low_idx])/2;
-		if(tone < t)
-			i = low_idx;
-		else
-			i = hi_idx;
-	}
-
-	param.p1 = i;	// only the index is sent to rig
+	param.p1 = ts2k_uniq_tone2idx(tone);	// only the index is sent to rig
 	retval = ts2k_s_cn(rig, &param);
 
 	RESETVFO(skip);
@@ -1540,37 +1467,7 @@ int ts2k_set_dcs(RIG * rig, vfo_t vfo, tone_t tone)
 
 	TESTVFO(skip);
 
-	hi_idx = (sizeof(ts2k_dcs_list) / sizeof(int)) - 1;
-	low_idx = i = 0;
-
-	while( ts2k_dcs_list[hi_idx] == 0 )
-		hi_idx--;	// one or two zeros at end
-
-	i = hi_idx;
-	// do a "fast" search through 38 variable. Hi!
-	while(low_idx < hi_idx) {
-		i = low_idx + (hi_idx - low_idx)/2;	// mid index
-		if(ts2k_dcs_list[i] < tone)
-			low_idx = i;
-		else if(ts2k_dcs_list[i] > tone)
-			hi_idx = i+1;
-		else {			// exact match!
-			low_idx = hi_idx = i;
-			break;
-		}
-	}
-
-	if(low_idx < hi_idx) {
-		// midpoint between hi/low
-		t = ts2k_dcs_list[low_idx] +
-			(ts2k_dcs_list[hi_idx] - ts2k_dcs_list[low_idx]) / 2;
-		if(tone < t)
-			i = low_idx;
-		else
-			i = hi_idx;
-	}
-
-	param.p1 = i;	// only the index is sent to rig
+	param.p1 = ts2k_uniq_dcs2idx(tone);	// only the index is sent to rig
 	retval = ts2k_s_qc(rig, &param);
 
 	RESETVFO(skip);
@@ -1878,11 +1775,11 @@ int ts2k_get_split_mode(RIG * rig,
 	vfo_t vfo, rmode_t * txmode, pbwidth_t * txwidth)
 {
 	STDPARAM;
-	union {
+/*	union {
 		TS2K_MR_T mr;
 		TS2K_MD_T md;
 	} param;
-
+*/
 	TESTVFO2(skip);
 
 	switch(vfo) {
@@ -2600,7 +2497,7 @@ int ts2k_uniq_SetMem(RIG *rig, channel_t *chan)
 {
 	TS2K_MW_T	param[2];
 	channel_t	*next, *p[2];
-	int		mem[2], i, t, j, retval, am_fm;
+	int		mem[2], i, t, j, k, retval, am_fm;
 
 	rig_debug(RIG_DEBUG_VERBOSE,__FUNCTION__": chan = %i\n", chan->channel_num);
 
@@ -2643,6 +2540,7 @@ int ts2k_uniq_SetMem(RIG *rig, channel_t *chan)
 		param[i].p1 = i;	// Select Rx/Tx (Rx *always* first!)
 		param[i].p2p3 = chan->channel_num;
 		param[i].p4 = p[i]->freq;
+		param[i].p5 = RIG_MODE_FM;	// kludge
 		//ts2k_mode_list[param[i].p5] = p[i]->mode;	// FIXME:
 		//	am_fm = (p[i]->mode == RIG_MODE_AM);
 		//	am_fm |= (p[i]->mode == RIG_MODE_FM);
@@ -2651,30 +2549,37 @@ int ts2k_uniq_SetMem(RIG *rig, channel_t *chan)
 		param[i].p6 = (p[i]->flags & RIG_CHFLAG_SKIP)? 1: 0;
 
 		// FIXME:
-		//param[i].p7 = p[i]->tone_sql = (param[i].p7 == 1)? 1: 0;
-		//param[i].p7 = p[i]->ctcss_sql = (param[i].p7 == 2)? 1: 0;
-		//param[i].p7 = p[i]->dcs_sql = (param[i].p7 == 3)? 1: 0;
-		//param[i].p8 = p[i]->tone = ts2k_ctcss_list[ param[i].p8 - 1 ];
-		//param[i].p9 = p[i]->ctcss = ts2k_ctcss_list[ param[i].p9 - 1];
-		//param[i].p10 = p[i]->dcs = ts2k_dcs_list[ param[i].p10 - 1 ];
+		param[i].p7 = (p[i]->tone_sql == 1)? 1: \
+					(p[i]->ctcss_sql == 1)? 2: \
+						(p[i]->dcs_sql == 1)? 3: 0;
+		param[i].p8 = ts2k_uniq_tone2idx(p[i]->tone);
+		param[i].p9 = ts2k_uniq_tone2idx(p[i]->ctcss);
+		param[i].p10 = ts2k_uniq_dcs2idx(p[i]->dcs);
 
 		param[i].p11 = ((p[i]->vfo & RIG_CTRL_REV) && !p[i]->split)?
 					1: 0;	// use VFO for now
 		// FIXME:
 		//param[i].p12 = p[i]->rptr_shift = ts2k_shift_list[ param[i].p12 ];
+		param[i].p12 = 0;	// kludge
 		param[i].p13 = p[i]->rptr_offs;
 		// FIXME
 		//param[i].p14 = p[i]->tuning_step = ts2k_steps[j][param[i].p14 - 1];
+		param[i].p14 = 0;	// kludge
 		param[i].p15 = p[i]->scan_group;
-		j = (MAXCHANDESC > 8)? 8: MAXCHANDESC;
+		j = (MAXCHANDESC > 8)? 8: MAXCHANDESC-1;
 		strncpy(&param[i].p16[0], &p[i]->channel_desc[0], j);
+		for(k=0; k<=j; k++) {
+			if( !isprint( param[i].p16[k])) {
+				break;
+			}
+		}
+		param[i].p16[k] = 0;	// Terminate the bugger!
 
 		rig_debug(RIG_DEBUG_VERBOSE,__FUNCTION__
 			": writing p[%i]\n", i);
 
 		retval = ts2k_s_mw(rig, &param[i]);
 		CHKERR(retval);
-
 	}
 
 	// continue down the list...
@@ -2722,12 +2627,101 @@ int ts2k_uniq_PrintChan(RIG *rig, channel_t *chan)
 	MSG(scan_group);
 	MSG(flags);
 	MSG(ext_levels);
+	rig_debug(RIG_DEBUG_ERR, "channel_desc = %s\n", &chan->channel_desc[0]);
 
 #undef MSG
 
 	rig_debug(RIG_DEBUG_ERR, "\n");
 
 	return RIG_OK;
+}
+
+/*
+ * return a index given a dcs code
+ *
+ *	status:	unknown
+ */ 
+int ts2k_uniq_dcs2idx(tone_t dcs)
+{
+	int i, cnt;
+
+	cnt = sizeof(ts2k_dcs_list) / sizeof(tone_t) - 1;
+
+	// FIXME:
+	// Currently, I just grab the quickest available...
+	for(i=0; i<cnt; i++) {
+		if(dcs > ts2k_dcs_list[i]) {
+			return i-1;
+		} else if(dcs == ts2k_dcs_list[i]) {
+			return i;
+		}
+	}
+
+	return i;
+}
+
+/*
+ * return a index given a tone/ctcss
+ *
+ *	status: originally from ts2k_set_tone()
+ */ 
+int ts2k_uniq_tone2idx(int tone)
+{
+//	STDPARAM;
+	int i, low_idx, hi_idx, t;
+
+	hi_idx = (sizeof(ts2k_ctcss_list) / sizeof(int)) - 1;
+	low_idx = i = 0;
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		"\t: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+
+	while( ts2k_ctcss_list[hi_idx] == 0 )
+		hi_idx--;	// one or two zeros at end
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		"\t:B: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+
+	// Here I kludge in a preference for 103.5 (13)
+	i = hi_idx/3;
+
+	// do a "fast" search through 38 variable. Hi!
+	while( (hi_idx - low_idx) > 1 ) {
+		if(ts2k_ctcss_list[i] > tone)
+			hi_idx = i;
+		else if(ts2k_ctcss_list[i] < tone) {
+			low_idx = i;
+		}
+		if(ts2k_ctcss_list[i] == tone) {
+			rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+				"\t:exact: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+			return i+1;
+		}
+		i = low_idx + (hi_idx - low_idx) / 2;	// mid index
+
+		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+			"\t:M: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+	}
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		"\t:E: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+
+	if(ts2k_ctcss_list[hi_idx] == tone)
+		return hi_idx+1;
+	
+	if(low_idx < hi_idx) {
+		// midpoint between hi/low
+		t = ts2k_ctcss_list[low_idx] +
+			(ts2k_ctcss_list[hi_idx] - ts2k_ctcss_list[low_idx])/2;
+		if(tone < t)
+			i = low_idx;
+		else
+			i = hi_idx;
+	}
+
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
+		"\t: Done: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
+
+	return i+1;	// only the index is returned
 }
 
 /****************************************

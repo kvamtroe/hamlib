@@ -27,6 +27,39 @@ int testrptrshift(RIG *, vfo_t, rptr_shift_t);
 int testrptroffs(RIG *, vfo_t, shortfreq_t);
 int testchan(RIG *, vfo_t vfo, channel_t *);
 
+// Test channel with known data.
+channel_t ctest = {
+	next:		NULL,
+	channel_num:	90,
+	bank_num:	0,
+	vfo:		RIG_VFO_MEM,
+	freq:		147520000,
+	mode:		RIG_MODE_FM,
+	tx_vfo:		0,	// obsolete
+	tx_freq:	0,	// obsolete
+	tx_mode:	0,	// obsolete
+	tx_width:	0,	// obsolete
+	split:		0,
+	rptr_shift:	RIG_RPT_SHIFT_PLUS,
+	rptr_offs:	800000,
+	tuning_step:	5000,
+	rit:		0,
+	xit:		0,
+	funcs:		0,
+	//levels[0]:	0,
+	tone:		1234,
+	tone_sql:	TS2K_SQL_TONE,
+	ctcss:		5678,
+	ctcss_sql:	TS2K_SQL_OFF,
+	dcs:		246,
+	dcs_sql:	TS2K_SQL_OFF,
+	scan:		RIG_SCAN_NONE,
+	scan_group:	5,
+	flags:		RIG_CHFLAG_SKIP,
+	ext_levels:	0,
+	channel_desc:	"HLTest"
+};
+
 int main(int argc, char *argv[])
 {
 	RIG *my_rig;		/* handle to rig (nstance) */
@@ -238,6 +271,10 @@ int main(int argc, char *argv[])
 	testrptroffs(my_rig, RIG_VFO_A, MHz(59));
 
 	LOG("\n/************* Channel Read/Write Test ***************/\n\n");
+
+	// Force VFO mode on both transceivers.
+	testvfo(my_rig, RIG_VFO_C);	// Rig Bug?
+	testvfo(my_rig, RIG_VFO_A);
 
 	chantest.channel_num = 90;	// My test channel
 	vfo = RIG_VFO_MEM;		// Direct access.
@@ -501,52 +538,19 @@ int testrptroffs(RIG * rig, vfo_t vfo, shortfreq_t offset)
 
 int testchan(RIG * rig, vfo_t vfo, channel_t *chan)
 {
-	int sretval, gretval, chan_err;
+	int sretval, gretval, chan_err, i;
 	channel_t ctmp;
 
-	fflush(stdout);	// maybe this'll work instead...
+	fflush(stdout);	// maybe this'll work instead...  Yep!
 	fprintf(stderr, "/****** " __FUNCTION__ " ******/\n");
 
 	ctmp.vfo = chan->vfo = vfo;
 	ctmp.channel_num = chan->channel_num;
+	ctest.channel_num = chan->channel_num;
 
-	gretval = rig_get_channel(rig, chan);
-
-#define COPYCHAN(_a)	ctmp._a = chan->_a;
-
-	ctmp.next = NULL;	// debug
-//	COPYCHAN(next);
-	COPYCHAN(channel_num);
-	COPYCHAN(bank_num);
-	COPYCHAN(vfo);
-	COPYCHAN(freq);
-	COPYCHAN(mode);
-	COPYCHAN(tx_vfo);	// obsolete
-	COPYCHAN(tx_freq);
-	COPYCHAN(tx_mode);
-	COPYCHAN(tx_width);
-	COPYCHAN(split);
-	COPYCHAN(rptr_shift);
-	COPYCHAN(rptr_offs);
-	COPYCHAN(tuning_step);	// Value wrong on GetMem
-	COPYCHAN(rit);		// ENAVAIL
-	COPYCHAN(xit);		// ENAVAIL
-	COPYCHAN(funcs);
-	COPYCHAN(levels[0]);	// ENAVAIL
-	COPYCHAN(tone);
-	COPYCHAN(tone_sql);	// ENIMPL
-	COPYCHAN(ctcss);
-	COPYCHAN(ctcss_sql);	// ENIMPL
-	COPYCHAN(dcs);
-	COPYCHAN(dcs_sql);	// ENIMPL
-	COPYCHAN(scan);		// ENAVAIL
-	COPYCHAN(scan_group);
-	COPYCHAN(flags);
-	COPYCHAN(ext_levels);	// ENIMPL
-
-#undef COPYCHAN
-
-	sretval = rig_set_channel(rig, &ctmp);
+	// Write the test data above to channel
+	sretval = rig_set_channel(rig, &ctest);
+	gretval = rig_get_channel(rig, &ctmp);
 
 	vfo = vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
 
@@ -557,35 +561,35 @@ int testchan(RIG * rig, vfo_t vfo, channel_t *chan)
 		fprintf(stderr, __FUNCTION__
 			": rig_set_channel() failed: %s\n", rigerror(sretval));
 
-	fprintf(stdout, "received\tmem = %i\n", (int)ctmp.channel_num);
-	fprintf(stdout, "sent\t\tmem = %i\n", (int)chan->channel_num);
+	fprintf(stdout, "sent\t\tctest.freq = %lli\n", ctest.freq);
+	fprintf(stdout, "received\tctmp.freq = %lli\n", ctmp.freq);
 
 	chan_err = 0;
 
-#define TESTCHAN(_a)	chan_err |= chan->_a == ctmp._a
-	TESTCHAN(next);
+#define TESTCHAN(_a)	chan_err |= (ctest._a == ctmp._a)
+//	TESTCHAN(next);
 	TESTCHAN(channel_num);
 	TESTCHAN(bank_num);
 	TESTCHAN(vfo);
 	TESTCHAN(freq);
-	TESTCHAN(mode);
+//	TESTCHAN(mode);
 //	TESTCHAN(tx_vfo);	// obsolete
 //	TESTCHAN(tx_freq);
 //	TESTCHAN(tx_mode);
 //	TESTCHAN(tx_width);
 	TESTCHAN(split);
-	TESTCHAN(rptr_shift);
+//	TESTCHAN(rptr_shift);
 	TESTCHAN(rptr_offs);
-	TESTCHAN(tuning_step);	// Value wrong on GetMem
+//	TESTCHAN(tuning_step);	// Value wrong on GetMem
 //	TESTCHAN(rit);		// ENAVAIL
 //	TESTCHAN(xit);		// ENAVAIL
-	TESTCHAN(funcs);
+//	TESTCHAN(funcs);
 	//TESTCHAN(levels[0]);	// ENAVAIL
-	TESTCHAN(tone);
+//	TESTCHAN(tone);
 //	TESTCHAN(tone_sql);	// ENIMPL
-	TESTCHAN(ctcss);
+//	TESTCHAN(ctcss);
 //	TESTCHAN(ctcss_sql);	// ENIMPL
-	TESTCHAN(dcs);
+//	TESTCHAN(dcs);
 //	TESTCHAN(dcs_sql);	// ENIMPL
 //	TESTCHAN(scan);		// ENAVAIL
 	TESTCHAN(scan_group);
@@ -593,11 +597,12 @@ int testchan(RIG * rig, vfo_t vfo, channel_t *chan)
 //	TESTCHAN(ext_levels);	// ENIMPL
 #undef TESTCHAN
 
+	/* currently, only a few minimal checks performed! */
 	if (chan_err) {
 		errcnt++;
 		fprintf(stderr, "Channel Mismatch!\n");
 		fprintf(stderr, "\n\n/**** Received the Following Channel ****/\n");
-		ts2k_uniq_PrintChan(rig, chan);
+		ts2k_uniq_PrintChan(rig, &ctest);
 		fprintf(stderr, "\n\n/****** Sent the Following Channel ******/\n");
 		ts2k_uniq_PrintChan(rig, &ctmp);
 		fprintf(stderr, "\n/*************** Done *******************/\n");

@@ -2,7 +2,7 @@
  *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.1.2.4 2003-03-01 22:06:27 dedmons Exp $
+ *		$Id: ts2k.h,v 1.1.2.5 2003-03-02 21:50:14 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -231,13 +231,15 @@ int ts2k_set_ts(RIG *, vfo_t, shortfreq_t);
 int ts2k_get_xit(RIG *, vfo_t, shortfreq_t *);
 int ts2k_set_xit(RIG *, vfo_t, shortfreq_t);
 /* Uniq Functions */
+int ts2k_uniq_dcs2idx(tone_t);
 int ts2k_uniq_GetMem(RIG *, channel_t *);
+int ts2k_uniq_GetSimpleVfo(RIG *, vfo_t *);
+int ts2k_uniq_GetTransceiver(RIG *, vfo_t *);
 int ts2k_uniq_PrintChan(RIG *, channel_t *);
 int ts2k_uniq_SetMem(RIG *, channel_t *);
-int ts2k_uniq_SetSimpleVfo(RIG *, vfo_t);
-int ts2k_uniq_GetSimpleVfo(RIG *, vfo_t *);
 int ts2k_uniq_SetTransceiver(RIG *, vfo_t);
-int ts2k_uniq_GetTransceiver(RIG *, vfo_t *);
+int ts2k_uniq_SetSimpleVfo(RIG *, vfo_t);
+int ts2k_uniq_tone2idx(int);
 /* Emulation Routines */
 int ts2k_emul_SetCallFreq(RIG *, vfo_t, freq_t);
 /* end kd7eni functions */
@@ -376,6 +378,13 @@ static const struct ts2k_id_string ts2k_id_string_list[] = {
 	{RIG_MODEL_NONE, NULL},	/* end marker */
 };
 
+enum ts2k_sql {
+	TS2K_SQL_OFF = 0,
+	TS2K_SQL_TONE,
+	TS2K_SQL_CTCSS,
+	TS2K_SQL_DCS,
+	TS2K_SQL_ON	// any other non-zero rig value
+};
 
 /*
  * 38 CTCSS sub-audible tones  (17500 invalid for ctcss --kd7eni)
