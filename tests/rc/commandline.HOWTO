@@ -1,0 +1,364 @@
+
+			Hamlib Command Line
+
+	Copyright 2003 by Dale E. Edmons.  All Rights Reserved.
+
+	This document may be freely used for personal purposes.
+	For any other uses, please contact the author.
+
+Intro:
+	This command line interface is being written primarily for
+	my rig: Kenwood TS-2000.  It is currently written exclusively
+	for a modified version of Hamlib.  It has a CVS branch
+	tag called branch_ts2k.  Other rigs should work but will
+	require modification to reap the full benefits of this tool.
+	It is currently undetermined if this branch will get merged
+	back into the Main CVS branch.
+
+	The original intent of this commandline interface was for
+	providing a startup script interface to hamlib.  It currently
+	lives in tests/ and tests/rc rather than src/, src/rc.
+
+	I have found that this tool, as it develops is becoming
+	more and more a *required* part of hamlib for me.  Using
+	rigctl just doesn't test things quickly, thoroughly, or
+	easily enough to warrant its continued use.
+
+	This interface needs to be integrated into Hamlib so that
+	script files may open rigs, setup initial VFO, and pointers
+	be passed to the appropriate caller.  My ts2k routines take
+	advantage of the open/close routines.  Thus, a method of
+	leaving the rig open to both the startup and user will
+	be required.  (Any ideas Stephane?) :)
+
+History:
+	Being a c/c++ programmer and linux user I am developing the
+	syntax along the lines of .Xdefaults and C++.  There is no
+	design document or intensive study of syntax.  If I want it
+	and can code it, it goes into the parser.
+
+	Anybody who wishes to do development or otherwise study the
+	parser the program base may be built in tests/rc.  This is
+	the actual skeleton parser with debugging enabled.  Syntax
+	structure is more obvious and changes may be quickly tested
+	before placing them in the parser.y file.  Any question about
+	actual syntax may be resolved only in base.y as parser.y is
+	developed strictly according to what is in base.y.  After
+	testing in base.y, parser.y may be updated.
+
+Basics:
+	Using the open/close routines for examples anybody familiar
+	with hamlib knows a rig structure is defined for each open
+	rig.  Thus, to open a rig this structure must be defined
+	and initialized.  Also, we need to know the model of the
+	rig and the port.  The following shows two methods of opening
+	two rigs simultaneously:
+
+		// open the dummy (test) rig.  (this is a comment)
+		port[1] = "/dev/null";
+		model[1] = dummy;
+		rig[1].open(model[1], port[1]);
+
+		// open the infamous ts2000 (I call it ts2k 'cause I'm lazy.)
+	 	rig.open(ts2k, "/dev/ttyS1");
+
+	The labels port, model, and rig are all arrays (currently ten).
+	Thus, port[0]-port[9] is available to the user.  If port is
+	used without the "[n]" index, then "[0]" is used in its
+	place.  The second open() therefore is identical to the
+	following:
+
+		rig[0].open(ts2k, "/dev/ttyS1");
+
+	There is no requirement that rig[0] be used with model[0] or
+	port[0].  I reccomend it though unless you have five identical
+	rigs and use only one model[n].
+
+	The rig is required for all commands.  When there are multiple
+	rigs, we *must* know which one to talk to.  However, there is
+	usually just one rig attached.  For this reason I default the
+	command to rig[0] if no rig[n] is specified.  We could have
+	opened the Kenwood with:
+
+		open(ts2k, "/dev/ttyS1");
+
+	or even
+
+		port[0] = "/dev/ttyS1";
+		model = ts2k;		// defaults to model[0]
+		open(rig[0], model[0], port[0]);
+
+		model[9] = 299;		// int okay if you know it.
+
+	Note that the more terse open doesn't even save which model or
+	port information.
+
+	The ';' is required syntax so that multiple commands may
+	be typed on one line.  Comments of the form /*comment*/ are
+	not currently supported.
+
+	I consider VFO, under hamlib, to be a control element.  When
+	you specifiy a vfo in branch_ts2k, all routines are expected
+	to switch the rig to that vfo, make the change, and restore
+	the original vfo.  If you wish to select a new active vfo,
+	then you do a rig_set_vfo().  This supports the command line
+	very well.
+
+	In branch_ts2k the vfo_t is a bitwise mask.  You may OR the
+	simple elements to completely specify the desired VFO.
+
+	The following demonstrate changing the VFO:
+
+		// The following change to the specified VFO.
+		rig.vfo = VFOA;			// calls rig_set_vfo()
+		rig[0].vfo( MEM | VFOA );	// same as MEMA
+		vfo(MEMA);
+
+		// More complex modes are trivial!
+		vfo(VFO_AB);	// Split mode between A/B vfos (if supported on rig)
+		vfo( REV | SPLIT | VFOA | VFOB);	// Split B/A
+		vfo( REV | VFO_AB);			// Split B/A
+		vfo( VFO_BA );				// Split B/A
+
+		// Satellite.  Other rigs may have to do this in software.
+		vfo(SAT);		// Satellite mode
+		vfo(MEM | SAT);		// Satellite memory!
+		vfo(SAT | UPLOAD);	// Upload vfo
+		vfo(SAT | DNLOAD);	// Download vfo
+
+	The list goes on.  Its easy to see how much easier it is to
+	manipulate the rig than having to call many functions!  Some
+	are just variations.
+
+	Changing the frequency is likewise trivial:
+
+		rig.vfo(A).freq = 145.33 MHz;	// one of my favorite repeaters
+		//rig.vfo(B).band(160m);		// to be developed!
+		rig.vfo(A).freq( 145.33 MHz);
+		rig.vfo(vfoa).freq++;		// Step the freq up
+		rig.vfo(vfoa).freq--;		// or down
+		//rig.vfo(B).band++;		// to be developed!
+
+		// Why not just copy vfos?
+		chan(VFOA) = chan(VFOC);	// my ts2k won't do this!
+		// Why not copy from one rig to another?
+		rig[0].chan(VFOA) = rig[1].chan(VFOB);
+
+		// or do memory copies?
+		rig[0].chan(MEMA) = rig[1].chan(MEMA);		// indirect access
+		rig[0].chan.mem[100] = rig[1].chan.mem[123];	// direct access
+
+		// or just use rig[0] and VFO_CURR
+		freq++; freq = 145.33 MHz; freq += 2.5 kHz;
+		freq = mem[100].freq();		// mem -> vfo but only freq
+		chan = mem[100];		// freq and channel info too!
+
+		// How do we listen to the repeater input????
+		rig.vfo(REV | VFOA);		// assuming VFOA is on a repeater.
+		rig.vfo(A | REV);		// always swaps rx with tx freq
+
+	The chan copies an entire VFO channel which include the mode,
+	offset, frequency and other items.  A memory channel may also
+	have a callsign or other text data.
+
+	Memory may be accessed either directly via mem[N] or indirectly
+	through a VFO currently on memory via vfo(MEMC) or mem(C).
+
+	An issue on the ts2k related to Menus and such are the PM's.
+	Though extremely sparse in the documentation, it is very nice
+	to use, especially when doing development work.  If you have
+	something similiar on your rig and program it into the backend,
+	let me know and I'll add comments about it or change the function
+	as required.  They are used as follows:
+
+		rig.pm(2);	// Will be okay unless 2 is made private.
+		rig.pm(0);	// Fails since I set it private.
+
+	You may change the modulation mode with:
+
+		mode = AM; mode = FM;	// use default rig and VFO_CURR
+		vfo(A).mode(AM); vfo(B).mode(FM);
+
+	Some items seem common enough and I'm lazy enough that I've made
+	special tokens for them.  There are two buttons on my rig:
+	A=B, and A/B.  The A=B copies VFO_A to VFO_B, and A/B switches
+	VFO_A to VFO_B or VFO_B to VFO_A.  On the command line however,
+	I did things a little different.
+
+		A=B;	// same as chan(A) = chan(B)
+		B=A;	// same as  chan(B) = chan(A)
+		A=C;
+
+		A/B;	// tmp = chan(A); chan(A) = chan(B); chan(B) = tmp;
+
+		A/M;	// uses memory channel and VFO_A
+
+	Lastly, are the following:
+
+		help;	// no parameters yet
+		exit;	// Guess what this does!
+
+	Summary:
+		rig[0].vfo(VFO_CURR) is default if not specified.
+		vfo_t is a bitwise mask in branch_ts2k.
+		memory is either direct or indirect
+		++/-- "steps" the band/freq up/down
+		somefunc() calls rig_get_somefunc()
+		somefunc(VAL), somefunc = VAL; calls rig_put_somefunc()
+		all backends should be supported.
+
+Detailed Commands (many under development):
+
+	band()
+	chan()
+	close()
+	freq()
+	limit()
+	mem()
+	menu()
+	mic()
+	mode()
+	morse()
+	open()
+	pm()
+	rev()	??
+	vfo()
+	vox()
+
+Superfunctions or "Buttons":
+	// Note: you may prefix these with rig[n]
+	b=a, b<a, a>b, B=A, B<A, A>B	// copy chan(VFO_B) to chan(VFO_A)
+	c=a,
+	m=a,  "    "    "    "    "
+	a=b,
+	c=b,
+	m=b,
+	a=c,
+	b=c,
+	m=c,
+	a=m,
+	b=m,
+	c=m,
+	a/b, b/a, A/B, B/A		// Exchange/swap chan(A) and chan(B)
+	a/c,
+	b/c,  "
+	a/m,
+	b/m,
+	c/m
+
+Variables:
+	rig[], model[], port[]	// currently arrays of ten
+	Note: mem[n] is not a variable, but disambiguates direct/indirect
+
+New VFO rational:
+	There are two views in my rational: 1) as hamlib developer,
+	2) as application developer using hamlib.
+
+	As a developer in hamlib, it was frustrating when I'd
+	be in Split, Sat, Mem, or scan and select VFOA but nothing
+	would happen.  While programming routines it became increasingly
+	more difficult to tell what was being requested.  More
+	information was required.  I started looking at the vfo
+	parameter provided in almost all functions but they almost
+	always had VFO_CURR.  If you performed a rig_get_vfo()
+	you got back VFO_A, VFO_B, or VFO_C.  Yet, my rig also
+	had, Split, Mem, Call, Reverse, Sat, as well as Scratchpads
+	and such.  To accomodate this information deficit I created
+	a mask very similar to the exiting vfo_t and went to
+	work.
+
+	This approach was, for me, very successful.  My current
+	implementation is a little too slow and has bugs, but I
+	never lack the info I need to switch modes.  Some modes
+	cannot be directly set.  Rather, I must determine the current
+	status, switch to a simpler state then set the new state.
+	It was a lot of fuss, but now it works.
+
+	As an application developer using hamlib I don't know what
+	rig is attached.  The wrapper functions only partially
+	insulate me.  I can't assume anything.  Hamlib does reply
+	back and I know if it failed.  The caps even tell me most
+	every thing.  However, I still don't know if the order of
+	operation is important (it is on the ts-2000).  What is
+	needed is a method from switching from Split A/B to Satellite
+	or Scan on VFOA to Memory scan.  What sequence of calls is
+	correct for *every* rig?  The answer is *NONE*!  Thus, if
+	I am to program multiple rigs, there has to be a common
+	call or call sequence to switch major modes.
+
+	Again, the delima is lack of knowledge.  This time it is
+	harder to see any solution other than using rig_set_vfo()
+	and rig_get_vfo() as the single method of switching from
+	any mode to any mode.  I simply demand a certain VFO be
+	set in the rig, the API goes and attempts to do it.  It
+	replies back.  Any special sequence is handled by the
+	rig backend as only the backend knows how to perform the
+	switch.  It also simplifies the interface to the USER.
+
+	The reasons I picked and use the vfo are many.  1) Almost
+	all functions already pass a vfo_t as a parameter.
+	2) It saves duplication of code as I don't have to reprogram
+	the same sequences over and over in the backend.  Making
+	this routine available to the user API only makes sense.
+	3) The rig_*_vfo() functions already do part of the exact
+	same work.  I have only extended it to add new ones.
+
+	Any and all comments are welcome on my vfo_t implemention.
+	Please post them to the mail list or to me directly
+
+VFO masks:
+	VFO minor:
+		PTT
+		CTRL
+		VFO1
+		VFO2
+		VFO3
+		VFO4
+		VFO5
+
+	VFO major:
+		CALL
+		FAKE
+		Main
+		MEM
+		REV
+		SAT
+		SCAN
+		SPLIT
+		Sub
+
+	Predefined VFO major+minor:
+		A, VFOA, VFO_A, vfoa		Main | VFO1
+		B, VFOB, VFO_B, vfob		Main | VFO2
+		C, VFOC, VFO_C, vfoc		Sub | VFO3
+
+		VFO_AB, vfoab			Main | SPLIT | VFO1 | VFO2
+		VFO_BA, vfoba			REV | Main | SPLIT | VFO1 | VFO2
+
+		MEMA				Main | MEM | VFO1
+		MEMC				Sub | MEM | VFO3
+
+		CALLA, CALL_A, calla		Main | CALL | VFO1
+		CALLC, CALL_C, callc		Sub | CALL | VFO3
+
+		VFO_CURR			FAKE | VFO1
+		VFO_MEM				FAKE | MEM | VFO1
+
+TODO:
+	Provide a 'show error' command.
+	Add c style comments: /*comment*/
+	Add rig.band(2m)
+	Iron out when chan is required or default if not specified.
+	Add rig.vfo().limit( LOWFREQ, HIFREQ ), and rig.band(75m).limit()
+	Add repeater(145.33 MHz, 103.5, 103.5, 600kHz, +);
+	Add parameters to help (e.g. help vfo; or help(vfo))
+	Add ability to change menu parameters
+	Add the kenwood PM0-5.
+	Add setting PM's to private/public?
+
+References:
+
+Contact:
+	dedmons@user.sourceforge.net
+	ts2k-interface-developers@sourceforge.net
+	hamlib-developers@sourceforge.net
