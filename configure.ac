@@ -1,13 +1,17 @@
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(hamlib, 1.1.4-cvs, hamlib-developer@lists.sourceforge.net)
-AM_INIT_AUTOMAKE(hamlib, 1.1.4-cvs)
+dnl Please do not use '-' in the version number, 'make rpm' will fail
+AC_INIT(hamlib, 1.1.4cvs, hamlib-developer@lists.sourceforge.net)
+AM_INIT_AUTOMAKE(hamlib, 1.1.4cvs)
 AC_CONFIG_SRCDIR([include/hamlib/rig.h])
 AM_CONFIG_HEADER(include/config.h)
 AM_MAINTAINER_MODE
 
 # Minimum Autoconf version required.
 AC_PREREQ(2.50)
+
+dnl Pick up the Hamlib macros.
+AM_ACLOCAL_INCLUDE(macros)
 
 dnl directory for docs (html)
 hamlibdocdir=$datadir/doc/hamlib
@@ -21,6 +25,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
+AC_CHECK_PROGS(RPMBUILD, rpmbuild, rpm)
 
 AC_AIX
 AC_ISC_POSIX
@@ -32,15 +37,15 @@ dnl Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_STDC
 AC_CHECK_HEADERS([alloca.h argz.h malloc.h memory.h string.h strings.h])
-AC_CHECK_HEADERS([stdlib.h values.h rpc/rpc.h net/errno.h])
-AC_CHECK_HEADERS([fcntl.h sys/ioctl.h sys/time.h unistd.h getopt.h errno.h])
+AC_CHECK_HEADERS([stdlib.h values.h rpc/rpc.h rpc/rpcent.h net/errno.h])
+AC_CHECK_HEADERS([fcntl.h sys/ioctl.h sys/time.h sys/param.h unistd.h getopt.h errno.h])
 AC_CHECK_HEADERS([sys/ioccom.h linux/ppdev.h sgtty.h term.h termio.h termios.h])
 AC_CHECK_HEADERS([windows.h winioctl.h winbase.h])
 
 AM_SYS_POSIX_TERMIOS
 
 INCLUDES="${INCLUDES} -I\$(top_srcdir)/include -I\$(top_srcdir)/src -I\$(top_srcdir)/lib"
-CPPFLAGS="${CPPFLAGS} -D_GNU_SOURCE"
+#CPPFLAGS="${CPPFLAGS} -D_ISOC99_SOURCE"
 if test "${ac_cv_c_compiler_gnu}" = "yes"; then
   CFLAGS="${CFLAGS} -Wall"
 fi
@@ -70,8 +75,6 @@ dnl Checks for libraries.
 AC_CHECK_FUNC(sin, [MATH_LIBS=""], [MATH_LIBS="-lm"])
 AC_CHECK_LIB(ieee, main, [MATH_LIBS="-lieee $MATH_LIBS"], [], [])
 
-# trunc is part of C99 only
-AC_CHECK_LIB([c], [trunc], [], [AC_LIBOBJ(trunc)], [$MATH_LIBS])
 #--------------------------------------------------------------------
 # Interactive UNIX requires -linet instead of -lsocket, plus it
 # needs net/errno.h to define the socket-related error codes.
@@ -120,7 +123,7 @@ AC_CHECK_FUNCS([strcasecmp strchr strdup strerror strrchr strstr strtol])
 AC_CHECK_FUNCS([cfmakeraw])
 AC_REPLACE_FUNCS([getopt_long usleep])
 AC_FUNC_ALLOCA
-AC_FUNC_MALLOC
+#AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 
 dnl initialize libtool
@@ -137,6 +140,22 @@ dnl Configure libtool
 AC_PROG_LIBTOOL
 dnl Configure libltdl
 AC_CONFIG_SUBDIRS(libltdl)
+
+case "$host_os" in
+darwin* | rhapsody*)
+  # Trick from http://fink.sourceforge.net/doc/porting/
+  # TODO: check the compiler actually does support these options
+  CFLAGS="${CFLAGS} -no-cpp-precomp"
+  CXXFLAGS="${CXXFLAGS} -no-cpp-precomp"
+  ;;
+esac
+
+dnl Check if C99 struct initializers are supported
+AC_MSG_CHECKING(whether C99 struct/array initializers are supported)
+AC_TRY_COMPILE(,[struct{char a;int b;}s[8]={[3]={.b=5}};], [AC_MSG_RESULT(yes)],
+		[AC_MSG_ERROR( ""
+		"You need a C99 compliant C compiler that supports struct/array intializers."
+		"Have you considered GCC lately?.")]);
 
 
 dnl Check if libgd-dev is installed, so we can enable rigmatrix
@@ -161,7 +180,7 @@ AC_SUBST(RIGMATRIX)
 
 
 BACKEND_LIST="icom kenwood aor yaesu dummy pcr alinco uniden tentec kachina jrc drake"
-ROT_BACKEND_LIST="dummy easycomm"
+ROT_BACKEND_LIST="dummy easycomm rotorez"
 BINDING_LIST=""
 
 dnl Check if cxx-binding not wanted, default is to build it
@@ -179,22 +198,27 @@ AC_ARG_WITH(cxx-binding,
 AC_MSG_RESULT($cf_with_cxx_binding)
 
 if test "${cf_with_cxx_binding}" = "yes" ; then
-  BINDING_LIST="$BINDING_LIST c++"
+  BINDING_LIST="${BINDING_LIST} c++"
 fi
 
 dnl Check if perl-binding not wanted, default is to not build it
 
-AC_CHECK_PROG(cf_with_perl, h2xs, [yes], [no])
+SC_PATH_PERLINC
+if test x"${no_perl}" = x; then
+	cf_with_perl=yes
+else
+	cf_with_perl=no
+fi
 
 AC_MSG_CHECKING(whether to build perl binding and demo)
 AC_ARG_WITH(perl-binding,
         [  --with-perl-binding   build perl binding and demo],
         [cf_with_perl_binding=$withval],
-        [cf_with_perl_binding=no])
+        [cf_with_perl_binding=$cf_with_perl])
 AC_MSG_RESULT($cf_with_perl_binding)
 
 if test "${cf_with_perl_binding}" = "yes" ; then
-  BINDING_LIST="$BINDING_LIST perl"
+  BINDING_LIST="${BINDING_LIST} perl"
 fi
 
 dnl Check if kylix-binding wanted, REM: nothing to build yet
@@ -208,7 +232,7 @@ AC_ARG_WITH(kylix-binding,
 AC_MSG_RESULT($cf_with_kylix_binding)
 
 if test "${cf_with_kylix_binding}" = "yes" ; then
-  BINDING_LIST="$BINDING_LIST kylix"
+  BINDING_LIST="${BINDING_LIST} kylix"
 fi
 
 
@@ -229,19 +253,11 @@ AC_ARG_WITH(tcl-binding,
 AC_MSG_RESULT($cf_with_tcl_binding)
 
 if test "${cf_with_tcl_binding}" = "yes" ; then
-  BINDING_LIST="$BINDING_LIST tcl"
+  BINDING_LIST="${BINDING_LIST} tcl"
 fi
 AC_SUBST(TCL_LIB_SPEC)
 
-
-if test "${ac_cv_header_sys_socket_h}" = "no"; then
-  echo "disabling NET port"
-  NET=
-else
-  echo "enabling NET port"
-  NET=net
-fi
-AC_SUBST(NET)
+# TODO: require "${ac_cv_header_sys_socket_h}" = "no"
 
 
 dnl Backend list
@@ -250,14 +266,14 @@ case "$host_os" in
  linux-gnu*)
  # Winradio only under Linux (until someone port it on other os)
  BACKEND_LIST="$BACKEND_LIST winradio"
+ # TODO: support parallel port interface on other systems too
+ ROT_BACKEND_LIST="$ROT_BACKEND_LIST fodtrack"
  ;;
  *) 
 esac
 
-# assumes we have libgnuradio, libfftw
+# FIXME: check for presence of libgnuradio, libfftw
 if test "${cf_with_cxx}" = "yes" ; then
-AC_CHECK_HEADERS([VrMultiTask.h])
-#AC_CHECK_LIB([gnuradio],[], [], [], [-lfftw -lrfftw])
   AC_MSG_CHECKING(whether to build gnuradio backend)
   AC_ARG_WITH(gnuradio,
         [  --with-gnuradio	build gnuradio backend],
@@ -266,32 +282,53 @@ AC_CHECK_HEADERS([VrMultiTask.h])
   AC_MSG_RESULT($cf_with_gnuradio)
 
   if test "${cf_with_gnuradio}" = "yes" ; then
+  	PKG_CHECK_MODULES(GNURADIO, gnuradio >= 0.6)
 	BACKEND_LIST="$BACKEND_LIST gnuradio"
+  fi
+ 
+  # So far, microtune has only support on Linux x86.
+  # BTW, any platform with a parallel support may support it in the future
 
-	# fix almost hardcoded path...
-	grpath="../../gnuradio-0.3"
-	#GNURADIO_LIBS="-L. -L${grpath}/src/gnu/lib -lgnuradio -lrfftw -lfftw"
-	GNURADIO_LIBS="${grpath}/src/gnu/lib/libgnuradio.la -lstdc++"
-	GNURADIO_FLAGS="-DUSE_LIBGXX_INLINES -D_REENTRANT -DPARANOID=1 -DCACHESIZE=262144 -I${grpath}/src/gnu/lib/gr -I${grpath}/src/gnu/lib/grio -I${grpath}/src/gnu/lib/grgui -I${grpath}/src/gnu/lib/dtv -I${grpath}/src/pspectra/lib/vr -I${grpath}/src/pspectra/lib/vrp -I${grpath}/src/pspectra/lib/vrio"
+  AC_MSG_CHECKING(whether to build microtune backend)
+  AC_ARG_WITH(microtune,
+        [  --with-microtune	build microtune backend],
+        [cf_with_microtune=$withval],
+        [cf_with_microtune="no"])
+  AC_MSG_RESULT($cf_with_microtune)
+
+  if test "${cf_with_microtune}" = "yes" ; then
+	BACKEND_LIST="$BACKEND_LIST microtune"
   fi
 fi
+
+AC_SUBST(GNURADIO_CFLAGS)
 AC_SUBST(GNURADIO_LIBS)
-AC_SUBST(GNURADIO_FLAGS)
 
 
+AC_CHECK_PROG(cf_with_rpcgen, rpcgen, [yes], [no])
+AC_MSG_CHECKING(whether to build rpc backends)
 # RPCRig must be the last one added to BACKEND_LIST 
 # because it links against other backends (build order)
-if test "${ac_cv_header_rpc_rpc_h}" = "yes" ; then
+if test "${ac_cv_header_rpc_rpc_h}" = "yes" -a "${cf_with_rpcgen}" = "yes"; then
+	cf_with_rpc=yes
+else
+	cf_with_rpc=no
+fi
+AC_ARG_WITH(rpc-backends,
+        [  --without-rpc-backends   do not build rpcrig and rpcrot backends],
+        [cf_with_rpc_backends=$withval],
+        [cf_with_rpc_backends=$cf_with_rpc])
+AC_MSG_RESULT($cf_with_rpc_backends)
+if test "${cf_with_rpc_backends}" = "yes"; then
     BACKEND_LIST="$BACKEND_LIST rpcrig"
     ROT_BACKEND_LIST="$ROT_BACKEND_LIST rpcrot"
 fi
 
-
 # dlopen force or preopen self for static version ?
 BACKENDLNK="-dlopen force"
 for be in ${BACKEND_LIST} ; do
-	BACKENDLNK="${BACKENDLNK} -dlopen ../${be}/libhamlib-${be}.la"
-	BACKENDEPS="${BACKENDEPS} ../${be}/libhamlib-${be}.la"
+	BACKENDLNK="${BACKENDLNK} -dlopen ../${be}/hamlib-${be}.la"
+	BACKENDEPS="${BACKENDEPS} ../${be}/hamlib-${be}.la"
 done
 AC_SUBST(BACKEND_LIST)
 AC_SUBST(BACKENDLNK)
@@ -300,19 +337,48 @@ AC_SUBST(BACKENDEPS)
 # dlopen force or preopen self for static version ?
 ROT_BACKENDLNK="-dlopen force"
 for be in ${ROT_BACKEND_LIST} ; do
-    ROT_BACKENDLNK="${ROT_BACKENDLNK} -dlopen ../${be}/libhamlib-${be}.la"
-    ROT_BACKENDEPS="${ROT_BACKENDEPS} ../${be}/libhamlib-${be}.la"
+    ROT_BACKENDLNK="${ROT_BACKENDLNK} -dlopen ../${be}/hamlib-${be}.la"
+    ROT_BACKENDEPS="${ROT_BACKENDEPS} ../${be}/hamlib-${be}.la"
 done
 AC_SUBST(ROT_BACKEND_LIST)
 AC_SUBST(ROT_BACKENDLNK)
 AC_SUBST(ROT_BACKENDEPS)
 
+BINDINGS=""
+AC_CHECK_PROG(cf_with_bindings, [swig], [yes], [no], [$PATH])
+if test "${cf_with_bindings}" = "yes" ; then
+  AC_MSG_CHECKING(for swig >= 1.3.14)
+  cf_with_bindings=no
+  case `swig -version 2>&1| grep 'SWIG Version'` in
+  *1.3.1[[4-9]]*)
+  	cf_with_bindings=yes
+ 	BINDINGS="bindings"
+ 	;;
+  *2.*.*)
+  	cf_with_bindings=yes
+ 	BINDINGS="bindings"
+	;;
+  esac
+  AC_MSG_RESULT($cf_with_bindings)
+fi
+AC_MSG_CHECKING(whether to build bindings)
+AC_MSG_RESULT($cf_with_bindings)
+AC_SUBST(BINDINGS)
+
+for bi in ${BINDING_LIST} ; do
+    if test "${bi}" != "c++" -a "${bi}" != "kylix" ; then
+    	BINDING_LA="${BINDING_LA} hamlib${bi}.la"
+    fi
+done
+AC_SUBST(BINDING_LA)
 AC_SUBST(BINDING_LIST)
 
-AC_LIBSOURCES([trunc.c])
 AC_SUBST(INCLUDES)
 
+#tcl/Makefile
+#perl/Makefile
 AC_CONFIG_FILES([Makefile
+macros/Makefile
 include/Makefile
 lib/Makefile
 dummy/Makefile
@@ -330,15 +396,19 @@ jrc/Makefile
 drake/Makefile
 gnuradio/Makefile
 easycomm/Makefile
+fodtrack/Makefile
 rpcrig/Makefile
 rpcrot/Makefile
 src/Makefile
 c++/Makefile
-tcl/Makefile
 kylix/Makefile
-perl/Makefile
+bindings/Makefile
 tests/Makefile
 doc/Makefile
-hamlib.spec])
+rotorez/Makefile
+microtune/Makefile
+hamlib.pc
+hamlib.spec]
+)
 AC_OUTPUT
 
