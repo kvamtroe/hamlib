@@ -77,6 +77,8 @@ CXX = @CXX@
 DEPDIR = @DEPDIR@
 DLLTOOL = @DLLTOOL@
 ECHO = @ECHO@
+GNURADIO_FLAGS = @GNURADIO_FLAGS@
+GNURADIO_LIBS = @GNURADIO_LIBS@
 INCLTDL = @INCLTDL@
 INCLUDES = @INCLUDES@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
@@ -106,26 +108,31 @@ cf_with_perl = @cf_with_perl@
 hamlibdocdir = @hamlibdocdir@
 install_sh = @install_sh@
 
-bin_PROGRAMS = rigctl rotctl
+bin_PROGRAMS = rigctl rotctl tsctl
 man_MANS = rigctl.1 rotctl.1
 
-noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testtrn testbcd testfreq listrigs testloc testvfo @RIGMATRIX@
+noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testptt testts2k \
+	testtrn testbcd testfreq listrigs testloc testcmd @RIGMATRIX@
+
 
 EXTRA_PROGRAMS = rigmatrix
 
 # all the programs need this
-LDADD = ../src/libhamlib.la
-DEPENDENCIES = ../src/libhamlib.la
+LDADD = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
+DEPENDENCIES = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
 
 listrigs_LDFLAGS = @BACKENDLNK@
 dumpcaps_LDFLAGS = @BACKENDLNK@
 dumpmem_LDFLAGS = @BACKENDLNK@
 testcaps_LDFLAGS = @BACKENDLNK@
 testrig_LDFLAGS = @BACKENDLNK@
-testvfo_LDFLAGS = @BACKENDLNK@
+testts2k_LDFLAGS = @BACKENDLNK@
+testptt_LDFLAGS = @BACKENDLNK@
+testcmd_LDFLAGS = @BACKENDLNK@
 testtrn_LDFLAGS = @BACKENDLNK@
 testfreq_LDFLAGS = @BACKENDLNK@
 rigctl_LDFLAGS = @BACKENDLNK@
+tsctl_LDFLAGS = @BACKENDLNK@
 rotctl_LDFLAGS = @ROT_BACKENDLNK@
 
 # temporary hack
@@ -139,10 +146,13 @@ dumpcaps_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 dumpmem_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testcaps_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testrig_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
-testvfo_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+testptt_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+testts2k_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+testcmd_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testtrn_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 listrigs_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rigctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+tsctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rotctl_DEPENDENCIES = $(DEPENDENCIES) @ROT_BACKENDEPS@
 rigmatrix_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 
@@ -152,11 +162,11 @@ mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/include/config.h
 CONFIG_CLEAN_FILES =
 EXTRA_PROGRAMS = rigmatrix$(EXEEXT)
-bin_PROGRAMS = rigctl$(EXEEXT) rotctl$(EXEEXT)
+bin_PROGRAMS = rigctl$(EXEEXT) rotctl$(EXEEXT) tsctl$(EXEEXT)
 noinst_PROGRAMS = dumpcaps$(EXEEXT) dumpmem$(EXEEXT) testcaps$(EXEEXT) \
-	testrig$(EXEEXT) testtrn$(EXEEXT) testbcd$(EXEEXT) \
-	testfreq$(EXEEXT) listrigs$(EXEEXT) testloc$(EXEEXT) \
-	testvfo$(EXEEXT) @RIGMATRIX@
+	testrig$(EXEEXT) testptt$(EXEEXT) testts2k$(EXEEXT) \
+	testtrn$(EXEEXT) testbcd$(EXEEXT) testfreq$(EXEEXT) \
+	listrigs$(EXEEXT) testloc$(EXEEXT) testcmd$(EXEEXT) @RIGMATRIX@
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 
 dumpcaps_SOURCES = dumpcaps.c
@@ -180,27 +190,36 @@ rotctl_LDADD = $(LDADD)
 testbcd_SOURCES = testbcd.c
 testbcd_OBJECTS = testbcd.$(OBJEXT)
 testbcd_LDADD = $(LDADD)
-testbcd_DEPENDENCIES = ../src/libhamlib.la
+testbcd_DEPENDENCIES = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
 testcaps_SOURCES = testcaps.c
 testcaps_OBJECTS = testcaps.$(OBJEXT)
 testcaps_LDADD = $(LDADD)
+testcmd_SOURCES = testcmd.c
+testcmd_OBJECTS = testcmd.$(OBJEXT)
+testcmd_LDADD = $(LDADD)
 testfreq_SOURCES = testfreq.c
 testfreq_OBJECTS = testfreq.$(OBJEXT)
 testfreq_LDADD = $(LDADD)
-testfreq_DEPENDENCIES = ../src/libhamlib.la
+testfreq_DEPENDENCIES = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
 testloc_SOURCES = testloc.c
 testloc_OBJECTS = testloc.$(OBJEXT)
 testloc_LDADD = $(LDADD)
-testloc_DEPENDENCIES = ../src/libhamlib.la
+testloc_DEPENDENCIES = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
+testptt_SOURCES = testptt.c
+testptt_OBJECTS = testptt.$(OBJEXT)
+testptt_LDADD = $(LDADD)
 testrig_SOURCES = testrig.c
 testrig_OBJECTS = testrig.$(OBJEXT)
 testrig_LDADD = $(LDADD)
 testtrn_SOURCES = testtrn.c
 testtrn_OBJECTS = testtrn.$(OBJEXT)
 testtrn_LDADD = $(LDADD)
-testvfo_SOURCES = testvfo.c
-testvfo_OBJECTS = testvfo.$(OBJEXT)
-testvfo_LDADD = $(LDADD)
+testts2k_SOURCES = testts2k.c
+testts2k_OBJECTS = testts2k.$(OBJEXT)
+testts2k_LDADD = $(LDADD)
+tsctl_SOURCES = tsctl.c
+tsctl_OBJECTS = tsctl.$(OBJEXT)
+tsctl_LDADD = $(LDADD)
 
 DEFS = @DEFS@
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/include
@@ -213,9 +232,10 @@ am__depfiles_maybe = depfiles
 @AMDEP_TRUE@	./$(DEPDIR)/listrigs.Po ./$(DEPDIR)/rigctl.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/rigmatrix.Po ./$(DEPDIR)/rotctl.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/testbcd.Po ./$(DEPDIR)/testcaps.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/testfreq.Po ./$(DEPDIR)/testloc.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/testcmd.Po ./$(DEPDIR)/testfreq.Po \
+@AMDEP_TRUE@	./$(DEPDIR)/testloc.Po ./$(DEPDIR)/testptt.Po \
 @AMDEP_TRUE@	./$(DEPDIR)/testrig.Po ./$(DEPDIR)/testtrn.Po \
-@AMDEP_TRUE@	./$(DEPDIR)/testvfo.Po
+@AMDEP_TRUE@	./$(DEPDIR)/testts2k.Po ./$(DEPDIR)/tsctl.Po
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
@@ -225,13 +245,13 @@ LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 CFLAGS = @CFLAGS@
 DIST_SOURCES = dumpcaps.c dumpmem.c listrigs.c rigctl.c rigmatrix.c \
-	rotctl.c testbcd.c testcaps.c testfreq.c testloc.c testrig.c \
-	testtrn.c testvfo.c
+	rotctl.c testbcd.c testcaps.c testcmd.c testfreq.c testloc.c \
+	testptt.c testrig.c testtrn.c testts2k.c tsctl.c
 
 NROFF = nroff
 MANS = $(man_MANS)
 DIST_COMMON = README Makefile.am Makefile.in
-SOURCES = dumpcaps.c dumpmem.c listrigs.c rigctl.c rigmatrix.c rotctl.c testbcd.c testcaps.c testfreq.c testloc.c testrig.c testtrn.c testvfo.c
+SOURCES = dumpcaps.c dumpmem.c listrigs.c rigctl.c rigmatrix.c rotctl.c testbcd.c testcaps.c testcmd.c testfreq.c testloc.c testptt.c testrig.c testtrn.c testts2k.c tsctl.c
 
 all: all-am
 
@@ -296,21 +316,30 @@ testbcd$(EXEEXT): $(testbcd_OBJECTS) $(testbcd_DEPENDENCIES)
 testcaps$(EXEEXT): $(testcaps_OBJECTS) $(testcaps_DEPENDENCIES) 
 	@rm -f testcaps$(EXEEXT)
 	$(LINK) $(testcaps_LDFLAGS) $(testcaps_OBJECTS) $(testcaps_LDADD) $(LIBS)
+testcmd$(EXEEXT): $(testcmd_OBJECTS) $(testcmd_DEPENDENCIES) 
+	@rm -f testcmd$(EXEEXT)
+	$(LINK) $(testcmd_LDFLAGS) $(testcmd_OBJECTS) $(testcmd_LDADD) $(LIBS)
 testfreq$(EXEEXT): $(testfreq_OBJECTS) $(testfreq_DEPENDENCIES) 
 	@rm -f testfreq$(EXEEXT)
 	$(LINK) $(testfreq_LDFLAGS) $(testfreq_OBJECTS) $(testfreq_LDADD) $(LIBS)
 testloc$(EXEEXT): $(testloc_OBJECTS) $(testloc_DEPENDENCIES) 
 	@rm -f testloc$(EXEEXT)
 	$(LINK) $(testloc_LDFLAGS) $(testloc_OBJECTS) $(testloc_LDADD) $(LIBS)
+testptt$(EXEEXT): $(testptt_OBJECTS) $(testptt_DEPENDENCIES) 
+	@rm -f testptt$(EXEEXT)
+	$(LINK) $(testptt_LDFLAGS) $(testptt_OBJECTS) $(testptt_LDADD) $(LIBS)
 testrig$(EXEEXT): $(testrig_OBJECTS) $(testrig_DEPENDENCIES) 
 	@rm -f testrig$(EXEEXT)
 	$(LINK) $(testrig_LDFLAGS) $(testrig_OBJECTS) $(testrig_LDADD) $(LIBS)
 testtrn$(EXEEXT): $(testtrn_OBJECTS) $(testtrn_DEPENDENCIES) 
 	@rm -f testtrn$(EXEEXT)
 	$(LINK) $(testtrn_LDFLAGS) $(testtrn_OBJECTS) $(testtrn_LDADD) $(LIBS)
-testvfo$(EXEEXT): $(testvfo_OBJECTS) $(testvfo_DEPENDENCIES) 
-	@rm -f testvfo$(EXEEXT)
-	$(LINK) $(testvfo_LDFLAGS) $(testvfo_OBJECTS) $(testvfo_LDADD) $(LIBS)
+testts2k$(EXEEXT): $(testts2k_OBJECTS) $(testts2k_DEPENDENCIES) 
+	@rm -f testts2k$(EXEEXT)
+	$(LINK) $(testts2k_LDFLAGS) $(testts2k_OBJECTS) $(testts2k_LDADD) $(LIBS)
+tsctl$(EXEEXT): $(tsctl_OBJECTS) $(tsctl_DEPENDENCIES) 
+	@rm -f tsctl$(EXEEXT)
+	$(LINK) $(tsctl_LDFLAGS) $(tsctl_OBJECTS) $(tsctl_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core
@@ -326,11 +355,14 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rotctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testbcd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testcaps.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testcmd.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testfreq.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testloc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testptt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testrig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testtrn.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testvfo.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testts2k.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsctl.Po@am__quote@
 
 distclean-depend:
 	-rm -rf ./$(DEPDIR)

@@ -1,8 +1,8 @@
 /*
- *  Hamlib TS2000 backend - main header
+ *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.3.2.2 2002-07-10 20:28:01 dedmons Exp $
+ *		$Id: ts2k.h,v 1.3.2.3 2002-07-26 08:53:09 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -31,7 +31,34 @@
 
 #define	_USEVFO
 
-// imported from ts2000.h --Dale kd7eni
+#define RIG_SCAN_ALL (RIG_SCAN_MEM | RIG_SCAN_SLCT | RIG_SCAN_PRIO \
+			| RIG_SCAN_PROG | RIG_SCAN_DELTA | RIG_SCAN_VFO)
+
+#define RIG_LEVEL_ALL (RIG_LEVEL_PREAMP  | RIG_LEVEL_ATT | RIG_LEVEL_VOX \
+		 	| RIG_LEVEL_AF | RIG_LEVEL_RF | RIG_LEVEL_SQL \
+			| RIG_LEVEL_IF | RIG_LEVEL_APF | RIG_LEVEL_NR \
+		 | RIG_LEVEL_PBT_IN | RIG_LEVEL_PBT_OUT | RIG_LEVEL_CWPITCH \
+		 | RIG_LEVEL_RFPOWER | RIG_LEVEL_MICGAIN | RIG_LEVEL_KEYSPD \
+		 | RIG_LEVEL_NOTCHF | RIG_LEVEL_COMP | RIG_LEVEL_AGC \
+		 | RIG_LEVEL_BKINDL | RIG_LEVEL_BALANCE | RIG_LEVEL_METER \
+		 | RIG_LEVEL_VOXGAIN | RIG_LEVEL_VOXDELAY | RIG_LEVEL_SQLSTAT \
+		 | RIG_LEVEL_SWR | RIG_LEVEL_ALC | RIG_LEVEL_STRENGTH)
+
+#define RIG_PARM_ALL (RIG_PARM_ANN | RIG_PARM_APO | RIG_PARM_BACKLIGHT \
+			| RIG_PARM_BEEP | RIG_PARM_TIME | RIG_PARM_BAT \
+			| RIG_PARM_KEYLIGHT )  
+
+#define RIG_FUNC_ALL	(RIG_FUNC_FAGC | RIG_FUNC_NB | RIG_FUNC_COMP \
+			| RIG_FUNC_VOX | RIG_FUNC_TONE | RIG_FUNC_TSQL \
+			| RIG_FUNC_SBKIN | RIG_FUNC_FBKIN | RIG_FUNC_ANF \
+			| RIG_FUNC_NR | RIG_FUNC_AIP | RIG_FUNC_MON \
+			| RIG_FUNC_MN | RIG_FUNC_RNF | RIG_FUNC_ARO \
+			| RIG_FUNC_LOCK | RIG_FUNC_MUTE | RIG_FUNC_VSC \
+			| RIG_FUNC_REV | RIG_FUNC_SQL | RIG_FUNC_BC \
+			| RIG_FUNC_MBC | RIG_FUNC_LMP | RIG_FUNC_AFC \
+			| RIG_FUNC_SATMODE | RIG_FUNC_SCOPE | RIG_FUNC_RESUME)
+
+// imported from ts2k.h --Dale kd7eni
 /*
  * 103 available DCS codes
  */
@@ -55,7 +82,7 @@ static const tone_t ts2k_dcs_list[] = {
 #define TS2K_CTRL_ON_SUB	1
 
 // Needed to prevent ts2k_transaction (kenwood_transaction) from
-// expecting a reply from the ts2000 in cases where there is none.
+// expecting a reply from the ts2k in cases where there is none.
 #define NOREPLY	0
 // some commands reply "?;" if rig currently in requested mode
 // usually, there is NOREPLY when mode is changed.  This can be
@@ -83,42 +110,39 @@ struct ts2k_priv_data {
 extern int ts2k_init(RIG *rig);
 extern int ts2k_cleanup(RIG *rig);
 
-
 extern const int ts2k_ctcss_list[];
 
-int ts2k_transaction(RIG *rig, const char *cmd, int cmd_len, char *data,
-				size_t *data_len);
-int ts2k_set_vfo(RIG *rig, vfo_t vfo);
-int ts2k_get_vfo(RIG *rig, vfo_t *vfo);
-int ts2k_set_freq(RIG *rig, vfo_t vfo, freq_t freq);
+int ts2k_get_ctcss(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_get_dcd(RIG *rig, vfo_t vfo, dcd_t *dcd);
 int ts2k_get_freq(RIG *rig, vfo_t vfo, freq_t *freq);
-int ts2k_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
-int ts2k_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width);
-int ts2k_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val);
-int ts2k_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val);
-int ts2k_set_func(RIG *rig, vfo_t vfo, setting_t func, int status);
 int ts2k_get_func(RIG *rig, vfo_t vfo, setting_t func, int *status);
-int ts2k_set_ctcss_tone(RIG *rig, vfo_t vfo, tone_t tone);
-int ts2k_set_tone(RIG *rig, vfo_t vfo, tone_t tone);
-int ts2k_get_ctcss_tone(RIG *rig, vfo_t vfo, tone_t *tone);
-int ts2k_get_tone(RIG *rig, vfo_t vfo, tone_t *tone);
-int ts2k_set_Tones(RIG *rig, vfo_t vfo, tone_t tone, const char ct);
-int ts2k_get_Tones(RIG *rig, vfo_t vfo, tone_t *tone, const char *ct);
-int ts2k_set_powerstat(RIG *rig, powerstat_t status);
+int ts2k_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val);
+const char* ts2k_get_info(RIG *rig);
+int ts2k_get_mem(RIG *rig, vfo_t vfo, int *ch);
+int ts2k_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width);
 int ts2k_get_powerstat(RIG *rig, powerstat_t *status);
+int ts2k_get_ptt(RIG *rig, vfo_t vfo, ptt_t *ptt);
+int ts2k_get_tone(RIG *rig, vfo_t vfo, tone_t *tone);
+int ts2k_get_Tones(RIG *rig, vfo_t vfo, tone_t *tone, const char *ct);
+int ts2k_get_trn(RIG *rig, int *trn);
+int ts2k_get_vfo(RIG *rig, vfo_t *vfo);
 int ts2k_reset(RIG *rig, reset_t reset);
 int ts2k_send_morse(RIG *rig, vfo_t vfo, const char *msg);
-int ts2k_get_ptt(RIG *rig, vfo_t vfo, ptt_t *ptt);
-int ts2k_set_ptt(RIG *rig, vfo_t vfo, ptt_t ptt);
-int ts2k_get_dcd(RIG *rig, vfo_t vfo, dcd_t *dcd);
-int ts2k_vfo_op(RIG *rig, vfo_t vfo, vfo_op_t op);
+int ts2k_set_ctcss(RIG *rig, vfo_t vfo, tone_t tone);
+int ts2k_set_freq(RIG *rig, vfo_t vfo, freq_t freq);
+int ts2k_set_func(RIG *rig, vfo_t vfo, setting_t func, int status);
+int ts2k_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val);
 int ts2k_set_mem(RIG *rig, vfo_t vfo, int ch);
-int ts2k_get_mem(RIG *rig, vfo_t vfo, int *ch);
-const char* ts2k_get_info(RIG *rig);
-
-int ts2k_get_trn(RIG *rig, int *trn);
+int ts2k_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
+int ts2k_set_powerstat(RIG *rig, powerstat_t status);
+int ts2k_set_ptt(RIG *rig, vfo_t vfo, ptt_t ptt);
 int ts2k_set_trn(RIG *rig, int trn);
-
+int ts2k_set_Tones(RIG *rig, vfo_t vfo, tone_t tone, const char ct);
+int ts2k_set_tone(RIG *rig, vfo_t vfo, tone_t tone);
+int ts2k_set_vfo(RIG *rig, vfo_t vfo);
+int ts2k_transaction(RIG *rig, const char *cmd, int cmd_len, char *data,
+				size_t *data_len);
+int ts2k_vfo_op(RIG *rig, vfo_t vfo, vfo_op_t op);
 /*
  * functions I've written -- Dale KD7ENI
  */
@@ -132,11 +156,12 @@ int ts2k_set_channel(RIG *rig, channel_t *chan);
 int ts2k_get_ctrl(RIG *rig, char *dc_buf, int dc_len);
 int ts2k_set_ctrl(RIG *rig, int ptt, int ctrl);
 int ts2k_vfo_ctrl(RIG *rig, vfo_t vfo);
-int ts2k_get_dcs_code(RIG *rig, vfo_t vfo, tone_t *tone); 
-int ts2k_set_dcs_code(RIG *rig, vfo_t vfo, tone_t  tone); 
+int ts2k_get_dcs(RIG *rig, vfo_t vfo, tone_t *tone); 
+int ts2k_set_dcs(RIG *rig, vfo_t vfo, tone_t  tone); 
 int ts2k_get_int(char *c, int i);
 int ts2k_sat_off(RIG *rig, vfo_t vfo);
 int ts2k_sat_on(RIG *rig, vfo_t vfo);
+int ts2k_open(RIG *rig);
 int ts2k_get_parm(RIG *rig, setting_t parm, value_t *val);
 int ts2k_set_parm(RIG *rig, setting_t parm, value_t val);
 int ts2k_get_rit(RIG *rig, vfo_t vfo, shortfreq_t *rit);
@@ -191,19 +216,20 @@ extern const struct rig_caps ts850_caps;
 extern const struct rig_caps ts870s_caps;
 extern const struct rig_caps ts950sdx_caps;
 extern const struct rig_caps ts2000_caps;
+extern const struct rig_caps ts2k_caps;
 
 extern BACKEND_EXPORT(int) initrigs_ts2k(void *be_handle);
 extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
 
 /*
- * Some of the following imported from original ts2000.c	--Dale
+ * Some of the following imported from original ts2k.c	--Dale
  */
 
-#define TS2000_ALL_MODES (RIG_MODE_AM|RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
+#define TS2K_ALL_MODES (RIG_MODE_AM|RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
 	RIG_MODE_RTTY)
-#define TS2000_OTHER_TX_MODES (RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
+#define TS2K_OTHER_TX_MODES (RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
 	RIG_MODE_RTTY)
-#define TS2000_AM_TX_MODES (RIG_MODE_AM)
+#define TS2K_AM_TX_MODES (RIG_MODE_AM)
 
 // the following might be cond. later
 
@@ -211,51 +237,35 @@ extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
 #ifndef _NEW_VFO_H
 
 // old / simple
-# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM)
-# define TS2000_SUBVFO (RIG_VFO_C)
-# define TS2000_RIGVFO (0)
-# define TS2000_FUNC_ALL (RIG_FUNC_TONE | RIG_FUNC_NB)
-# define TS2000_PARM_OP (RIG_PARM_BEEP | RIG_PARM_BACKLIGHT)
-# define TS2000_LEVEL_ALL (RIG_LEVEL_PREAMP | RIG_LEVEL_VOX | RIG_LEVEL_AF)
-# define TS2000_SCAN_OP (RIG_SCAN_STOP | RIG_SCAN_MEM)
+# define TS2K_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM)
+# define TS2K_SUBVFO (RIG_VFO_C)
+# define TS2K_RIGVFO (0)
+# define TS2K_FUNC_ALL (RIG_FUNC_TONE | RIG_FUNC_NB)
+# define TS2K_PARM_OP (RIG_PARM_BEEP | RIG_PARM_BACKLIGHT)
+# define TS2K_LEVEL_ALL (RIG_LEVEL_PREAMP | RIG_LEVEL_VOX | RIG_LEVEL_AF)
+# define TS2K_SCAN_OP (RIG_SCAN_STOP | RIG_SCAN_MEM)
 
 #else
 
 // new
-# define TS2000_FUNC_ALL ( RIG_FUNC_ALL & \
+# define TS2K_FUNC_ALL ( RIG_FUNC_ALL & \
 			~(RIG_FUNC_MN | RIG_FUNC_RNF | RIG_FUNC_VSC) ) 
-# define TS2000_PARM_OP (RIG_PARM_ALL & ~(RIG_PARM_BAT | RIG_PARM_TIME))
-# define TS2000_LEVEL_ALL (RIG_LEVEL_ALL & ~(RIG_LEVEL_APF))
-# define TS2000_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
+# define TS2K_PARM_OP (RIG_PARM_ALL & ~(RIG_PARM_BAT | RIG_PARM_TIME))
+# define TS2K_LEVEL_ALL (RIG_LEVEL_ALL & ~(RIG_LEVEL_APF))
+# define TS2K_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
 
 // the following uses both Sub and Main for the Major mode
-# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A \
+# define TS2K_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A \
 			| RIG_VFO_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
-# define TS2000_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
-# define TS2000_RIGVFO	RIG_CTRL_MASK 
+# define TS2K_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
+# define TS2K_RIGVFO	RIG_CTRL_MASK 
 
 #endif
 
-#define TS2000_VFO_ALL (TS2000_RIGVFO | TS2000_MAINVFO | TS2000_SUBVFO)
+#define TS2K_VFO_ALL (TS2K_RIGVFO | TS2K_MAINVFO | TS2K_SUBVFO)
 // FIXME: Shouldn't this be part of rig_caps?!
 
-#define TS2000_VFO_OP (RIG_OP_UP | RIG_OP_DOWN)
-
-/*
- * 103 available DCS codes
- */
-static const tone_t ts2000_dcs_list[] = {
-       23,  25,  26,  31,   32,  36,  43,  47,       51,  53,
-  54,  65,  71,  72,  73,   74, 114, 115, 116, 122, 125, 131,
-  132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174, 205,
-  212, 223, 225, 226, 243, 244, 245, 246, 251, 252, 255, 261,
-  263, 265, 266, 271, 274, 306, 311, 315, 325, 331, 332, 343,
-  346, 351, 356, 364, 365, 371, 411, 412, 413, 423, 431, 432,
-  445, 446, 452, 454, 455, 462, 464, 465, 466, 503, 506, 516,
-  523, 526, 532, 546, 565, 606, 612, 624, 627, 631, 632, 654,
-  662, 664, 703, 712, 723, 731, 732, 734, 743, 754,
-  0,
-};
+#define TS2K_VFO_OP (RIG_OP_UP | RIG_OP_DOWN)
 
 /*
  * modes in use by the "MD" command
@@ -311,7 +321,7 @@ static const struct ts2k_id ts2k_id_list[] = {
 	{RIG_MODEL_TS870S, 15},
 	{RIG_MODEL_TS570D, 17},
 	{RIG_MODEL_TS570S, 18},
-	{RIG_MODEL_TS2000, 19},	/* correct --kd7eni */
+	{RIG_MODEL_TS2K, 19},	/* correct --kd7eni */
 	{RIG_MODEL_NONE, UNKNOWN_ID},	/* end marker */
 };
 
@@ -339,4 +349,4 @@ static const int ts2k_ctcss_list[] = {
 #define cmd_trm(rig) ((struct ts2k_priv_caps *)(rig)->caps->priv)->cmdtrm
 #define ta_quit	rs->hold_decode = 0; return retval
 
-#endif /* _TS2000_H */
+#endif /* _TS2K_H */

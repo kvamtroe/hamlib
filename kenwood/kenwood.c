@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - main file
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: kenwood.c,v 1.37 2002-03-25 00:12:17 pa4tu Exp $
+ *	$Id: kenwood.c,v 1.37.2.1 2002-07-26 08:53:09 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -74,11 +74,16 @@ struct kenwood_id_string {
  * TODO: sort this list with most frequent rigs first.
  */
 static const struct kenwood_id kenwood_id_list[] = {
+	{ RIG_MODEL_TS940, 1 },
+	{ RIG_MODEL_TS811, 2 },
+	{ RIG_MODEL_TS711, 3 },
+	{ RIG_MODEL_TS440, 4 },
 	{ RIG_MODEL_R5000, 5 },
 	{ RIG_MODEL_TS870S, 15 },
 	{ RIG_MODEL_TS570D, 17 },
 	{ RIG_MODEL_TS570S, 18 },
 	{ RIG_MODEL_TS2000, 19 },
+	{ RIG_MODEL_TS2K, 19 },
 	{ RIG_MODEL_NONE, UNKNOWN_ID },	/* end marker */
 };
 
@@ -167,21 +172,21 @@ transaction_read:
     if (!strchr(cmdtrm, data[strlen(data)])) {
         if (retry_read++ < MAX_RETRY_READ)
             goto transaction_read;
-        rig_debug(RIG_DEBUG_ERR, __FUNCTION__": Command is not correctly terminated '%s'\n", data);
+        rig_debug(RIG_DEBUG_ERR, "%s: Command is not correctly terminated '%s'\n", __FUNCTION__, data);
         retval = -RIG_EPROTO;
         goto transaction_quit;
     }
 
     /* Command recognised by rig but invalid data entered. */
     if (strlen(data) == 2 && data[0] == 'N') {
-        rig_debug(RIG_DEBUG_ERR, __FUNCTION__": NegAck for '%s'\n", cmdstr);
+        rig_debug(RIG_DEBUG_ERR, "%s: NegAck for '%s'\n", __FUNCTION__, cmdstr);
         retval = -RIG_ERJCTED;
         goto transaction_quit;
     }
 
     /* Command not understood by rig */
     if (strlen(data) == 2 && data[0] == '?') {
-        rig_debug(RIG_DEBUG_ERR, __FUNCTION__": Unknown command '%s'\n", cmdstr);
+        rig_debug(RIG_DEBUG_ERR, "%s: Unknown command '%s'\n", __FUNCTION__, cmdstr);
         retval = -RIG_ERJCTED;
         goto transaction_quit;
     }
@@ -205,7 +210,7 @@ transaction_read:
           */
         if (retry_read++ < MAX_RETRY_READ)
             goto transaction_read;
-        rig_debug(RIG_DEBUG_ERR, __FUNCTION__": Unexpected reply '%s'\n", data);
+        rig_debug(RIG_DEBUG_ERR, "%s: Unexpected reply '%s'\n", __FUNCTION__, data);
         retval =  -RIG_EPROTO;
         goto transaction_quit;
     }
@@ -259,6 +264,7 @@ int kenwood_set_vfo(RIG *rig, vfo_t vfo)
 		return retval;
 }
 
+
 /*
  * kenwood_get_vfo
  * Assumes rig!=NULL, !vfo
@@ -293,6 +299,77 @@ int kenwood_get_vfo(RIG *rig, vfo_t *vfo)
 		}
 		return RIG_OK;
 }
+
+/*
+ * kenwood_old_set_vfo
+ * Assumes rig!=NULL
+ * for TS-940, TS-811, TS-711 and TS-440
+ */
+int kenwood_old_set_vfo(RIG *rig, vfo_t vfo)
+{
+		unsigned char cmdbuf[16], ackbuf[16];
+		int cmd_len, ack_len = 0, retval;
+		char vfo_function;
+
+			/*
+			 * FIXME: vfo==RIG_VFO_CURR
+			 */
+
+		switch (vfo) {
+		case RIG_VFO_VFO:
+		case RIG_VFO_A: vfo_function = '0'; break;
+		case RIG_VFO_B: vfo_function = '1'; break;
+		case RIG_VFO_MEM: vfo_function = '2'; break;
+		/* TODO : case RIG_VFO_C: */ 
+		default: 
+			rig_debug(RIG_DEBUG_ERR,"kenwood_set_vfo: unsupported VFO %d\n",
+								vfo);
+			return -RIG_EINVAL;
+		}
+
+		cmd_len = sprintf(cmdbuf, "FN%c%s", vfo_function, cmd_trm(rig));
+
+		ack_len = 16;
+		retval = kenwood_transaction (rig, cmdbuf, cmd_len, ackbuf, &ack_len);
+		return retval;
+}
+
+/*
+ * kenwood_old_get_vfo
+ * Assumes rig!=NULL, !vfo
+ * for TS-940, TS-811, TS-711 and TS-440
+ */
+int kenwood_old_get_vfo(RIG *rig, vfo_t *vfo)
+{
+		unsigned char vfobuf[50];
+		int vfo_len, retval;
+
+
+		/* query RX VFO */
+		vfo_len = 50;
+		retval = kenwood_transaction (rig, "FN;", 3, vfobuf, &vfo_len);
+		if (retval != RIG_OK)
+			return retval;
+
+		if (vfo_len != 4 || vfobuf[1] != 'N') {
+			rig_debug(RIG_DEBUG_ERR,"%s: unexpected answer %s, "
+				"len=%d\n", __FUNCTION__, vfobuf, vfo_len);
+			return -RIG_ERJCTED;
+		}
+
+		/* TODO: replace 0,1,2,.. constants by defines */
+		switch (vfobuf[2]) {
+		case '0': *vfo = RIG_VFO_A; break;
+		case '1': *vfo = RIG_VFO_B; break;
+		case '2': *vfo = RIG_VFO_MEM; break;
+		default: 
+			rig_debug(RIG_DEBUG_ERR,"%s: unsupported VFO %c\n",
+						__FUNCTION__, vfobuf[2]);
+			return -RIG_EPROTO;
+		}
+		return RIG_OK;
+}
+
 
 /*
  * kenwood_set_freq
@@ -1248,7 +1325,7 @@ int kenwood_init(RIG *rig)
 {
     const struct rig_caps *caps;
     const struct kenwood_priv_caps *priv_caps;
-    rig_debug(RIG_DEBUG_TRACE, __FUNCTION__": called\n");
+    rig_debug(RIG_DEBUG_TRACE, "%s: called\n", __FUNCTION__);
 
     if (!rig || !rig->caps)
         return -RIG_EINVAL;
@@ -1279,7 +1356,7 @@ int kenwood_init(RIG *rig)
  */
 int kenwood_cleanup(RIG *rig)
 {
-    rig_debug(RIG_DEBUG_TRACE, __FUNCTION__": called\n");
+    rig_debug(RIG_DEBUG_TRACE, "%s: called\n", __FUNCTION__);
 
     if (!rig)
         return -RIG_EINVAL;
@@ -1300,6 +1377,7 @@ int initrigs_kenwood(void *be_handle)
 
 		rig_register(&ts950sdx_caps);
 		rig_register(&ts50s_caps);
+		rig_register(&ts440_caps);
 		rig_register(&ts450s_caps);
 		rig_register(&ts570d_caps);
 		rig_register(&ts570s_caps);
@@ -1307,6 +1385,7 @@ int initrigs_kenwood(void *be_handle)
 		rig_register(&ts850_caps);
 		rig_register(&ts870s_caps);
 		rig_register(&ts2000_caps);
+		rig_register(&ts2k_caps);
 		rig_register(&thd7a_caps);
 		rig_register(&thf7e_caps);
 

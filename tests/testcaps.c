@@ -4,7 +4,7 @@
  * like the passband info..
  *
  *
- *    $Id: testcaps.c,v 1.5.2.1 2002-07-10 20:35:49 dedmons Exp $  
+ *    $Id: testcaps.c,v 1.5.2.2 2002-07-26 08:53:10 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

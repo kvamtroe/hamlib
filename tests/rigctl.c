@@ -5,7 +5,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rigctl.c,v 1.30.2.1 2002-07-10 20:35:49 dedmons Exp $  
+ * $Id: rigctl.c,v 1.30.2.2 2002-07-26 08:53:10 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -140,9 +140,9 @@ struct test_table test_list[] = {
 		{ 'f', "get_freq", get_freq, ARG_OUT, "Frequency" },
 		{ 'M', "set_mode", set_mode, ARG_IN, "Mode", "Passband" },
 		{ 'm', "get_mode", get_mode, ARG_OUT, "Mode", "Passband" },
-		{ 'V', "set_vfo", set_vfo, ARG_IN, "VFO\t\t" },
+		{ 'V', "set_vfo", set_vfo, ARG_IN, "VFO" },
 		{ 'v', "get_vfo", get_vfo, ARG_OUT, "VFO" },
-		{ 'T', "set_ptt", set_ptt, ARG_IN, "PTT\t\t" },
+		{ 'T', "set_ptt", set_ptt, ARG_IN, "PTT" },
 		{ 't', "get_ptt", get_ptt, ARG_OUT, "PTT" },
 		{ 'R', "set_rptr_shift", set_rptr_shift, ARG_IN, "Rptr shift" },
 		{ 'r', "get_rptr_shift", get_rptr_shift, ARG_OUT, "Rptr shift" },
@@ -150,7 +150,7 @@ struct test_table test_list[] = {
 		{ 'o', "get_rptr_offs", get_rptr_offs, ARG_OUT, "Rptr offset" },
 		{ 'C', "set_ctcss_tone", set_ctcss_tone, ARG_IN, "CTCSS tone" },
 		{ 'c', "get_ctcss_tone", get_ctcss_tone, ARG_OUT, "CTCSS tone" },
-		{ 'D', "set_dcs_code", set_dcs_code, ARG_IN, "DCS code\t" },
+		{ 'D', "set_dcs_code", set_dcs_code, ARG_IN, "DCS code" },
 		{ 'd', "get_dcs_code", get_dcs_code, ARG_OUT, "DCS code" },
 		{ 'I', "set_split_freq", set_split_freq, ARG_IN, "Tx frequency" },
 		{ 'i', "get_split_freq", get_split_freq, ARG_OUT, "Tx frequency" },
@@ -166,15 +166,15 @@ struct test_table test_list[] = {
 		{ 'u', "get_func", get_func, ARG_IN1|ARG_OUT2, "Func", "Func status" },
 		{ 'P', "set_parm", set_parm, ARG_IN, "Parm", "Value" },
 		{ 'p', "get_parm", get_parm, ARG_IN1|ARG_OUT2, "Parm", "Value" },
-		{ 'E', "set_mem", set_mem, ARG_IN, "Memory#\t" },
+		{ 'E', "set_mem", set_mem, ARG_IN, "Memory#" },
 		{ 'e', "get_mem", get_mem, ARG_OUT, "Memory#" },
 		{ 'G', "vfo_op", vfo_op, ARG_IN, "Mem/VFO op" },
 		{ 'g', "scan", scan, ARG_IN, "Scan fct", "Channel" },
-		{ 'H', "set_channel", set_channel, ARG_IN, "\t\t" /* huh! */ },
+		{ 'H', "set_channel", set_channel, ARG_IN,  /* huh! */ },
 		{ 'h', "get_channel", get_channel, ARG_IN, "Channel" },
 		{ 'A', "set_trn", set_trn, ARG_IN, "Transceive" },
 		{ 'a', "get_trn", get_trn, ARG_OUT, "Transceive" },
-		{ 'B', "set_bank", set_bank, ARG_IN, "Bank\t" },
+		{ 'B', "set_bank", set_bank, ARG_IN, "Bank" },
 		{ '_', "get_info", get_info, ARG_OUT, "Info" },
 		{ '2', "power2mW", power2mW },
 		{ 0x00, "", NULL },
@@ -607,7 +607,6 @@ static int print_conf_list(const struct confparams *cfp, rig_ptr_t data)
 				printf(", %s", cfp->u.c.combostr[i]);
 		printf("\n");
 		break;
-	default:
 	}
 
 	return 1;  /* !=0, we want them all ! */
@@ -976,13 +975,43 @@ declare_proto_rig(power2mW)
 		return status;
 }
 
-
+/*
+ * RIG_CONF_ extparm's type:
+ *   NUMERIC: val.f
+ *   COMBO: val.i, starting from 0
+ *   STRING: val.s
+ *   CHECKBUTTON: val.i 0/1
+ */
 declare_proto_rig(set_level)
 {
 		setting_t level;
 		value_t val;
 
 		level = parse_level(arg1);
+		if (!rig_has_set_level(rig, level)) {
+			const struct confparams *cfp;
+
+			cfp = rig_ext_lookup(rig, arg1);
+			if (!cfp)
+				return -RIG_EINVAL;	/* no such parameter */
+
+			switch (cfp->type) {
+			case RIG_CONF_CHECKBUTTON:
+			case RIG_CONF_COMBO:
+				sscanf(arg2, "%d", &val.i);
+				break;
+			case RIG_CONF_NUMERIC:
+				sscanf(arg2, "%f", &val.f);
+				break;
+			case RIG_CONF_STRING:
+				val.s = arg2;
+				break;
+			default:
+				return -RIG_ECONF;
+			}
+			return rig_set_ext_level(rig, RIG_VFO_CURR, cfp->token, val);
+		}
+
 		if (RIG_LEVEL_IS_FLOAT(level))
 			sscanf(arg2, "%f", &val.f);
 		else
@@ -999,6 +1028,37 @@ declare_proto_rig(get_level)
 		value_t val;
 
 		level = parse_level(arg1);
+		if (!rig_has_get_level(rig, level)) {
+			const struct confparams *cfp;
+
+			cfp = rig_ext_lookup(rig, arg1);
+			if (!cfp)
+				return -RIG_EINVAL;	/* no such parameter */
+
+			status = rig_get_ext_level(rig, RIG_VFO_CURR, cfp->token, &val);
+			if (status != RIG_OK)
+				return status;
+
+			if (interactive)
+				printf("%s: ", cmd->arg2);
+
+			switch (cfp->type) {
+			case RIG_CONF_CHECKBUTTON:
+			case RIG_CONF_COMBO:
+				printf("%d\n", val.i);
+				break;
+			case RIG_CONF_NUMERIC:
+				printf("%f\n", val.f);
+				break;
+			case RIG_CONF_STRING:
+				printf("%s\n", val.s);
+				break;
+			default:
+				return -RIG_ECONF;
+			}
+			return status;
+		}
+
 		status = rig_get_level(rig, RIG_VFO_CURR, level, &val);
 		if (status != RIG_OK)
 				return status;
@@ -1008,7 +1068,6 @@ declare_proto_rig(get_level)
 			printf("%f\n", val.f);
 		else
 			printf("%d\n", val.i);
-
 		return status;
 }
 
@@ -1046,6 +1105,31 @@ declare_proto_rig(set_parm)
 		value_t val;
 
 		parm = parse_parm(arg1);
+
+		if (!rig_has_set_parm(rig, parm)) {
+			const struct confparams *cfp;
+
+			cfp = rig_ext_lookup(rig, arg1);
+			if (!cfp)
+				return -RIG_EINVAL;	/* no such parameter */
+
+			switch (cfp->type) {
+			case RIG_CONF_CHECKBUTTON:
+			case RIG_CONF_COMBO:
+				sscanf(arg2, "%d", &val.i);
+				break;
+			case RIG_CONF_NUMERIC:
+				sscanf(arg2, "%f", &val.f);
+				break;
+			case RIG_CONF_STRING:
+				val.s = arg2;
+				break;
+			default:
+				return -RIG_ECONF;
+			}
+			return rig_set_ext_parm(rig, cfp->token, val);
+		}
+
 		if (RIG_PARM_IS_FLOAT(parm))
 			sscanf(arg2, "%f", &val.f);
 		else
@@ -1062,6 +1146,37 @@ declare_proto_rig(get_parm)
 		value_t val;
 
 		parm = parse_parm(arg1);
+		if (!rig_has_get_parm(rig, parm)) {
+			const struct confparams *cfp;
+
+			cfp = rig_ext_lookup(rig, arg1);
+			if (!cfp)
+				return -RIG_EINVAL;	/* no such parameter */
+
+			status = rig_get_ext_parm(rig, cfp->token, &val);
+			if (status != RIG_OK)
+				return status;
+
+			if (interactive)
+				printf("%s: ", cmd->arg2);
+
+			switch (cfp->type) {
+			case RIG_CONF_CHECKBUTTON:
+			case RIG_CONF_COMBO:
+				printf("%d\n", val.i);
+				break;
+			case RIG_CONF_NUMERIC:
+				printf("%f\n", val.f);
+				break;
+			case RIG_CONF_STRING:
+				printf("%s\n", val.s);
+				break;
+			default:
+				return -RIG_ECONF;
+			}
+			return status;
+		}
+
 		status = rig_get_parm(rig, parm, &val);
 		if (status != RIG_OK)
 				return status;
@@ -1137,8 +1252,17 @@ declare_proto_rig(get_channel)
 {
 		int status;
 		channel_t chan;
+		vfo_t vfo;
 
-		sscanf(arg1, "%d", &chan.channel_num);
+		vfo = parse_vfo(arg1);
+		if (vfo != RIG_VFO_CURR) {
+			vfo = RIG_VFO_MEM;
+			if (sscanf(arg1, "%d", &chan.channel_num) != 1)
+				return -RIG_EINVAL;
+		} else
+			chan.channel_num = 0;
+
+		chan.vfo = vfo;
 		status = rig_get_channel(rig, &chan);
 		if (status != RIG_OK)
 				return status;

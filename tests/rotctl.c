@@ -5,7 +5,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rotctl.c,v 1.3.2.1 2002-07-10 20:35:49 dedmons Exp $  
+ * $Id: rotctl.c,v 1.3.2.2 2002-07-26 08:53:10 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

@@ -1,9 +1,330 @@
 /*
- *  Hamlib Kenwood backend - TS2000 description
+ *  Hamlib Kenwood backend - TS2K description
+ *  Copyright (c) 2000-2002 by Stephane Fillod
+ *
+ *		$Id: ts2k.c,v 1.5.2.3 2002-07-26 08:53:09 dedmons Exp $
+ *
+ *   This library is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU Library General Public License as
+ *   published by the Free Software Foundation; either version 2 of
+ *   the License, or (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU Library General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Library General Public
+ *   License along with this library; if not, write to the Free Software
+ *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <hamlib/rig.h>
+#include "ts2k_menu.h"
+#include "ts2k.h"
+
+ts2k_pm_t ts2k_pm[TS2K_PMSIZ];
+
+ts2k_menu_t ts2k_menu[2*TS2K_PMSIZ];	// One set for each PM
+
+const struct ts2k_priv_caps  ts2k_priv_caps  = {
+		cmdtrm: EOM_KEN,
+};
+
+/*
+ * ts2k rig capabilities.
+ *
+ * TODO: antenna caps
+ *
+ * part of infos comes from http://www.kenwood.net/
+ */
+const struct rig_caps ts2k_caps = {
+rig_model: RIG_MODEL_TS2K,
+model_name:"TS-2k",
+mfg_name: "Kenwood",
+version: "0.1.2",
+copyright: "LGPL",
+status: RIG_STATUS_ALPHA,
+rig_type: RIG_TYPE_TRANSCEIVER,
+ptt_type: RIG_PTT_RIG,
+dcd_type: RIG_DCD_RIG,
+port_type: RIG_PORT_SERIAL,
+serial_rate_min: 1200,
+serial_rate_max: 57600,
+serial_data_bits: 8,
+serial_stop_bits: 1,
+serial_parity: RIG_PARITY_NONE,
+serial_handshake: RIG_HANDSHAKE_NONE,
+write_delay: 0,
+// set 1,20,4 and cured timeouts for "if...;" on ts2k_get_freq()	--Dale
+post_write_delay: 1,
+timeout: 20,
+retry: 4,
+
+has_get_func: TS2K_FUNC_ALL,
+has_set_func: TS2K_FUNC_ALL,
+has_get_level: TS2K_LEVEL_ALL,
+has_set_level: RIG_LEVEL_SET(TS2K_LEVEL_ALL),
+has_get_parm: TS2K_PARM_OP,
+has_set_parm: TS2K_PARM_OP,
+level_gran: {},                 /* FIXME: granularity */
+parm_gran: {},
+vfo_ops: TS2K_VFO_OP,
+scan_ops: TS2K_SCAN_OP,
+vfo_all: RIG_VFO_VALID,
+ctcss_list: ts2k_ctcss_list,
+dcs_list: ts2k_dcs_list,
+preamp:  { 20, RIG_DBLST_END, },	/* FIXME: real preamp? */
+attenuator:  { 20, RIG_DBLST_END, },
+max_rit: kHz(20),
+max_xit: kHz(20),
+max_ifshift: kHz(1),
+targetable_vfo: RIG_TARGETABLE_FREQ,
+transceive: RIG_TRN_RIG,
+bank_qty:  0,
+chan_desc_sz: 8,
+
+/* set up the memories.  See also, rig.h --D.E. kd7eni */
+
+/* The following are suggested 'modes' and when the following may
+ *  be accessed:
+ *
+ *	MTYPE		MSTATE		Description
+ *
+ *	MEM		M_MEM		main, sub
+ *	EDGE		M_MEM		main, sub (vhf/uhf)
+ *	MEMOPAD		M_VFO		e.g. main&&sub in vfo (both!)
+ *	CALL		M_ANY		at least VFO and MEM (others?)
+ *	SAT		M_SAT		only (uses both main+sub)
+ *	PCT		M_PCT		when P.C.T. enabled on sub+tnc
+ *	MENU		M_MOST		rig does it if it feels like it :)
+ *	SETUP		M_UNKNOWN	twilight zone stuff...
+ */
+chan_list: {
+	{ 0, 289, RIG_MTYPE_MEM, 0 },		/* regular memories */
+	/* Note: each memory is receive+transmit an RX != TX is split memory. */
+	{ 290, 299, RIG_MTYPE_EDGE, 0 },	/* band tune limits (not scan-only) */
+	{ 0, 9, RIG_MTYPE_MEMOPAD, 0 },		/* Quick Memories, Main+sub both saved:) */
+	{ 0, 1, RIG_MTYPE_CALL, 0 },		/* each TX band has one call */
+	{ 0, 9, RIG_MTYPE_SAT, 0 },		/* direct operation from these */
+//	{ 0, 9, RIG_MTYPE_PCT, 0 },		/* packet clusters buffered as
+//						   they come in */
+//	{ 0, 1, RIG_MTYPE_MENU, 0 },		/* There are two menus, A/B. I
+//						   set one for HF, one for VHF/UHF*/
+//	{ 0, 5, RIG_MTYPE_SETUP, 0 },		/* See: "pm;" command.  ;) */
+	/* This seems to be undocumented and not accesible to the front panel.
+	   When operated it seems to be an independently settable menu. Thus,
+	   more than just A/B are available.  I don't know if the memopad
+	   quick memories are involved but the regular MEM ones are *NOT*
+	   duplicated.  The manual only says: 0=PM off, 1-5=channel 1-5.
+	   Kenwood calls this "Programmable Memory".  I haven't used this
+	   in some time but 0-5 seems more appropriate than 1-5.  I'll
+	   investigate more after hamlib-1.1.3 (gnurig's target release). */
+
+/*	{ 0, , RIG_MTYPE_, 0 },*/
+	RIG_CHAN_END,
+   },
+rx_range_list1: {
+	{kHz(300),MHz(60),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(144),MHz(146),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(430),MHz(440),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(144),MHz(146),TS2K_ALL_MODES,-1,-1,TS2K_SUBVFO},
+	{MHz(430),MHz(440),TS2K_ALL_MODES,-1,-1,TS2K_SUBVFO},
+	RIG_FRNG_END,
+  }, /* rx range */
+tx_range_list1: {
+    {kHz(1830),kHz(1850),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(1830),kHz(1850),TS2K_AM_TX_MODES,2000,25000,TS2K_MAINVFO},
+    {kHz(3500),kHz(3800),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(3500),kHz(3800),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(7),kHz(7100),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(7),kHz(7100),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(10.1),MHz(10.15),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(10.1),MHz(10.15),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(14),kHz(14350),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(14),kHz(14350),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {kHz(18068),kHz(18168),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(18068),kHz(18168),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(21),kHz(21450),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(21),kHz(21450),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {kHz(24890),kHz(24990),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(24890),kHz(24990),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(28),kHz(29700),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(28),kHz(29700),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(50),MHz(50.2),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(50),MHz(50.2),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(144),MHz(146),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(144),MHz(146),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(430),MHz(440),TS2K_OTHER_TX_MODES,W(5),W(50),TS2K_MAINVFO},
+    {MHz(430),MHz(440),TS2K_AM_TX_MODES,W(5),W(12.5),TS2K_MAINVFO},
+	RIG_FRNG_END,
+  }, /* tx range */
+
+rx_range_list2: {
+	{kHz(300),MHz(60),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(142),MHz(152),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(420),MHz(450),TS2K_ALL_MODES,-1,-1,TS2K_MAINVFO},
+	{MHz(118),MHz(174),TS2K_ALL_MODES,-1,-1,TS2K_SUBVFO},
+	{MHz(220),MHz(512),TS2K_ALL_MODES,-1,-1,TS2K_SUBVFO},
+	RIG_FRNG_END,
+  }, /* rx range */
+tx_range_list2: {
+    {kHz(1800),MHz(2),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(1800),MHz(2),TS2K_AM_TX_MODES,2000,25000,TS2K_MAINVFO},
+    {kHz(3500),MHz(4),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(3500),MHz(4),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(7),kHz(7300),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(7),kHz(7300),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(10.1),MHz(10.15),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(10.1),MHz(10.15),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(14),kHz(14350),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(14),kHz(14350),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {kHz(18068),kHz(18168),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(18068),kHz(18168),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(21),kHz(21450),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(21),kHz(21450),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {kHz(24890),kHz(24990),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {kHz(24890),kHz(24990),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(28),kHz(29700),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(28),kHz(29700),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(50),MHz(54),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(50),MHz(54),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(144),MHz(148),TS2K_OTHER_TX_MODES,W(5),W(100),TS2K_MAINVFO},
+    {MHz(144),MHz(148),TS2K_AM_TX_MODES,W(5),W(25),TS2K_MAINVFO},
+    {MHz(430),MHz(450),TS2K_OTHER_TX_MODES,W(5),W(50),TS2K_MAINVFO},
+    {MHz(430),MHz(450),TS2K_AM_TX_MODES,W(5),W(12.5),TS2K_MAINVFO},
+	RIG_FRNG_END,
+  }, /* tx range */
+tuning_steps: {
+	 {TS2K_ALL_MODES,50},
+	 {TS2K_ALL_MODES,100},
+	 {TS2K_ALL_MODES,kHz(1)},
+	 {TS2K_ALL_MODES,kHz(5)},
+	 {TS2K_ALL_MODES,kHz(9)},
+	 {TS2K_ALL_MODES,kHz(10)},
+	 {TS2K_ALL_MODES,12500},
+	 {TS2K_ALL_MODES,kHz(20)},
+	 {TS2K_ALL_MODES,kHz(25)},
+	 {TS2K_ALL_MODES,kHz(100)},
+	 {TS2K_ALL_MODES,MHz(1)},
+	 {TS2K_ALL_MODES,0},	/* any tuning step */
+	 RIG_TS_END,
+	},
+        /* mode/filter list, remember: order matters! */
+filters: {
+		{RIG_MODE_SSB, kHz(2.2)},
+		{RIG_MODE_CW, Hz(600)},
+		{RIG_MODE_RTTY, Hz(1500)},
+		{RIG_MODE_AM, kHz(6)},
+		{RIG_MODE_FM|RIG_MODE_AM, kHz(12)},
+		RIG_FLT_END,
+	},
+priv: (void *)&ts2k_priv_caps,
+
+/* ts2k */
+// Temporary!  We might be able to use priv.  Until I sort that out, I just
+// added an new stucture.  Locally nothing should be affected.
+
+//pm: (ts2k_pm_t *) &ts2k_pm,
+pm: NULL,
+
+//rig_init: ts2k_init,
+rig_open: ts2k_open,
+rig_close: ts2k_pm_close,
+set_tone: ts2k_set_tone,
+get_tone: ts2k_get_tone,
+set_ctcss: ts2k_set_ctcss,
+get_ctcss: ts2k_get_ctcss,
+get_dcd: ts2k_get_dcd,
+set_freq: ts2k_set_freq,
+get_freq: ts2k_get_freq,
+get_func: ts2k_get_func,
+set_func: ts2k_set_func,
+get_info: ts2k_get_info,
+get_level: ts2k_get_level,
+set_level: ts2k_set_level,
+get_mem: ts2k_get_mem,
+set_mem: ts2k_set_mem,
+get_mode: ts2k_get_mode,
+set_mode: ts2k_set_mode,
+get_powerstat: ts2k_get_powerstat,
+set_powerstat: ts2k_set_powerstat,
+get_ptt: ts2k_get_ptt,
+set_ptt: ts2k_set_ptt,
+reset: ts2k_reset,
+send_morse: ts2k_send_morse,
+get_trn: ts2k_get_trn,
+set_trn: ts2k_set_trn,
+/*
+*/
+set_vfo: ts2k_set_vfo,
+get_vfo: ts2k_get_vfo,
+vfo_op: ts2k_vfo_op,
+/*
+ * stuff I've written--kd7eni
+ */
+
+scan:		ts2k_scan,
+get_channel:	ts2k_get_channel,
+set_channel:	ts2k_set_channel,
+get_dcs:	ts2k_get_dcs,
+set_dcs:	ts2k_set_dcs,
+get_parm:	ts2k_get_parm,
+set_parm:	ts2k_set_parm,
+get_rit:	ts2k_get_rit,
+set_rit:	ts2k_set_rit,
+get_rptr_offs:	ts2k_get_rptr_offs,
+set_rptr_offs:	ts2k_set_rptr_offs,
+get_rptr_shift:	ts2k_get_rptr_shift,
+set_rptr_shift:	ts2k_set_rptr_shift,
+get_split:	ts2k_get_split,
+set_split:	ts2k_set_split,
+get_split_freq:	ts2k_get_split_freq,
+set_split_freq:	ts2k_set_split_freq,
+get_split_mode:	ts2k_get_split_mode,
+set_split_mode:	ts2k_set_split_mode,
+get_ts:		ts2k_get_ts,
+set_ts:		ts2k_set_ts,
+get_xit:	ts2k_get_xit,
+set_xit:	ts2k_set_xit,
+
+/* comming soon... */
+//get_tone_sql:	ts2k_get_tone_sql,
+//set_tone_sql:	ts2k_set_tone_sql,
+//decode_event:	ts2k_decode_event,	/* highest */
+//get_conf:	ts2k_get_conf,
+//set_conf:	ts2k_set_conf,
+//get_ant:	ts2k_get_ant,
+//set_ant:	ts2k_set_ant,
+//recv_dtmf:	ts2k_recv_dtmf,		/* possible? */
+//get_ctcss_sql:	ts2k_get_ctcss_sql,
+//set_ctcss_sql:	ts2k_set_ctcss_sql,
+//get_dcs_sql:	ts2k_get_dcs_sql,
+//set_dcs_sql:	ts2k_set_dcs_sql,
+//send_dtmf:	ts2k_send_dtmf,		/* lowest */
+
+/* and never... */
+//set_bank:				/* not needed */
+/*
+  end ts2k
+ */
+};
+
+/*
+ * Function definitions below
+ */
+
+/*
+ *  Hamlib Kenwood backend - TS2K description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
  *
- *		$Id: ts2k.c,v 1.5.2.2 2002-07-10 20:28:01 dedmons Exp $
+ *		$Id: ts2k.c,v 1.5.2.3 2002-07-26 08:53:09 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -43,7 +364,7 @@
  * kenwood functions that actually work on other rigs won't be broken by
  * my hacks.  Anything that works for all can be sent back over to kenwood.c
  *
- * Note: due to my compulsive laziness, I often abbreviate Kenwood TS-2000
+ * Note: due to my compulsive laziness, I often abbreviate Kenwood TS-2k
  *	as simply ts2k, especially for code!
  *
  * Dale kd7eni
@@ -132,7 +453,7 @@ ts2k_transaction(RIG * rig, const char *cmdstr, int cmd_len,
 	}
 
       transaction_read:
-	/* FIXME : TS-2000 gets alot of 'timedout' on read_string()! */
+	/* FIXME : TS-2k gets alot of 'timedout' on read_string()! */
 	//rig_debug(RIG_DEBUG_ERR, __FUNCTION__": 3a) reading %u bytes...\n", *datasize);
 	retval =
 	    read_string(&rs->rigport, data, *datasize, cmdtrm,
@@ -252,7 +573,7 @@ int ts2k_set_vfo(RIG * rig, vfo_t vfo)
  *
  *	status:	works perfect for all modes!  --Dale
  *		Completely rewritten.
- *		TS2000 only
+ *		TS2k only
  */
 int ts2k_get_vfo(RIG * rig, vfo_t * vfo)
 {
@@ -264,50 +585,51 @@ int ts2k_get_vfo(RIG * rig, vfo_t * vfo)
  * kenwood_set_freq
  * Assumes rig!=NULL
  *
- *	status:	correctly sets FA, FB, FC	--Dale
+ *	status: broken
+		correctly sets FA, FB, FC	--Dale
  *		Cannot handle anything but VFOA-C.  Broken!
  *		Being rewritten.
  */
 int ts2k_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 {
 	unsigned char freqbuf[16];
-	int freq_len, ack_len = 0, retval, spcl, ptt_ctrl, scan;
+	int freq_len, ack_len = 0, retval, spcl, scan;
 	char vfo_letter;
+	vfo_t vtmp, ptt_ctrl;
 
-	if (vfo == RIG_VFO_CURR) {
-		retval = rig_get_vfo(rig, &vfo);
-		if (retval != RIG_OK)
-			return retval;
-	}
+	retval = rig_get_vfo(rig, &vtmp);
+	CHKERR(retval);
 
 	if(vfo == RIG_VFO_VFO) {
-		retval = ts2k_set_basic(rig, RIG_VFO_VFO);
+		vfo = vtmp & (RIG_VFO_MASK | RIG_CTRL_MAIN | RIG_CTRL_SUB);
+	} else if(vfo == RIG_VFO_CURR) {
+		vfo = vtmp;
 	}
 
-	// Save PTT/CTRL bits as an int
-	ptt_ctrl = (int) (vfo & (RIG_VFO_PTT | RIG_VFO_CTRL));
+	// Save PTT/CTRL bits
+	ptt_ctrl = (vfo & (RIG_VFO_PTT | RIG_VFO_CTRL));
 	// Mask out PTT/CTRL for easier handling
 	vfo = vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
 
 	/* Special Cases */
-	spcl = (vfo & RIG_CTRL_SAT);
-	spcl |= (vfo & RIG_CTRL_MEM);
+	spcl = (vfo & RIG_CTRL_MEM);
 
 	/* VFO scan is just like a vfo except it changes! */
-	scan = (vfo & RIG_CTRL_SCAN)
-		& !(vfo & RIG_CTRL_MEM) & !(vfo & RIG_CTRL_SAT);
+	scan = (vfo & RIG_CTRL_SCAN);
 
-	if(!spcl || scan) {
+	if(!spcl) {
 		/* We just mask scan and blaze forward */
 		vfo = vfo & ~RIG_CTRL_SCAN;
 
 		switch (vfo) {
 		case RIG_VFO_A:
 		case RIG_VFO_AB:
+		case RIG_SAT_DNLINK:
 			vfo_letter = 'a';
 			break;
 		case RIG_VFO_B:
 		case RIG_VFO_BA:
+		case RIG_SAT_UPLINK:
 			vfo_letter = 'b';
 			break;
 		case RIG_VFO_C:
@@ -321,37 +643,33 @@ int ts2k_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 			return -RIG_EINVAL;
 		}
 		freq_len = sprintf(freqbuf, "f%c%011u;", vfo_letter, (unsigned) freq);
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			  ": FREQ = %011u\n", freq);
+
+		if(vfo != vtmp) {	// check required for speed!
+			retval = rig_set_vfo(rig, vtmp);
+			CHKERR(retval);
+		}
 
 		ack_len = 14;
 		retval = ts2k_transaction(rig, freqbuf, freq_len, NULL, NULL);
+
+		if(vfo != vtmp) {
+			retval = rig_set_vfo(rig, vfo);
+			CHKERR(retval);
+		}
+
 	} else {
 		if(vfo & RIG_CTRL_SAT) {	// Sat before MEM!
-		/* Note: The memory BUG below doesn't apply in SAT mode.  It
-		 *	seems when they got here it wasn't Monday or Friday!
-		 */
-		
+			retval = -RIG_ENIMPL;
+
 		} else if(vfo & RIG_CTRL_MEM) {
-		/* TS-2000 BUG!  You know that great BIG frequency tuning knob
-		 *	on the front of the rig?  It seems Kenwood forgot to
-		 *	include the ability to turn this knob.  "bu;", isn't 
-		 *	it; "ru;" isn't it; "ch0;" isn't it.  There is not a
-		 *	bloody command to control the knob!  The direct entry
-		 *	panel is simulated by "fa;", "fb;", "fc;" but we can't
-		 *	turn the knob.  The only real problem this creates is
-		 *	when doing temporary frequency changes in memory mode.
-		 *	Thus, we disallow it completely, even though you can
-		 *	do it on the front panel!  There is no "fa;" equivalent
-		 *	for temporary memory changes so none are allowed!
-		 *
-		 *	Sat must be checked first because it may be in mem mode
-		 *	also.
-		 */
 			retval = -RIG_ENAVAIL;	// But, should be!
 		}
 		retval = -RIG_EINTERNAL;	// Something bad is wrong.
 	}
 
-	return retval;
+	return RIG_OK;
 }
 
 /*
@@ -377,11 +695,11 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 		  ": checking rig's vfo = 0x%X, mask = 0x%X\n", vfo,
 		  RIG_VFO_TEST(vfo));
 //      if( RIG_VFO_TEST(vfo) || (vfo & ~*caps->vfo_all))       // check caps?
-	if (!RIG_VFO_TEST(vfo))
-		return -RIG_EINVAL;
+//	if (!RIG_VFO_TEST(vfo))
+//		return -RIG_EINVAL;
 
 	getvfo = (RIG_VFO_CURR == vfo) \
-	    | (RIG_VFO_VFO == vfo) | (RIG_VFO_MEM == vfo);
+	    || (RIG_VFO_VFO == vfo) || (RIG_VFO_MEM == vfo);
 
 	if (getvfo) {
 		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": getting exact vfo\n");
@@ -405,8 +723,8 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
 		": checking scan... (vfo & RIG_CTRL_SCAN) = %0x\n",
 			vfo & RIG_CTRL_SCAN);
-	if(vfo & RIG_CTRL_SCAN)
-		return -RIG_EINVAL;	// Can't hit a moving target yet!
+//	if(vfo & RIG_CTRL_SCAN)
+//		return -RIG_EINVAL;	// Can't hit a moving target yet!
 
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": setting tmp vfo\n");
 	retval = rig_set_vfo(rig, vfo);
@@ -417,8 +735,10 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 
 	switch (vfo) {
 		/* Direct mem access not allowed since we don't have the channel# */
-	case RIG_CTRL_MEM:
-		retval = -RIG_EINVAL;	// VFO is valid, so caller is wrong!
+	case RIG_VFO_MEM:
+	case RIG_VFO_MEM_A:
+	case RIG_VFO_MEM_C:
+		retval = -RIG_ENIMPL;
 		break;
 
 		/* since we temporarily change vfo most everything works here */
@@ -449,6 +769,14 @@ int ts2k_set_mode(RIG * rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 {
 	unsigned char mdbuf[16];
 	int mdbuf_len, ack_len = 0, kmode, retval;
+	vfo_t vtmp;
+
+	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
+		retval = rig_get_vfo(rig, &vtmp);
+		CHKERR(retval);
+		retval = rig_set_vfo(rig, vfo);
+		CHKERR(retval);
+	}
 
 	switch (mode) {
 	case RIG_MODE_CW:
@@ -479,6 +807,11 @@ int ts2k_set_mode(RIG * rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 	rig_debug(RIG_DEBUG_ERR, "ts2k_set_mode: sending %s\n", mdbuf);
 	retval = ts2k_transaction(rig, mdbuf, mdbuf_len, NULL, NULL);
 
+	if(vfo != vtmp) {
+		retval = rig_set_vfo(rig, vtmp);
+		CHKERR(retval);
+	}
+
 	return retval;
 }
 
@@ -490,18 +823,21 @@ int ts2k_get_mode(RIG * rig, vfo_t vfo, rmode_t * mode, pbwidth_t * width)
 {
 	unsigned char modebuf[50];
 	int mode_len, retval;
+	vfo_t vtmp;
 
+	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
+		retval = rig_get_vfo(rig, &vtmp);
+		CHKERR(retval);
+		retval = rig_set_vfo(rig, vfo);
+		CHKERR(retval);
+	}
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__": vtmp = %s\n", strvfo(vtmp));
 
 	mode_len = 50;
-	retval = ts2k_transaction(rig, "MD;", 3, modebuf, &mode_len);
+	retval = ts2k_transaction(rig, "md;", 3, modebuf, &mode_len);
 	if (retval != RIG_OK)
 		return retval;
-
-	if (mode_len != 4 || modebuf[1] != 'D') {
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-			  ": unexpected answer, len=%u\n", mode_len);
-		return -RIG_ERJCTED;
-	}
 
 	*width = RIG_PASSBAND_NORMAL;	/* FIXME */
 	switch (modebuf[2]) {
@@ -540,6 +876,11 @@ int ts2k_get_mode(RIG * rig, vfo_t vfo, rmode_t * mode, pbwidth_t * width)
 		rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": "
 			  "unsupported mode '%c'\n", modebuf[2]);
 		return -RIG_EINVAL;
+	}
+
+	if(vfo != vtmp) {
+		retval = rig_set_vfo(rig, vtmp);
+		CHKERR(retval);
 	}
 
 	return RIG_OK;
@@ -885,7 +1226,7 @@ int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 		return ts2k_transaction(rig, fctbuf, fct_len, NULL, NULL);
 
 	case RIG_FUNC_TSQL:
-		// fixme: see ts2000.doc and follow the proceedure!  --kdeni
+		// fixme: see ts2k.doc and follow the proceedure!  --kdeni
 		// rigbug!
 		fct_len =
 		    sprintf(fctbuf, "CT%c;",
@@ -989,7 +1330,7 @@ int ts2k_get_func(RIG * rig, vfo_t vfo, setting_t func, int *status)
 	case RIG_FUNC_NR:
 		return get_ts2k_func(rig, "NR;", 3, status);
 		break;
-		/* FIXME on TS2000 */
+		/* FIXME on TS2k */
 	case RIG_FUNC_BC:
 		return get_ts2k_func(rig, "BC;", 3, status);
 		break;
@@ -1009,16 +1350,16 @@ int ts2k_get_func(RIG * rig, vfo_t vfo, setting_t func, int *status)
 }
 
 /*
- * kenwood_set_ctcss_tone
+ * ts2k_set_ctcss()
  * Assumes rig!=NULL, rig->caps->ctcss_list != NULL
  *
  * Warning! This is untested stuff! May work at least on TS-870S
  * 	Please owners report to me <fillods@users.sourceforge.net>, thanks. --SF
  *
- * TODO: TS-2000 uses CN/CT
- *	ex057 menu is AutoPower off for TS-2000	--kd7eni
+ * TODO: TS-2k uses CN/CT
+ *	ex057 menu is AutoPower off for TS-2k	--kd7eni
  */
-int ts2k_set_ctcss_tone(RIG * rig, vfo_t vfo, tone_t tone)
+int ts2k_set_ctcss(RIG * rig, vfo_t vfo, tone_t tone)
 {
 	return ts2k_set_Tones(rig, vfo, tone, (char) 'c');
 }
@@ -1032,10 +1373,18 @@ int ts2k_set_Tones(RIG * rig, vfo_t vfo, tone_t tone, const char ct)
 {
 	const struct rig_caps *caps;
 	unsigned char tonebuf[16];
-	int tone_len, ack_len = 0;
-	int i;
+	int tone_len, ack_len = 0, i, retval;
+	vfo_t vtmp;
+
+	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
+		retval = rig_get_vfo(rig, &vtmp);
+		CHKERR(retval);
+		retval = rig_set_vfo(rig, vfo);
+		CHKERR(retval);
+	}
+
 	caps = rig->caps;
-/* TODO: replace 200 by something like RIGTONEMAX */
+
 	for (i = 0; caps->ctcss_list[i] != 0 && i < 38; i++) {
 		if ((caps->ctcss_list[i] >= tone)
 		    && (caps->ctcss_list[i - 1] < tone))	// at least get close
@@ -1047,15 +1396,23 @@ int ts2k_set_Tones(RIG * rig, vfo_t vfo, tone_t tone, const char ct)
 		return -RIG_EINVAL;
 	tone_len = sprintf(tonebuf, "%cn%02u;", ct, i + 1);
 	ack_len = 16;
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": for VFO = %s\n", strvfo(vfo));
+
+	if(vfo != vtmp) {
+		retval = rig_set_vfo(rig, vtmp);
+		CHKERR(retval);
+	}
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": sent %s\n", tonebuf);
 	return ts2k_transaction(rig, tonebuf, tone_len, NULL, NULL);
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": sent %s", tonebuf);
 }
 
 /*
- * kenwood_get_ctcss_tone
+ * ts2k_get_ctcss
  * Assumes rig!=NULL, rig->state.priv!=NULL
  */
-int ts2k_get_ctcss_tone(RIG * rig, vfo_t vfo, tone_t * tone)
+int ts2k_get_ctcss(RIG * rig, vfo_t vfo, tone_t * tone)
 {
 	return ts2k_get_Tones(rig, vfo, tone, "cn;");
 }
@@ -1071,6 +1428,16 @@ int ts2k_get_Tones(RIG * rig, vfo_t vfo, tone_t * tone, const char *ct)
 	unsigned char tonebuf[10];
 	int tone_len, i, retval;
 	unsigned int tone_idx;
+	vfo_t vtmp;
+
+	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
+		retval = rig_get_vfo(rig, &vtmp);
+		CHKERR(retval);
+		retval = rig_set_vfo(rig, vfo);
+		CHKERR(retval);
+	}
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": using VFO = %s\n", strvfo(vfo));
 	caps = rig->caps;
 	tone_len = 10;
 	retval = ts2k_transaction(rig, ct, 3, tonebuf, &tone_len);
@@ -1101,6 +1468,12 @@ int ts2k_get_Tones(RIG * rig, vfo_t vfo, tone_t * tone, const char *ct)
 		}
 	}
 	*tone = caps->ctcss_list[tone_idx - 1];
+
+	if( vfo != vtmp ) {
+		retval = rig_set_vfo(rig, vtmp);
+		CHKERR(retval);
+	}
+
 	return RIG_OK;
 }
 
@@ -1167,7 +1540,7 @@ int ts2k_set_trn(RIG * rig, int trn)
 {
 	unsigned char trnbuf[16];
 	int trn_len;
-	/* changed to TS-2000 --D.E. kd7eni */
+	/* changed to TS-2k --D.E. kd7eni */
 	trn_len = sprintf(trnbuf, "AI%c;", trn == RIG_TRN_RIG ? '2' : '0');
 	return ts2k_transaction(rig, trnbuf, trn_len, NULL, NULL);
 	// No reply on "ai2;"--how quaint!
@@ -1365,7 +1738,7 @@ int ts2k_get_mem(RIG * rig, vfo_t vfo,
 
 /*
  * kenwood_get_info
- * supposed to work only for TS2000...
+ * supposed to work only for TS2k...
  * Assumes rig!=NULL
  */
 const char *ts2k_get_info(RIG * rig)
@@ -1409,7 +1782,7 @@ rig_model_t probe_ts2k(port_t * port)
 		return RIG_MODEL_NONE;
 	port->write_delay = port->post_write_delay = 0;
 	port->timeout = 50;
-	port->retry = 1;
+	port->retry = 2;
 	retval = serial_open(port);
 	if (retval != RIG_OK)
 		return RIG_MODEL_NONE;
@@ -1471,14 +1844,19 @@ int ts2k_init(RIG * rig)
 {
 	const struct rig_caps *caps;
 	const struct ts2k_priv_caps *priv_caps;
-	rig_debug(RIG_DEBUG_TRACE, __FUNCTION__ ": called\n");
+	rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": called\n");
 	if (!rig || !rig->caps)
 		return -RIG_EINVAL;
 	caps = rig->caps;
 	if (!caps->priv)
 		return -RIG_ECONF;
 	priv_caps = (const struct ts2k_priv_caps *) caps->priv;
-#if 0				/* No private data for Kenwood backends */
+
+	// moved to ts2k_open()
+//	ts2k_pm_init(rig);	// pm_init() calls menu_init() directly
+
+#if 0
+	/* this section won't compile --Dale */
 	priv = (struct ts2k_priv_data *)
 	    malloc(sizeof(struct ts2k_priv_data));
 	if (!priv) {
@@ -1490,6 +1868,7 @@ int ts2k_init(RIG * rig)
 	/* Assign default values */
 	priv->dummy = -1;	// placeholder for real entries.
 #endif
+
 	return RIG_OK;
 }
 
@@ -1504,24 +1883,6 @@ int ts2k_cleanup(RIG * rig)
 	if (rig->state.priv)
 		free(rig->state.priv);
 	rig->state.priv = NULL;
-	return RIG_OK;
-}
-/*
- * initrigs_kenwood is called by rig_backend_load
- */ int initrigs_ts2k(void *be_handle)
-{
-	rig_debug(RIG_DEBUG_VERBOSE, "ts2k: _init called\n");
-	rig_register(&ts950sdx_caps);
-	rig_register(&ts50s_caps);
-	rig_register(&ts450s_caps);
-	rig_register(&ts570d_caps);
-	rig_register(&ts570s_caps);
-	rig_register(&ts790_caps);
-	rig_register(&ts850_caps);
-	rig_register(&ts870s_caps);
-	rig_register(&ts2000_caps);
-	rig_register(&thd7a_caps);
-	rig_register(&thf7e_caps);
 	return RIG_OK;
 }
 
@@ -1551,7 +1912,7 @@ int int_n(char *tmp, char *src, const int cnt)
 }
 
 /*
- * ts2k_get_ctrl() ts2000 transceiver check.  Tests and returns the value of the current
+ * ts2k_get_ctrl() ts2k transceiver check.  Tests and returns the value of the current
  *	PTT/CTRL (using "dc;") for main and sub transceivers.  The settings are:
  *
  *	    PTT	__    __ CTRL	'0' = main; '1' = sub
@@ -2025,11 +2386,11 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 	chan->tone = ts2k_ctcss_list[int_n(tmp, &mrtxt[0][20], 2) - 1];
 	i = int_n(tmp, &mrtxt[1][19], 1);
 	chan->tone_sql = (i == 1) ? 1 : 0;	// FIXME: What value is ON?
-	chan->ctcss_tone =
+	chan->ctcss =
 	    ts2k_ctcss_list[int_n(tmp, &mrtxt[0][22], 2) - 1];
 	/* i still valid */
 	chan->ctcss_sql = (i == 2) ? 1 : 0;	// FIXME: What value is ON?
-	chan->dcs_code = ts2k_dcs_list[int_n(tmp, &mrtxt[0][24], 3) - 1];
+	chan->dcs = ts2k_dcs_list[int_n(tmp, &mrtxt[0][24], 3) - 1];
 	/* i still valid */
 	chan->dcs_sql = (i == 3) ? 1 : 0;
 	chan->scan = RIG_SCAN_NONE;	// n/a for memory read  
@@ -2171,7 +2532,7 @@ int ts2k_vfo_ctrl(RIG * rig, vfo_t vfo)
 /*
  *	status:	ok, no vfo checks
  */
-int ts2k_get_dcs_code(RIG * rig, vfo_t vfo, tone_t * code)
+int ts2k_get_dcs(RIG * rig, vfo_t vfo, tone_t * tone)
 {
 	char ack[10], tmp[10];
 	int retval, acklen, i;
@@ -2179,20 +2540,20 @@ int ts2k_get_dcs_code(RIG * rig, vfo_t vfo, tone_t * code)
 	retval = ts2k_transaction(rig, "qc;", 6, ack, &acklen);
 	CHKERR(retval);
 	i = int_n(tmp, &ack[2], 3);
-	*code = ts2k_dcs_list[i];
+	*tone = ts2k_dcs_list[i];
 	return RIG_OK;
 }
 
 /*
  *	status:	ok, no vfo checks
  */
-int ts2k_set_dcs_code(RIG * rig, vfo_t vfo, tone_t code)
+int ts2k_set_dcs(RIG * rig, vfo_t vfo, tone_t tone)
 {
 	char cmd[10];
 	int cmdlen, i;
 	// we only allow exact matches here
 	i = 0;
-	while (code != ts2k_dcs_list[i]) {
+	while (tone != ts2k_dcs_list[i]) {
 		if (ts2k_dcs_list[i] == 0)
 			return -RIG_EINVAL;
 		i++;
@@ -2398,72 +2759,6 @@ int ts2k_set_parm(RIG * rig, setting_t parm, value_t val)
 }
 
 /*
- * ts2k_set_basic(RIG *rig, vfo_t vfo)
- *
- *	Check vfo and change to a simpler mode on the vfo specified.
- *
- *	TS-2000 Only
- */
-int ts2k_set_basic(RIG *rig, vfo_t vfo)
-{
-	char ack[20], tmp[20];
-	int retval, acklen, tmplen, Sub, Main;
-//	vfo_t vtmp;
-
-	Sub = Main = 0;	// 0 == don't clear
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": checking SAT\n");
-
-/* SAT prevents everything else! */
-	acklen = 20;
-	retval = ts2k_transaction(rig, "sa;", 3, ack, &acklen);
-	CHKERR(retval);
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": SAT = %s\n", ack);
-	if(ack[2] == '1' && !(vfo & RIG_CTRL_SAT)) {
-		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": turning SAT off\n");
-		ack[2] = '0'; ack[9] = ';'; ack[10] = '\0';
-
-		retval = ts2k_transaction(rig, ack, acklen+1, NULL, NULL);
-		CHKERR(retval);
-	}
-
-/* Now, set VFOA, VFOC, or both depending on vfo. Nothing fancy allowed. */
-	if(vfo & RIG_CTRL_SAT) {
-		Sub = Main = 1;
-	}
-	if(vfo & RIG_CTRL_MAIN) {
-		Main = 1;
-	}
-	if(vfo & RIG_CTRL_SUB) {
-		Sub = 1;
-	}
-
-	if(Main) {	// Force VFOA
-		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Setting VFOA\n");
-		retval = ts2k_set_ctrl(rig, 0, TS2K_CTRL_ON_MAIN);
-		acklen = 20;
-		retval = ts2k_transaction(rig, "fr0;", 3, NULL, NULL);
-		CHKERR(retval);
-		acklen = 20;
-		retval = ts2k_transaction(rig, "ft0;", 3, NULL, NULL);
-		CHKERR(retval);
-	}
-
-	if(Sub) {	// Force VFOC
-		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Setting VFOC\n");
-		retval = ts2k_set_ctrl(rig, 0, TS2K_CTRL_ON_SUB);
-		acklen = 20;
-		retval = ts2k_transaction(rig, "fr0;", 3, NULL, NULL);
-		CHKERR(retval);
-		acklen = 20;
-		retval = ts2k_transaction(rig, "ft0;", 3, NULL, NULL);
-		CHKERR(retval);
-		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": Set VFOC\n");
-	}
-
-	return RIG_OK;
-}
-
-/*
  * ts2k_save_channel() (rig_save_channel() doesn't call us! don't write either)
  *
 int ts2k_save_channel(RIG *rig, chan_t *ch)
@@ -2545,7 +2840,6 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 
 	retval = ts2k_uniq_GetCtrl(rig, &cv);
 	CHKERR(retval);
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": CTRL: cv=%s\n", strvfo(cv));
 
 	/* For various reasons we must check SAT first. (RIG BUG) */
 	acklen = 60;
@@ -2561,9 +2855,7 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 			cv |= (ack[8] == '1') ? RIG_CTRL_MEM : 0;
 
 			*vfo = cv;
-			rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
-					": SAT: cv=%s\n", strvfo(cv));
-						
+
 			ts2k_uniq_UnlockPanel(rig);	// Oops!
 
 			return RIG_OK;	// Nothing left to do.
@@ -2577,7 +2869,6 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 	acklen = 60;
 	retval = ts2k_transaction(rig, "sc;", 3, ack, &acklen);
 	if (retval == RIG_OK) {
-		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": SCAN=%s\n", ack);
 		if (ack[2] != '0') {
 			cv |= RIG_CTRL_SCAN;
 		}		// continue checks
@@ -2585,15 +2876,12 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 		ts2k_uniq_UnlockPanel(rig);	// Oops!
 		return retval;
 	}
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": SCAN: cv=%s\n", strvfo(cv));
 
 	/* We can always derive RIG_CTRL_MAIN/SUB from ts2k_uniq_GetCtrl() */
 	if(cv & RIG_VFO_CTRL)
 		cv |= RIG_CTRL_MAIN;
 	else
 		cv |= RIG_CTRL_SUB;
-
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": MAIN/SUB: cv=%s\n", strvfo(cv));
 
 	/* Now we read TX and RX and check for split, mem, etc... */
 	txlen = 10;
@@ -2614,7 +2902,6 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 	if(rx[2] > tx[2]) {
 		cv |= RIG_CTRL_REV;
 	}
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": SPLIT: cv=%s\n", strvfo(cv));
 
 	/* We've already set split (if on) but much remains to be done... */
 	for(i=0; i<2; i++) {
@@ -3017,7 +3304,7 @@ int ts2k_uniq_SetSat(RIG * rig, vfo_t vfo)
 
 STest:	// FIXME: To be removed when testing is complete!
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		  ": Sending\tsat = %s,\n\t vfo = %s\n", cmd, strvfo(vfo));
+		  ": Sending\tsat = %s,\n\t vfo = %s\n", ack, strvfo(vfo));
 	// of course, this is *required* too!
 	return ts2k_transaction(rig, ack, acklen, NULL, NULL);
 }
@@ -3069,6 +3356,16 @@ int ts2k_uniq_ScanOn(RIG * rig, vfo_t vfo)
 int ts2k_uniq_ScanOff(RIG * rig, vfo_t vfo)
 {
 	return ts2k_uniq_SendScan(rig, vfo, '0');
+}
+
+/*
+ * ts2k_open()	Called just before rig.c does first rig_get_vfo().
+ *	We must be able to talk to the rig so ts2k_pm_init() must
+ *	be done here.
+ */
+int ts2k_open(RIG *rig)
+{
+	return ts2k_pm_init(rig);
 }
 
 #undef CHKERR

@@ -1,4 +1,4 @@
-Rig: TS-2000, ts2k.c          date: July 6, 2002; 1545 utc
+Rig: TS-2000, ts2k.c          Thought this might help. --Dale kd73ni
 n/i = not written, orig = original/rewritten, new = new, ok = works as written
 F:      ok  (no limit check)    orig    f:      ok, (vfo only)          orig
 M:      ok                      orig    m:      ok  (no vfo check)      orig

@@ -3,7 +3,7 @@
  * This programs dumps the mmeory contents of a rig.
  *
  *
- *    $Id: dumpmem.c,v 1.7.2.1 2002-07-10 20:35:49 dedmons Exp $  
+ *    $Id: dumpmem.c,v 1.7.2.2 2002-07-26 08:53:10 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -29,8 +29,8 @@
 
 #include <hamlib/rig.h>
 #include "misc.h"
-#include "tests.h"
 
+#define SERIAL_PORT "/dev/ttyS0"
 
 static char *decode_modes(rmode_t modes);
 static int dump_chan(RIG *rig, int chan_num);
@@ -121,6 +121,7 @@ int dump_chan(RIG *rig, int chan_num)
 	int status;
 	char freqbuf[20];
 
+	chan.vfo = RIG_VFO_MEM;
 	chan.channel_num = chan_num;
 	status=rig_get_channel(rig, &chan);
 
