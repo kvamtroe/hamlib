@@ -7,8 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <hamlib/rig.h>
-
-#define SERIAL_PORT "/dev/ttyS0"
+#include "tests.h"
 
 int myfreq_event(RIG *rig, vfo_t vfo, freq_t freq, rig_ptr_t arg)
 {

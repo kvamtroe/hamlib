@@ -7,8 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <hamlib/rig.h>
-
-#define SERIAL_PORT "/dev/ttyS0"
+#include "tests.h"
 
 int main (int argc, char *argv[])
 { 
@@ -162,19 +161,19 @@ int main (int argc, char *argv[])
 	  printf("rig_set_mode: error = %s \n", rigerror(retcode));
 	} 
 
-	retcode = rig_set_ptt(my_rig, RIG_VFO_A, RIG_PTT_ON ); /* stand back ! */
+//	retcode = rig_set_ptt(my_rig, RIG_VFO_A, RIG_PTT_ON ); /* stand back ! */
 
-	if (retcode != RIG_OK ) {
-	  printf("rig_set_ptt: error = %s \n", rigerror(retcode));
-	} 
+//	if (retcode != RIG_OK ) {
+//	  printf("rig_set_ptt: error = %s \n", rigerror(retcode));
+//	} 
 
 	sleep(1);
 
-	retcode = rig_set_ptt(my_rig, RIG_VFO_A, RIG_PTT_OFF ); /* phew ! */
+//	retcode = rig_set_ptt(my_rig, RIG_VFO_A, RIG_PTT_OFF ); /* phew ! */
 
-	if (retcode != RIG_OK ) {
-	  printf("rig_set_ptt: error = %s \n", rigerror(retcode));
-	} 
+//	if (retcode != RIG_OK ) {
+//	  printf("rig_set_ptt: error = %s \n", rigerror(retcode));
+//	} 
 
 	sleep(1);
 
@@ -186,7 +185,7 @@ int main (int argc, char *argv[])
 	retcode = rig_get_vfo(my_rig, &vfo); /* try to get vfo info */
 
 	if (retcode == RIG_OK ) {
-	  printf("rig_get_vfo: vfo = %i \n", vfo);
+	  printf("rig_get_vfo: vfo = %s \n", strvfo(vfo));
 	} else {
 	  printf("rig_get_vfo: error =  %s \n", rigerror(retcode));
 	}

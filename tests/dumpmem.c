@@ -3,7 +3,7 @@
  * This programs dumps the mmeory contents of a rig.
  *
  *
- *    $Id: dumpmem.c,v 1.7 2002-01-27 23:55:45 fillods Exp $  
+ *    $Id: dumpmem.c,v 1.7.2.1 2002-07-10 20:35:49 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -29,8 +29,8 @@
 
 #include <hamlib/rig.h>
 #include "misc.h"
+#include "tests.h"
 
-#define SERIAL_PORT "/dev/ttyS0"
 
 static char *decode_modes(rmode_t modes);
 static int dump_chan(RIG *rig, int chan_num);

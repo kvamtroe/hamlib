@@ -4,7 +4,7 @@
  * The code is rather ugly since this is only a try out.
  *
  *
- *    $Id: rigmatrix.c,v 1.17 2002-01-29 22:05:37 fillods Exp $  
+ *    $Id: rigmatrix.c,v 1.17.2.1 2002-07-10 20:35:49 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

@@ -3,7 +3,7 @@
  * This programs dumps the capabilities of a backend rig.
  *
  *
- *    $Id: dumpcaps.c,v 1.31 2002-01-29 22:04:30 fillods Exp $  
+ *    $Id: dumpcaps.c,v 1.31.2.1 2002-07-10 20:35:49 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

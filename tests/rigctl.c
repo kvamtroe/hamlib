@@ -5,7 +5,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rigctl.c,v 1.30 2002-06-26 20:44:37 dedmons Exp $  
+ * $Id: rigctl.c,v 1.30.2.1 2002-07-10 20:35:49 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -140,9 +140,9 @@ struct test_table test_list[] = {
 		{ 'f', "get_freq", get_freq, ARG_OUT, "Frequency" },
 		{ 'M', "set_mode", set_mode, ARG_IN, "Mode", "Passband" },
 		{ 'm', "get_mode", get_mode, ARG_OUT, "Mode", "Passband" },
-		{ 'V', "set_vfo", set_vfo, ARG_IN, "VFO" },
+		{ 'V', "set_vfo", set_vfo, ARG_IN, "VFO\t\t" },
 		{ 'v', "get_vfo", get_vfo, ARG_OUT, "VFO" },
-		{ 'T', "set_ptt", set_ptt, ARG_IN, "PTT" },
+		{ 'T', "set_ptt", set_ptt, ARG_IN, "PTT\t\t" },
 		{ 't', "get_ptt", get_ptt, ARG_OUT, "PTT" },
 		{ 'R', "set_rptr_shift", set_rptr_shift, ARG_IN, "Rptr shift" },
 		{ 'r', "get_rptr_shift", get_rptr_shift, ARG_OUT, "Rptr shift" },
@@ -150,7 +150,7 @@ struct test_table test_list[] = {
 		{ 'o', "get_rptr_offs", get_rptr_offs, ARG_OUT, "Rptr offset" },
 		{ 'C', "set_ctcss_tone", set_ctcss_tone, ARG_IN, "CTCSS tone" },
 		{ 'c', "get_ctcss_tone", get_ctcss_tone, ARG_OUT, "CTCSS tone" },
-		{ 'D', "set_dcs_code", set_dcs_code, ARG_IN, "DCS code" },
+		{ 'D', "set_dcs_code", set_dcs_code, ARG_IN, "DCS code\t" },
 		{ 'd', "get_dcs_code", get_dcs_code, ARG_OUT, "DCS code" },
 		{ 'I', "set_split_freq", set_split_freq, ARG_IN, "Tx frequency" },
 		{ 'i', "get_split_freq", get_split_freq, ARG_OUT, "Tx frequency" },
@@ -166,15 +166,15 @@ struct test_table test_list[] = {
 		{ 'u', "get_func", get_func, ARG_IN1|ARG_OUT2, "Func", "Func status" },
 		{ 'P', "set_parm", set_parm, ARG_IN, "Parm", "Value" },
 		{ 'p', "get_parm", get_parm, ARG_IN1|ARG_OUT2, "Parm", "Value" },
-		{ 'E', "set_mem", set_mem, ARG_IN, "Memory#" },
+		{ 'E', "set_mem", set_mem, ARG_IN, "Memory#\t" },
 		{ 'e', "get_mem", get_mem, ARG_OUT, "Memory#" },
 		{ 'G', "vfo_op", vfo_op, ARG_IN, "Mem/VFO op" },
 		{ 'g', "scan", scan, ARG_IN, "Scan fct", "Channel" },
-		{ 'H', "set_channel", set_channel, ARG_IN,  /* huh! */ },
+		{ 'H', "set_channel", set_channel, ARG_IN, "\t\t" /* huh! */ },
 		{ 'h', "get_channel", get_channel, ARG_IN, "Channel" },
 		{ 'A', "set_trn", set_trn, ARG_IN, "Transceive" },
 		{ 'a', "get_trn", get_trn, ARG_OUT, "Transceive" },
-		{ 'B', "set_bank", set_bank, ARG_IN, "Bank" },
+		{ 'B', "set_bank", set_bank, ARG_IN, "Bank\t" },
 		{ '_', "get_info", get_info, ARG_OUT, "Info" },
 		{ '2', "power2mW", power2mW },
 		{ 0x00, "", NULL },

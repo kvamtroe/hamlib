@@ -2,7 +2,7 @@
 bin_PROGRAMS = rigctl rotctl
 man_MANS = rigctl.1 rotctl.1
 
-noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testtrn testbcd testfreq listrigs testloc @RIGMATRIX@
+noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testtrn testbcd testfreq listrigs testloc testvfo @RIGMATRIX@
 
 EXTRA_PROGRAMS = rigmatrix
 
@@ -16,6 +16,7 @@ dumpcaps_LDFLAGS = @BACKENDLNK@
 dumpmem_LDFLAGS = @BACKENDLNK@
 testcaps_LDFLAGS = @BACKENDLNK@
 testrig_LDFLAGS = @BACKENDLNK@
+testvfo_LDFLAGS = @BACKENDLNK@
 testtrn_LDFLAGS = @BACKENDLNK@
 testfreq_LDFLAGS = @BACKENDLNK@
 rigctl_LDFLAGS = @BACKENDLNK@
@@ -34,6 +35,7 @@ dumpcaps_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 dumpmem_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testcaps_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testrig_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+testvfo_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testtrn_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 listrigs_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rigctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
