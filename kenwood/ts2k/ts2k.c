@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.7 2003-03-03 14:27:18 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.8 2003-03-03 20:16:38 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -248,6 +248,8 @@ const struct rig_caps ts2k_caps = {
 	get_channel:	ts2k_get_channel,	// "qr;", ...
 	set_channel:	ts2k_set_channel,
 	scan:		ts2k_scan,		// "sc;"
+	get_func:	ts2k_get_func,
+	set_func:	ts2k_set_func,
 
 /* comming soon... */	/* highest */
 //	get_info:	ts2k_get_info,		// "ty;"=firmware, "id;"=019=ts2k
@@ -265,8 +267,6 @@ const struct rig_caps ts2k_caps = {
 //	set_trn:	ts2k_set_trn,
 //	get_level:	ts2k_get_level,
 //	set_level:	ts2k_set_level,
-//	get_func:	ts2k_get_func,
-//	set_func:	ts2k_set_func,
 //	get_parm:	ts2k_get_parm,
 //	set_parm:	ts2k_set_parm,
 //	get_powerstat:	ts2k_get_powerstat,	// "ps;"
@@ -2003,7 +2003,7 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 /*
  *	status:	untested
  */
-int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t value)
+int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 {
 	STDPARAM;
 	int ret, val;	// return value for set func
@@ -2029,14 +2029,14 @@ int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t value)
 	} param;
 
 	Main = (vfo & RIG_CTRL_MAIN)? 0: 1;	// Main=0, Sub=1
-	val = value.i;
+	val = status;	// Mistake on my part.  Now we live with it.
 
 	TESTVFO(skip);
 
 #define ON_OFF	(val > 0)? 1: 0
 #define MAX(_v)	(val > _v)? _v: val
 
-	switch(level) {
+	switch(func) {
 
 	case RIG_FUNC_FAGC:	/* Fast AGC */
 		param.gt.p1 = MAX(20);
@@ -2203,7 +2203,7 @@ int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t value)
 /*
  *	status:	untested
  */
-int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
+int ts2k_get_func(RIG * rig, vfo_t vfo, setting_t func, int *status)
 {
 	STDPARAM;
 	int ret, val;
@@ -2229,14 +2229,14 @@ int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
 	} param;
 
 	Main = (vfo & RIG_CTRL_MAIN)? 0: 1;	// Main=0, Sub=1
-	val = 0;
+	val = 0;	// My mistake, and now we live with it.
 
 	TESTVFO(skip);
 
 #define TRUEVAL(_p, _v)	val = (_p == _v)? 1: 0
 #define MAX(_v)	(val > _v)? _v: val
 
-	switch(level) {
+	switch(func) {
 
 	case RIG_FUNC_FAGC:	/* Fast AGC */
 		ret = ts2k_g_gt(rig, &param.gt);
@@ -2387,7 +2387,7 @@ int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
 		break;
 	}
 
-	value->i = val;	// to lazy to write casts on everything!!!
+	*status = val;
 
 	RESETVFO(skip);
 
@@ -2397,7 +2397,7 @@ int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
 /*
  *	status:	untested
  */
-int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
+int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t value)
 {
 	return -RIG_ENIMPL;
 }
@@ -2405,7 +2405,7 @@ int ts2k_set_func(RIG * rig, vfo_t vfo, setting_t func, int status)
 /*
  *	status:	untested
  */
-int ts2k_get_func(RIG * rig, vfo_t vfo, setting_t func, int *status)
+int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
 {
 	return -RIG_ENIMPL;
 }
