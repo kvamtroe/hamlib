@@ -2,7 +2,7 @@
  *  Hamlib GNUradio backend - graudio/any rig
  *  Copyright (c) 2001-2003 by Stephane Fillod
  *
- *	$Id: graudio.c,v 1.1 2003-02-09 22:46:00 fillods Exp $
+ *	$Id: graudio.c,v 1.1.2.1 2003-02-25 15:59:46 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

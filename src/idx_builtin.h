@@ -2,7 +2,7 @@
  *  Hamlib Interface - setting2idx for builtin constants
  *  Copyright (c) 2002 by Stephane Fillod and Frank Singleton
  *
- *	$Id: idx_builtin.h,v 1.1 2002-11-04 22:23:09 fillods Exp $
+ *	$Id: idx_builtin.h,v 1.1.2.1 2003-02-25 15:59:52 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

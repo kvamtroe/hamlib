@@ -1,7 +1,7 @@
 Quirks, known bugs, and other notes.
 ====================================
 
-$Id: README.ft920,v 1.3 2003-01-19 04:47:59 n0nb Exp $
+$Id: README.ft920,v 1.3.2.1 2003-02-25 15:59:41 dedmons Exp $
 
 In this document I'll try to describe the behavior of the Yaesu FT-920
 transceiver with Hamlib.  Some of these are limitations of the radio
