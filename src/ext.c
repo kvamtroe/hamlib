@@ -2,7 +2,7 @@
  *  Hamlib Interface - extrq parameter interface
  *  Copyright (c) 2000,2001,2002 by Stephane Fillod
  *
- *	$Id: ext.c,v 1.1 2002-07-09 20:36:07 fillods Exp $
+ *	$Id: ext.c,v 1.1.2.1 2002-07-26 09:53:24 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

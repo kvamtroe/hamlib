@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS440 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *	$Id: ts440.c,v 1.2 2002-07-10 21:45:44 fillods Exp $
+ *	$Id: ts440.c,v 1.2.2.1 2002-07-26 09:53:24 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
