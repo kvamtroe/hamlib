@@ -2,7 +2,7 @@
  *  Hamlib Interface - toolbox
  *  Copyright (c) 2000-2002 by Stephane Fillod and Frank Singleton
  *
- *		$Id: misc.c,v 1.18 2002-06-30 10:17:03 dedmons Exp $
+ *		$Id: misc.c,v 1.18.2.1 2002-07-10 20:42:55 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -278,41 +278,93 @@ const char * strmode(rmode_t mode)
  */
 const char *strvfo(vfo_t vfo)
 {
-	switch (vfo) {
-	case	RIG_VFO_A:
-			return "VFOA";
-	case	RIG_VFO_B:
-			return "VFOB";
-	case	RIG_VFO_C:
-			return "VFOC";
-	case	RIG_VFO_CURR:
-			return "currVFO";
-	case	RIG_VFO_ALL:
-			return "VFOall";
-	case	RIG_VFO_MEM:
-			return "MEM";
-	case	RIG_VFO_VFO:
-			return "VFO";
-	case	RIG_VFO_MAIN:
-			return "Main";
-	case	RIG_VFO_SUB:
-			return "Sub";
-	case	RIG_CTRL_SAT:
-			return "SAT";
-	case	RIG_VFO_MEM_A:
-			return "MEMA";
-	case	RIG_VFO_MEM_C:
-			return "MEMC";
-	case	RIG_VFO_CALL_A:
-			return "CALLA";
-	case	RIG_VFO_CALL_C:
-			return "CALLC";
-	case	RIG_VFO_AB:
-			return "VFOAB";
-	case	RIG_VFO_BA:
-			return "VFOBA";
+	unsigned int i, j, k, c;
+	static char tmp[80];
+	vfo_t tvfo;	// tmp for display purposes
+
+	// Mask out PTT/CTRL so standard VFO's will work
+	tvfo = vfo & (RIG_VFO_VALID & ~(RIG_VFO_CTRL | RIG_VFO_PTT));
+
+/* special cases and debug	--Dale */
+#define _SHOW_BITS
+#ifdef _SHOW_BITS
+	j=0; k=0;
+	for(i = 1<<15; (i >= 0x0001) && (j < 60) && (k < 16); i = i>>1) {
+		switch(vfo & i) {
+		case RIG_VFO_CTRL:	j += sprintf(&tmp[j], "CTRL"); break;
+		case RIG_VFO_PTT:	j += sprintf(&tmp[j], "PTT"); break;
+		case RIG_VFO1:	j += sprintf(&tmp[j], "VFO1"); break;
+		case RIG_VFO2:	j += sprintf(&tmp[j], "VFO2"); break;
+		case RIG_VFO3:	j += sprintf(&tmp[j], "VFO3"); break;
+		case RIG_VFO4:	j += sprintf(&tmp[j], "VFO4"); break;
+		case RIG_VFO5:	j += sprintf(&tmp[j], "VFO5"); break;
+		case RIG_CTRL_MAIN:	j += sprintf(&tmp[j], "MAIN"); break;
+		case RIG_CTRL_SUB:	j += sprintf(&tmp[j], "SUB"); break;
+		case RIG_CTRL_MEM:	j += sprintf(&tmp[j], "MEM"); break;
+		case RIG_CTRL_CALL:	j += sprintf(&tmp[j], "CALL"); break;
+		case RIG_CTRL_SPLIT:	j += sprintf(&tmp[j], "SPLT"); break;
+		case RIG_CTRL_SCAN:	j += sprintf(&tmp[j], "SCAN"); break;
+		case RIG_CTRL_SAT:	j += sprintf(&tmp[j], "SAT"); break;
+		case RIG_CTRL_REV:	j += sprintf(&tmp[j], "REV"); break;
+		case RIG_CTRL_CROSS:	j += sprintf(&tmp[j], "RPTR"); break;
+
+		default:	j += sprintf(&tmp[j], "%c", (vfo & i)? '1': '0'); break;
+		}
+		j += sprintf(&tmp[j], ",");
+		k++;
 	}
-	return NULL;
+#endif
+
+	// the --j is to remove the last erroneous comma
+	j += sprintf(&tmp[--j], " = ");
+//	rig_debug(RIG_DEBUG_TRACE, "%s--> ", tmp);
+
+	c=0;	// Nothing below set yet
+
+	switch (tvfo) {
+	case	RIG_VFO_A:
+		j += sprintf(&tmp[j], "VFOA"); c=1; break;
+	case	RIG_VFO_B:
+		j += sprintf(&tmp[j], "VFOB"); c=1; break;
+	case	RIG_VFO_C:
+		j += sprintf(&tmp[j], "VFOC"); c=1; break;
+	case	RIG_VFO_CURR:
+		j += sprintf(&tmp[j], "VFOcurr"); c=1; break;
+	case	RIG_VFO_ALL:
+		j += sprintf(&tmp[j], "VFOall"); c=1; break;
+	case	RIG_VFO_MEM:
+		j += sprintf(&tmp[j], "MEM"); c=1; break;
+	case	RIG_VFO_VFO:
+		j += sprintf(&tmp[j], "VFO"); c=1; break;
+	case	RIG_VFO_MAIN:
+		j += sprintf(&tmp[j], "Main"); c=1; break;
+	case	RIG_VFO_SUB:
+		j += sprintf(&tmp[j], "Sub"); c=1; break;
+	case	RIG_VFO_MEM_A:
+		j += sprintf(&tmp[j], "MEMA"); c=1; break;
+	case	RIG_VFO_MEM_C:
+		j += sprintf(&tmp[j], "MEMC"); c=1; break;
+	case	RIG_VFO_CALL_A:
+		j += sprintf(&tmp[j], "CALLA"); c=1; break;
+	case	RIG_VFO_CALL_C:
+		j += sprintf(&tmp[j], "CALLC"); c=1; break;
+	case	RIG_VFO_AB:
+		j += sprintf(&tmp[j], "VFOAB"); c=1; break;
+	case	RIG_VFO_BA:
+		j += sprintf(&tmp[j], "VFOBA"); c=1; break;
+	}
+
+	// Special modes (non-standard RIG_VFO_*)
+	if(c==0) {
+		if( vfo & RIG_CTRL_SAT)	
+			j += sprintf(&tmp[j], "SAT");
+		else
+			j += sprintf(&tmp[j], "Special");
+	}
+
+	tmp[j+1] = '\0';
+
+	return tmp;
 }
 
 const char *strfunc(setting_t func)
@@ -641,6 +693,7 @@ static struct {
 		{ RIG_VFO_VFO, "VFO" },
 		{ RIG_VFO_MEM, "MEM" },
 //		{ RIG_VFO_ALL, "allVFO" },
+
 		{ RIG_VFO_NONE, NULL },
 };
 
