@@ -1,8 +1,0 @@
-noinst_HEADERS = config.h bandplan.h
-
-includedir = @includedir@/hamlib
-
-# Should be nobase_include_HEADERS
-include_HEADERS = hamlib/rig.h hamlib/riglist.h hamlib/rig_dll.h \
-		hamlib/rotator.h hamlib/rotlist.h hamlib/rigclass.h hamlib/rotclass.h
-
