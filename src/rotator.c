@@ -11,7 +11,7 @@
  *  Hamlib Interface - main file
  *  Copyright (c) 2000,2001 by Stephane Fillod and Frank Singleton
  *
- *		$Id: rotator.c,v 1.6 2002-01-27 14:55:30 fillods Exp $
+ *		$Id: rotator.c,v 1.6.2.1 2003-02-25 06:01:15 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

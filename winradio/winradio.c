@@ -3,7 +3,7 @@
  *  Copyright (C) 2001 pab@users.sourceforge.net
  *  Derived from hamlib code (C) 2000,2001 Stephane Fillod.
  *
- *		$Id: winradio.c,v 1.16 2001-12-28 20:28:04 fillods Exp $
+ *		$Id: winradio.c,v 1.16.2.1 2003-02-25 06:01:21 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

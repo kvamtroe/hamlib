@@ -2,7 +2,7 @@
  *  Hamlib AOR backend - main header
  *  Copyright (c) 2000,2001,2002 by Stephane Fillod
  *
- *		$Id: aor.h,v 1.11 2002-02-27 23:17:22 fillods Exp $
+ *		$Id: aor.h,v 1.11.2.1 2003-02-25 06:00:43 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

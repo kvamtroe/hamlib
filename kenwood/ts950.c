@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS950 description
  *  Copyright (c) 2002 by Stephane Fillod
  *
- *	$Id: ts950.c,v 1.4.2.1 2003-02-25 03:58:53 dedmons Exp $
+ *	$Id: ts950.c,v 1.4.2.2 2003-02-25 06:00:58 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

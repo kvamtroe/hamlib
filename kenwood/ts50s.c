@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS50 description
  *  Copyright (c) 2002 by Stephane Fillod
  *
- *	$Id: ts50s.c,v 1.4.2.1 2003-02-25 03:58:52 dedmons Exp $
+ *	$Id: ts50s.c,v 1.4.2.2 2003-02-25 06:00:57 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

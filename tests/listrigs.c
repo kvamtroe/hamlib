@@ -3,7 +3,7 @@
  * This programs list all the available the rig capabilities.
  *
  *
- *    $Id: listrigs.c,v 1.11.2.2 2002-07-26 08:53:10 dedmons Exp $  
+ *    $Id: listrigs.c,v 1.11.2.3 2003-02-25 06:01:18 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

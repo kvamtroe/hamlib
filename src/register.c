@@ -2,7 +2,7 @@
  *  Hamlib Interface - provides registering for dynamically loadable backends.
  *  Copyright (c) 2000,2001,2002 by Stephane Fillod
  *
- *		$Id: register.c,v 1.16 2002-02-26 21:23:45 fillods Exp $
+ *		$Id: register.c,v 1.16.2.1 2003-02-25 06:01:13 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -289,7 +289,7 @@ int rig_load_backend(const char *be_name)
 
 	status = lt_dlinit();
 	if (status) {
-    		rig_debug(RIG_DEBUG_ERR, "rig_backend_load: lt_dlinit for %s "
+    		rig_debug(RIG_DEBUG_ERR, "rig_load_backend: lt_dlinit for %s "
 							"failed: %s\n", be_name, lt_dlerror());
     		return -RIG_EINTERNAL;
 	}

@@ -4,7 +4,7 @@
  *  Parts of the PTT handling are derived from soundmodem, an excellent
  *  ham packet softmodem written by Thomas Sailer, HB9JNX.
  *
- *		$Id: serial.c,v 1.25 2002-03-07 22:49:00 fillods Exp $
+ *		$Id: serial.c,v 1.25.2.1 2003-02-25 06:01:15 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

@@ -11,7 +11,7 @@
  *  Hamlib C++ bindings - main file
  *  Copyright (c) 2001 by Stephane Fillod
  *
- *		$Id: rigclass.cc,v 1.8.2.1 2002-07-26 08:53:08 dedmons Exp $
+ *		$Id: rigclass.cc,v 1.8.2.2 2003-02-25 06:00:46 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

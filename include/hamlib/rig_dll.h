@@ -1,4 +1,4 @@
-/* $Id: rig_dll.h,v 1.5.2.1 2003-02-25 04:13:10 dedmons Exp $ */
+/* $Id: rig_dll.h,v 1.5.2.2 2003-02-25 06:00:54 dedmons Exp $ */
 
 
 /*

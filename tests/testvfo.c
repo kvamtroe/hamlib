@@ -83,10 +83,10 @@ int main (int argc, char *argv[])
 	testvfo(my_rig, RIG_VFO_BA);
 
 // Memories
-	testvfo(my_rig, RIG_VFO_MEM_A);
-	testvfo(my_rig, RIG_VFO_MEM_C);
-	testvfo(my_rig, RIG_VFO_CALL_A);
-	testvfo(my_rig, RIG_VFO_CALL_C);
+	testvfo(my_rig, RIG_MEM_A);
+	testvfo(my_rig, RIG_MEM_C);
+	testvfo(my_rig, RIG_CALL_A);
+	testvfo(my_rig, RIG_CALL_C);
 
 // Special Selections
 
@@ -110,8 +110,8 @@ int main (int argc, char *argv[])
 
 // VFO we want after Testing.  :)
 	fprintf(stdout, "Setting my default mode.\n");
-	testvfo(my_rig, RIG_VFO_MEM_C);
-	testvfo(my_rig, (RIG_CTRL_SCAN | RIG_VFO_MEM_A));
+	testvfo(my_rig, RIG_MEM_C);
+	testvfo(my_rig, (RIG_CTRL_SCAN | RIG_MEM_A));
 
 /********* End of Test **************/
 

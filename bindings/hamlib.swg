@@ -6,7 +6,7 @@
  *  Hamlib bindings - swig interface file
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *	$Id: hamlib.swg,v 1.4 2002-10-08 21:54:58 fillods Exp $
+ *	$Id: hamlib.swg,v 1.4.2.1 2003-02-25 06:00:44 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

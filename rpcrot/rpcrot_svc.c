@@ -20,7 +20,7 @@
  *  Copyright (c) 2000,2001 by Stephane Fillod and Frank Singleton
  *  Contributed by Francois Retief <fgretief@sun.ac.za>
  *
- *		$Id: rpcrot_svc.c,v 1.2 2002-01-16 23:37:31 fillods Exp $
+ *		$Id: rpcrot_svc.c,v 1.2.2.1 2003-02-25 06:01:10 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

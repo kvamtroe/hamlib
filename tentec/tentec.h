@@ -2,7 +2,7 @@
  *  Hamlib Tentec backend - main header
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *		$Id: tentec.h,v 1.4 2002-01-06 17:49:55 fillods Exp $
+ *		$Id: tentec.h,v 1.4.2.1 2003-02-25 06:01:17 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

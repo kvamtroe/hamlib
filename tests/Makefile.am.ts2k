@@ -7,7 +7,7 @@ RUNTESTDEFAULTFLAGS = --tool rigctl --srcdir $$srcdir/testsuite RIGCTL=`pwd`/rig
 DISTCLEANFILES = rigctl.log rigctl.sum testbcd.log testbcd.sum
 
 bin_PROGRAMS = rigctl rotctl \
-	testcmd testts2k testvfo tsctl
+	testcmd testts2k testvfo
 
 man_MANS = rigctl.1 rotctl.1
 

@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - Elecraft K2 description
  *  Copyright (c) 2002 by Stephane Fillod
  *
- *	$Id: k2.c,v 1.1.2.1 2003-02-25 05:11:23 dedmons Exp $
+ *	$Id: k2.c,v 1.1.2.2 2003-02-25 06:00:56 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

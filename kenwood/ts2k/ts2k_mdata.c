@@ -11,8 +11,8 @@
  *		anything with m_tbd is: to be developed
  */
 
-#include "ts2k.h"
-#include "ts2k_menu.h"
+#include "ts2k/ts2k.h"
+#include "ts2k/ts2k_menu.h"
 
 char *ts2k_m_text[] = {
 	"", "On", "Off", "TO", "CO", "High Boost", "Bass Boost", "F Pass",

@@ -2,7 +2,7 @@
  *  Hamlib Dummy backend - main header
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *		$Id: rot_dummy.h,v 1.1 2001-12-28 20:29:33 fillods Exp $
+ *		$Id: rot_dummy.h,v 1.1.2.1 2003-02-25 06:00:48 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

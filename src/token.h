@@ -2,7 +2,7 @@
  *  Hamlib Interface - token header
  *  Copyright (c) 2000,2001,2002 by Stephane Fillod
  *
- *		$Id: token.h,v 1.1 2002-01-27 14:48:49 fillods Exp $
+ *		$Id: token.h,v 1.1.2.1 2003-02-25 06:01:15 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

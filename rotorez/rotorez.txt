@@ -6,7 +6,7 @@ The Hy-Gain DCU-1/DCU-1X Digital Control Unit supports a subset of
 these commands--AP1XXX; and AM1;  The DCU-1/DCU-1X is manufactured 
 and sold by Hy-Gain, http://www.hy-gain.com
 
-$Id: rotorez.txt,v 1.1 2003-01-12 14:29:15 n0nb Exp $
+$Id: rotorez.txt,v 1.1.2.1 2003-02-25 06:01:07 dedmons Exp $
 
 From: "sales@idiompress.com" <info@idiompress.com>
 To: "Nate Bargmann" <n0nb@arrl.net>

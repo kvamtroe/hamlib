@@ -156,30 +156,27 @@ sharedstatedir = @sharedstatedir@
 subdirs = @subdirs@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-PCRSRCLIST = pcr1000.c pcr100.c
 
-lib_LTLIBRARIES = hamlib-pcr.la
-hamlib_pcr_la_SOURCES = $(PCRSRCLIST) pcr.c
-hamlib_pcr_la_LDFLAGS = -no-undefined -module -avoid-version
-hamlib_pcr_la_LIBADD = $(top_builddir)/src/libhamlib.la
+lib_LTLIBRARIES = hamlib-fodtrack.la
+hamlib_fodtrack_la_SOURCES = fodtrack.c
+hamlib_fodtrack_la_LDFLAGS = -no-undefined -module -avoid-version
+hamlib_fodtrack_la_LIBADD = $(top_builddir)/src/libhamlib.la
 
-noinst_HEADERS = pcr.h
-subdir = pcr
+noinst_HEADERS = fodtrack.h
+subdir = fodtrack
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/include/config.h
 CONFIG_CLEAN_FILES =
 LTLIBRARIES = $(lib_LTLIBRARIES)
 
-hamlib_pcr_la_DEPENDENCIES = $(top_builddir)/src/libhamlib.la
-am__objects_1 = pcr1000.lo pcr100.lo
-am_hamlib_pcr_la_OBJECTS = $(am__objects_1) pcr.lo
-hamlib_pcr_la_OBJECTS = $(am_hamlib_pcr_la_OBJECTS)
+hamlib_fodtrack_la_DEPENDENCIES = $(top_builddir)/src/libhamlib.la
+am_hamlib_fodtrack_la_OBJECTS = fodtrack.lo
+hamlib_fodtrack_la_OBJECTS = $(am_hamlib_fodtrack_la_OBJECTS)
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
-@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/pcr.Plo ./$(DEPDIR)/pcr100.Plo \
-@AMDEP_TRUE@	./$(DEPDIR)/pcr1000.Plo
+@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/fodtrack.Plo
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
@@ -187,11 +184,11 @@ LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-DIST_SOURCES = $(hamlib_pcr_la_SOURCES)
+DIST_SOURCES = $(hamlib_fodtrack_la_SOURCES)
 HEADERS = $(noinst_HEADERS)
 
 DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in
-SOURCES = $(hamlib_pcr_la_SOURCES)
+SOURCES = $(hamlib_fodtrack_la_SOURCES)
 
 all: all-am
 
@@ -199,7 +196,7 @@ all: all-am
 .SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ Makefile.am  $(top_srcdir)/configure.ac $(ACLOCAL_M4)
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  pcr/Makefile
+	  $(AUTOMAKE) --gnu  fodtrack/Makefile
 Makefile: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)
 libLTLIBRARIES_INSTALL = $(INSTALL)
@@ -230,8 +227,8 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-hamlib-pcr.la: $(hamlib_pcr_la_OBJECTS) $(hamlib_pcr_la_DEPENDENCIES) 
-	$(LINK) -rpath $(libdir) $(hamlib_pcr_la_LDFLAGS) $(hamlib_pcr_la_OBJECTS) $(hamlib_pcr_la_LIBADD) $(LIBS)
+hamlib-fodtrack.la: $(hamlib_fodtrack_la_OBJECTS) $(hamlib_fodtrack_la_DEPENDENCIES) 
+	$(LINK) -rpath $(libdir) $(hamlib_fodtrack_la_LDFLAGS) $(hamlib_fodtrack_la_OBJECTS) $(hamlib_fodtrack_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core
@@ -239,9 +236,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr100.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr1000.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fodtrack.Plo@am__quote@
 
 distclean-depend:
 	-rm -rf ./$(DEPDIR)

@@ -2,7 +2,7 @@
  *  Hamlib Interface - calibration header
  *  Copyright (c) 2000,2001 by Stephane Fillod and Frank Singleton
  *
- *		$Id: cal.h,v 1.4 2001-07-13 19:08:15 f4cfe Exp $
+ *		$Id: cal.h,v 1.4.2.1 2003-02-25 06:01:12 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

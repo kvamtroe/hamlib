@@ -2,7 +2,7 @@
  *  Hamlib Uniden backend - main file
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *		$Id: uniden.c,v 1.4 2002-03-13 23:37:13 fillods Exp $
+ *		$Id: uniden.c,v 1.4.2.1 2003-02-25 06:01:20 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

@@ -2,7 +2,7 @@
  *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.1.2.1 2003-02-25 03:46:59 dedmons Exp $
+ *		$Id: ts2k.h,v 1.1.2.2 2003-02-25 06:01:00 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -25,6 +25,7 @@
  */
 
 #include <hamlib/rig.h>
+#define _TS_LABEL
 
 #ifndef _TS2K_H
 #define _TS2K_H
@@ -33,6 +34,21 @@
 
 #define RIG_SCAN_ALL (RIG_SCAN_MEM | RIG_SCAN_SLCT | RIG_SCAN_PRIO \
 			| RIG_SCAN_PROG | RIG_SCAN_DELTA | RIG_SCAN_VFO)
+
+#ifndef RIG_SCAN_CALL
+# define TS2K_SCAN_CALL RIG_SCAN_PRIO
+#endif
+
+enum ts2k_scan_e {
+	TS2K_SCAN_OFF = 0,
+	TS2K_SCAN_ON,		// VFO, MEM, CALL
+	TS2K_SCAN_MHZ,
+	TS2K_SCAN_VISUAL,
+	TS2K_SCAN_TONE,
+	TS2K_SCAN_CTCSS,
+	TS2K_SCAN_DCS
+};
+typedef enum ts2k_scan_e ts2k_scan_t;
 
 #define RIG_LEVEL_ALL (RIG_LEVEL_PREAMP  | RIG_LEVEL_ATT | RIG_LEVEL_VOX \
 		 	| RIG_LEVEL_AF | RIG_LEVEL_RF | RIG_LEVEL_SQL \
@@ -174,40 +190,20 @@ int ts2k_get_split(RIG *rig, vfo_t vfo, split_t *split);
 int ts2k_set_split(RIG *rig, vfo_t vfo, split_t  split);
 int ts2k_get_split_freq(RIG *rig, vfo_t vfo, freq_t *tx_freq);
 int ts2k_set_split_freq(RIG *rig, vfo_t vfo, freq_t  tx_freq);
-int ts2k_get_split_mode(RIG *rig, vfo_t vfo, rmode_t *txmode, pbwidth_t *txwidth);
-int ts2k_set_split_mode(RIG *rig, vfo_t vfo, rmode_t  txmode, pbwidth_t  txwidth); 
-int ts2k_get_ts(RIG *rig, vfo_t vfo, shortfreq_t *ts);
-int ts2k_set_ts(RIG *rig, vfo_t vfo, shortfreq_t ts);
-int ts2k_get_xit(RIG *rig, vfo_t vfo, shortfreq_t *freq);
-int ts2k_set_xit(RIG *rig, vfo_t vfo, shortfreq_t  freq);
-/* Redsigned Functions */
-int ts2k_uniq_GetCtrl(RIG *rig, vfo_t *vfo);
-int ts2k_uniq_GetMemChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_GetSatChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_GetSplitChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo);
-int ts2k_uniq_GetVfoChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_LockPanel(RIG *rig);
-int ts2k_uniq_MemOff(RIG *rig, vfo_t);
-int ts2k_uniq_MemOn(RIG *rig, vfo_t);
-int ts2k_uniq_SatOff(RIG *rig);
-int ts2k_uniq_SatOn(RIG *rig, vfo_t);
-int ts2k_uniq_SendScan(RIG *rig, vfo_t, char sc);
-int ts2k_uniq_SendVfo(RIG *rig, vfo_t, char v);
-int ts2k_uniq_SetCtrl(RIG *rig, vfo_t vfo);
-int ts2k_uniq_SetMajor(RIG *rig, vfo_t);
-int ts2k_uniq_SetMemChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_SetMinor(RIG *rig, vfo_t);
-int ts2k_uniq_SetSat(RIG *rig, vfo_t);
-int ts2k_uniq_SetScan(RIG *rig, vfo_t);
-int ts2k_uniq_SetSplitChan(RIG *rig, channel_t *chan);
-int ts2k_uniq_SetVfo(RIG *rig, vfo_t);
-int ts2k_uniq_ScanOff(RIG *rig, vfo_t);
-int ts2k_uniq_ScanOn(RIG *rig, vfo_t);
-int ts2k_uniq_SplitVfo(RIG *rig, char rx, char tx);
-int ts2k_uniq_SwitchVfo(RIG *rig, vfo_t);
-int ts2k_uniq_UnlockPanel(RIG *rig);
 
+int ts2k_get_split_mode(RIG *, vfo_t, rmode_t *, pbwidth_t *);
+int ts2k_set_split_mode(RIG *, vfo_t, rmode_t, pbwidth_t); 
+int ts2k_get_ts(RIG *, vfo_t, shortfreq_t *);
+int ts2k_set_ts(RIG *, vfo_t, shortfreq_t);
+int ts2k_get_xit(RIG *, vfo_t, shortfreq_t *);
+int ts2k_set_xit(RIG *, vfo_t, shortfreq_t);
+/* Uniq Functions */
+int ts2k_uniq_SetSimpleVfo(RIG *, vfo_t);
+int ts2k_uniq_GetSimpleVfo(RIG *, vfo_t *);
+int ts2k_uniq_SetTransceiver(RIG *, vfo_t);
+int ts2k_uniq_GetTransceiver(RIG *, vfo_t *);
+/* Emulation Routines */
+int ts2k_emul_SetCallFreq(RIG *, vfo_t, freq_t);
 /* end kd7eni functions */
 
 extern const struct rig_caps thd7a_caps;
@@ -261,9 +257,9 @@ extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
 # define TS2K_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
 
 // the following uses both Sub and Main for the Major mode
-# define TS2K_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A \
-			| RIG_VFO_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
-# define TS2K_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
+# define TS2K_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_MEM_A \
+			| RIG_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
+# define TS2K_SUBVFO (RIG_VFO_C | RIG_MEM_C | RIG_CALL_C)
 # define TS2K_RIGVFO	RIG_CTRL_MASK 
 
 #endif
@@ -276,15 +272,15 @@ extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
 /*
  * modes in use by the "MD" command
  */
-#define MD_NONE	'0'
-#define MD_LSB	'1'
-#define MD_USB	'2'
-#define MD_CW	'3'
-#define MD_FM	'4'
-#define MD_AM	'5'
-#define MD_FSK	'6'
-#define MD_CWR	'7'
-#define MD_FSKR	'9'
+#define MD_NONE	0
+#define MD_LSB	1
+#define MD_USB	2
+#define MD_CW	3
+#define MD_FM	4
+#define MD_AM	5
+#define MD_FSK	6
+#define MD_CWR	7
+#define MD_FSKR	9
 
 
 // Added the following lists --Dale, kd7eni

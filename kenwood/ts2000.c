@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS2000 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2000.c,v 1.9.2.4 2003-02-25 03:58:50 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.5 2003-02-25 06:00:56 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -317,7 +317,7 @@ set_xit:	ts2000_set_xit,
  *  Copyright (c) 2000-2002 by Stephane Fillod
  * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
  *
- *		$Id: ts2000.c,v 1.9.2.4 2003-02-25 03:58:50 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.5 2003-02-25 06:00:56 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

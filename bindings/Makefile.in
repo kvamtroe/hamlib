@@ -14,6 +14,11 @@
 
 @SET_MAKE@
 
+# hamlibtcl, hamlibperl, etc. are temproray modules names
+# They will be generated in separate subdirs in the future
+
+# more information on swig at http://www.swig.org
+
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
@@ -71,7 +76,8 @@ EXEEXT = @EXEEXT@
 GNURADIO_CFLAGS = @GNURADIO_CFLAGS@
 GNURADIO_LIBS = @GNURADIO_LIBS@
 INCLTDL = @INCLTDL@
-INCLUDES = @INCLUDES@
+
+INCLUDES = @INCLUDES@ -Dbool=char -I@PERL_INC_DIR@ -I@TCL_SRC_DIR@/generic -I$(top_srcdir)/bindings
 INSIDE_GNOME_COMMON_FALSE = @INSIDE_GNOME_COMMON_FALSE@
 INSIDE_GNOME_COMMON_TRUE = @INSIDE_GNOME_COMMON_TRUE@
 INSTALL_DATA = @INSTALL_DATA@
@@ -156,30 +162,55 @@ sharedstatedir = @sharedstatedir@
 subdirs = @subdirs@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-PCRSRCLIST = pcr1000.c pcr100.c
 
-lib_LTLIBRARIES = hamlib-pcr.la
-hamlib_pcr_la_SOURCES = $(PCRSRCLIST) pcr.c
-hamlib_pcr_la_LDFLAGS = -no-undefined -module -avoid-version
-hamlib_pcr_la_LIBADD = $(top_builddir)/src/libhamlib.la
+#lib_LTLIBRARIES = @BINDING_LA@
+#EXTRA_LTLIBRARIES = hamlibperl.la hamlibtcl.la
+lib_LTLIBRARIES = hamlibperl.la hamlibtcl.la
 
-noinst_HEADERS = pcr.h
-subdir = pcr
+
+# Perl binding
+#hamlibperl_la_INCLUDE = @INCLUDES@ -Dbool=char -I@PERL_INC_DIR@
+nodist_hamlibperl_la_SOURCES = hamlibperl_wrap.c
+hamlibperl_la_LDFLAGS = -no-undefined -module -avoid-version
+hamlibperl_la_LIBADD = $(top_builddir)/src/libhamlib.la
+
+BUILT_SOURCES = hamlibperl_wrap.c hamlibtcl_wrap.c
+DISTCLEANFILES = hamlibperl_wrap.c hamlibtcl_wrap.c
+
+
+# Tcl binding
+#hamlibtcl_la_INCLUDE = @INCLUDES@ -I@TCL_SRC_DIR@/generic
+nodist_hamlibtcl_la_SOURCES = hamlibtcl_wrap.c
+hamlibtcl_la_LDFLAGS = -no-undefined -module -avoid-version @TCL_LIB_SPEC@
+hamlibtcl_la_LIBADD = $(top_builddir)/src/libhamlib.la
+
+EXTRA_DIST = hamlib.swg ignore.swg rig.swg rotator.swg \
+			perltest.pl tcltest.tcl
+
+
+CLEANFILES = hamlibperl_wrap.c hamlib.pm hamlibtcl_wrap.c
+
+noinst_SCRIPTS = perltest.pl tcltest.tcl
+subdir = bindings
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/include/config.h
 CONFIG_CLEAN_FILES =
 LTLIBRARIES = $(lib_LTLIBRARIES)
 
-hamlib_pcr_la_DEPENDENCIES = $(top_builddir)/src/libhamlib.la
-am__objects_1 = pcr1000.lo pcr100.lo
-am_hamlib_pcr_la_OBJECTS = $(am__objects_1) pcr.lo
-hamlib_pcr_la_OBJECTS = $(am_hamlib_pcr_la_OBJECTS)
+hamlibperl_la_DEPENDENCIES = $(top_builddir)/src/libhamlib.la
+nodist_hamlibperl_la_OBJECTS = hamlibperl_wrap.lo
+hamlibperl_la_OBJECTS = $(nodist_hamlibperl_la_OBJECTS)
+hamlibtcl_la_DEPENDENCIES = $(top_builddir)/src/libhamlib.la
+nodist_hamlibtcl_la_OBJECTS = hamlibtcl_wrap.lo
+hamlibtcl_la_OBJECTS = $(nodist_hamlibtcl_la_OBJECTS)
+SCRIPTS = $(noinst_SCRIPTS)
+
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
-@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/pcr.Plo ./$(DEPDIR)/pcr100.Plo \
-@AMDEP_TRUE@	./$(DEPDIR)/pcr1000.Plo
+@AMDEP_TRUE@DEP_FILES = ./$(DEPDIR)/hamlibperl_wrap.Plo \
+@AMDEP_TRUE@	./$(DEPDIR)/hamlibtcl_wrap.Plo
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
@@ -187,19 +218,18 @@ LTCOMPILE = $(LIBTOOL) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-DIST_SOURCES = $(hamlib_pcr_la_SOURCES)
-HEADERS = $(noinst_HEADERS)
+DIST_SOURCES =
+DIST_COMMON = Makefile.am Makefile.in
+SOURCES = $(nodist_hamlibperl_la_SOURCES) $(nodist_hamlibtcl_la_SOURCES)
 
-DIST_COMMON = $(noinst_HEADERS) Makefile.am Makefile.in
-SOURCES = $(hamlib_pcr_la_SOURCES)
-
-all: all-am
+all: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ Makefile.am  $(top_srcdir)/configure.ac $(ACLOCAL_M4)
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  pcr/Makefile
+	  $(AUTOMAKE) --gnu  bindings/Makefile
 Makefile: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)
 libLTLIBRARIES_INSTALL = $(INSTALL)
@@ -230,8 +260,10 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-hamlib-pcr.la: $(hamlib_pcr_la_OBJECTS) $(hamlib_pcr_la_DEPENDENCIES) 
-	$(LINK) -rpath $(libdir) $(hamlib_pcr_la_LDFLAGS) $(hamlib_pcr_la_OBJECTS) $(hamlib_pcr_la_LIBADD) $(LIBS)
+hamlibperl.la: $(hamlibperl_la_OBJECTS) $(hamlibperl_la_DEPENDENCIES) 
+	$(LINK) -rpath $(libdir) $(hamlibperl_la_LDFLAGS) $(hamlibperl_la_OBJECTS) $(hamlibperl_la_LIBADD) $(LIBS)
+hamlibtcl.la: $(hamlibtcl_la_OBJECTS) $(hamlibtcl_la_DEPENDENCIES) 
+	$(LINK) -rpath $(libdir) $(hamlibtcl_la_LDFLAGS) $(hamlibtcl_la_OBJECTS) $(hamlibtcl_la_LIBADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT) core *.core
@@ -239,9 +271,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr100.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pcr1000.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hamlibperl_wrap.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hamlibtcl_wrap.Plo@am__quote@
 
 distclean-depend:
 	-rm -rf ./$(DEPDIR)
@@ -375,8 +406,9 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
-check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS)
+check: $(BUILT_SOURCES)
+	$(MAKE) $(AM_MAKEFLAGS) check-am
+all-am: Makefile $(LTLIBRARIES) $(SCRIPTS)
 
 installdirs:
 	$(mkinstalldirs) $(DESTDIR)$(libdir)
@@ -398,13 +430,16 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-rm -f Makefile $(CONFIG_CLEAN_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(BUILT_SOURCES)" || rm -f $(BUILT_SOURCES)
 clean: clean-am
 
 clean-am: clean-generic clean-libLTLIBRARIES clean-libtool \
@@ -465,6 +500,17 @@ uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES
 	tags uninstall uninstall-am uninstall-info-am \
 	uninstall-libLTLIBRARIES
 
+
+hamlibperl_wrap.c: hamlib.swg $(top_srcdir)/include/hamlib/rig.h
+	swig -perl5 -shadow @INCLUDES@ -I$(top_srcdir)/bindings -o $@ `test -f hamlib.swg || echo '$(srcdir)/'`hamlib.swg
+
+hamlibtcl_wrap.c: hamlib.swg $(top_srcdir)/include/hamlib/rig.h
+	swig -tcl @INCLUDES@ -I$(top_srcdir)/bindings -o $@ `test -f hamlib.swg || echo '$(srcdir)/'`hamlib.swg
+
+rig.swg: $(top_srcdir)/include/hamlib/rig.h $(top_srcdir)/include/hamlib/riglist.h
+rotator.swg: $(top_srcdir)/include/hamlib/rotator.h $(top_srcdir)/include/hamlib/rotlist.h
+
+hamlib.swg: ignore.swg rig.swg rotator.swg
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

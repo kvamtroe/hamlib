@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *	$Id: kenwood.h,v 1.21.2.2 2003-02-25 03:58:48 dedmons Exp $
+ *	$Id: kenwood.h,v 1.21.2.3 2003-02-25 06:00:56 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

@@ -55,17 +55,11 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `c' library (-lc). */
-#undef HAVE_LIBC
-
 /* Define to 1 if you have the `syslog' library (-lsyslog). */
 #undef HAVE_LIBSYSLOG
 
 /* Define to 1 if you have the <linux/ppdev.h> header file. */
 #undef HAVE_LINUX_PPDEV_H
-
-/* Define to 1 if your system has a working `malloc' function. */
-#undef HAVE_MALLOC
 
 /* Define to 1 if you have the <malloc.h> header file. */
 #undef HAVE_MALLOC_H
@@ -84,6 +78,9 @@
 
 /* Define to 1 if you have the <net/errno.h> header file. */
 #undef HAVE_NET_ERRNO_H
+
+/* Define to 1 if you have the <rpc/rpcent.h> header file. */
+#undef HAVE_RPC_RPCENT_H
 
 /* Define to 1 if you have the <rpc/rpc.h> header file. */
 #undef HAVE_RPC_RPC_H
@@ -147,6 +144,9 @@
    */
 #undef HAVE_SYS_NDIR_H
 
+/* Define to 1 if you have the <sys/param.h> header file. */
+#undef HAVE_SYS_PARAM_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
@@ -176,9 +176,6 @@
 
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
-
-/* Define to 1 if you have the <VrMultiTask.h> header file. */
-#undef HAVE_VRMULTITASK_H
 
 /* Define to 1 if you have the <winbase.h> header file. */
 #undef HAVE_WINBASE_H

@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TH-D7 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *	$Id: thd7.c,v 1.6.2.1 2003-02-25 03:58:49 dedmons Exp $
+ *	$Id: thd7.c,v 1.6.2.2 2003-02-25 06:00:56 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

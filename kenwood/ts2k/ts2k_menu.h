@@ -37,6 +37,7 @@
 #define MENU_F	6
 
 // parameter value text.  may be used in any menu.
+/*
 enum ts2k_m_parm_e {
 	M_END = 0, M_ON, M_OFF, M_TO, M_CO, M_H_BOOST, M_B_BOOST, M_F_PASS,
 	M_CONVEN, M_USER, M_AUTO, M_NORM, M_INV, M_LOW, M_MID, M_HI,
@@ -45,6 +46,7 @@ enum ts2k_m_parm_e {
 	M_CROSS, M_CLIENT, M_COMMANDER, M_TRANSPORTER, M_FONT1, M_FONT2,
 	M_TBD, M_NUM, M_TEXT, M_MENU_NOT_INITIALIZED = (0xCEEE + 0xDEE), M_NULL
 };
+*/
 // My wife's initials are C.E.E.E. and mine are D.E.E.  0xCEEE+0xDEE = 0xDCDC
 // DCDC -> DaleCathyDaleCathy Weird huh?
 
@@ -58,7 +60,7 @@ extern const char key_none[];
 #define KEY_MENU_MAX	62
 #define KEY_KEY_MAX	90
 #define KEY_UNASSIGNED	99
-
+/*
 typedef struct {
 	char *menu_no;
 	char *txt;
@@ -67,7 +69,7 @@ typedef struct {
 	int menu[4];
 	int val;		// same as P5
 } ts2k_menu_t;
-
+*/
 /*
  * Defaults for menu_t.val were obtained via minicom
  * on my rig after doing a full reset to factory defaults.
@@ -81,7 +83,7 @@ extern ts2k_menu_t ts2k_menus[];
 /*
  * Items related to menu structure
  */
-
+/*
 // Programmable memories
 typedef struct {
 	int	curr;	// PM now in use
@@ -96,7 +98,7 @@ typedef struct {
 	unsigned int	pub;
 	unsigned int	priv;
 } ts2k_pm_t;
-
+*/
 #ifdef TS2K_ENFORCE_PM
 # define TS2K_PM_PUB	( 	   	  (1<<2) | (1<<3)		 )
 # define TS2K_PM_PRIV	( (1<<0) | (1<<1)	 |	 (1<<4) | (1<<5) )

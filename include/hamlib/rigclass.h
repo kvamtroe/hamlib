@@ -2,7 +2,7 @@
  *  Hamlib C++ bindings - API header
  *  Copyright (c) 2001-2002 by Stephane Fillod
  *
- *	$Id: rigclass.h,v 1.9.2.2 2003-02-25 04:13:11 dedmons Exp $
+ *	$Id: rigclass.h,v 1.9.2.3 2003-02-25 06:00:54 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

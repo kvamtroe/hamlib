@@ -2,7 +2,7 @@
  *  Hamlib Interface - CTCSS and DCS tables header
  *  Copyright (c) 2000,2001 by Stephane Fillod and Frank Singleton
  *
- *		$Id: tones.h,v 1.1 2001-12-19 03:18:44 fillods Exp $
+ *		$Id: tones.h,v 1.1.2.1 2003-02-25 06:01:15 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

@@ -2,7 +2,7 @@
  *  Hamlib Kachina backend - main file
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *		$Id: kachina.c,v 1.4 2002-03-13 23:37:12 fillods Exp $
+ *		$Id: kachina.c,v 1.4.2.1 2003-02-25 06:00:55 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

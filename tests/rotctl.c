@@ -1,11 +1,11 @@
 /*
- * rotctl.c - (C) Stephane Fillod 2000,2001
+ * rotctl.c - (C) Stephane Fillod 2000-2002
  *
  * This program test/control a rotator using Hamlib.
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rotctl.c,v 1.3.2.2 2002-07-26 08:53:10 dedmons Exp $  
+ * $Id: rotctl.c,v 1.3.2.3 2003-02-25 06:01:19 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <getopt.h>
 
@@ -171,7 +172,7 @@ int main (int argc, char *argv[])
 
 	int interactive=1;	/* if no cmd on command line, switch to interactive */
 	int retcode;		/* generic return code from functions */
-	char cmd;
+	unsigned char cmd;
 	struct test_table *cmd_entry;
 
 	int verbose = 0;
@@ -297,14 +298,28 @@ int main (int argc, char *argv[])
 			static int last_was_ret = 1;
 
 			if (interactive) {
-				printf("\nRig command: ");
+				printf("\nRot command: ");
 
 				do {
 					scanf("%c", &cmd);
+
+					/* command by name */
+					if (cmd == '\\') {
+						unsigned char cmd_name[MAXNAMSIZ], *pcmd = cmd_name;
+						int c_len = MAXNAMSIZ;
+					
+						scanf("%c", pcmd);
+						while(c_len-- && (isalnum(*pcmd) || *pcmd == '_' ))
+							scanf("%c", ++pcmd);
+						*pcmd = '\0';
+						cmd = parse_arg(cmd_name);
+						break;
+					}
+
 					if (cmd == 0x0a || cmd == 0x0d) {
 						if (last_was_ret) {
 							printf("? for help, q to quit.\n");
-							printf("\nRig command: ");
+							printf("\nRot command: ");
 							continue;
 						}
 						last_was_ret = 1;
@@ -489,7 +504,7 @@ void list_models()
 
 	rot_load_all_backends();
 
-	printf("Rig#\tMfg           Model           Vers.\n");
+	printf("Rot#\tMfg           Model           Vers.\n");
 	status = rot_list_foreach(print_model_list, NULL);
 	if (status != RIG_OK ) {
 		printf("rot_list_foreach: error = %s \n", rigerror(status));

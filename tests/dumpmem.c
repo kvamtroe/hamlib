@@ -3,7 +3,7 @@
  * This programs dumps the mmeory contents of a rig.
  *
  *
- *    $Id: dumpmem.c,v 1.7.2.2 2002-07-26 08:53:10 dedmons Exp $  
+ *    $Id: dumpmem.c,v 1.7.2.3 2003-02-25 06:01:18 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or

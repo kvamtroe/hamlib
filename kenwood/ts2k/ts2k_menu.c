@@ -23,8 +23,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <hamlib/rig.h>
-#include "ts2k.h"
-#include "ts2k_menu.h"
+#include "ts2k/ts2k.h"
+#include "ts2k/ts2k_menu.h"
 
 /*
  * ts2k_menu_init()	Initialize one menu as in ts2k_menus[]
@@ -305,17 +305,36 @@ char * ts2k_list_menu(RIG *rig, ts2k_menu_t *menu)
  */
 int ts2k_pm_init(RIG *rig)
 {
+	// The following line taken from tests/dumpcaps.c
+	const struct rig_caps *caps;
+
 	char pmcmd[10], mfcmd[10];
 	int retval, i, j, k, pm_orig, pmsiz, mfsiz, mf_orig, dummy;
 	ts2k_menu_t **menus;
-	ts2k_pm_t **pm_all, *pm;
+	ts2k_pm_t **pm_all, *pm, **rig_pm;
 //	ts2k_pm_t *pm_all[TS2K_PMSIZ], *pm;
 
 	rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": begin.\n");
 
-	pm_all = malloc( sizeof(ts2k_pm_t *) * TS2K_PMSIZ );
-	if(pm_all == NULL)
+	if(rig == NULL) {
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": Invalid rig pointer\n");
+		return -RIG_EINTERNAL;
+	}
+
+	if((caps = rig->caps) == NULL) {
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": Invalid caps pointer\n");
+		return -RIG_EINTERNAL;
+	}
+
+	pm_all = calloc(TS2K_PMSIZ, sizeof(ts2k_pm_t *));
+
+	if(pm_all == NULL) {
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": calloc failed\n");
 		return -RIG_ENOMEM;
+	}
+
+	rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": Setting caps pointer.\n");
+	caps->pm = pm_all;
 
 	/* get current values of rig to be restored on close */
 	pmsiz = 10;
@@ -335,6 +354,8 @@ int ts2k_pm_init(RIG *rig)
 
 	// allocate array of ts2k_pm_t's
 	for( i=(TS2K_PMSIZ-1); i>=0; --i) {
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__ \
+			": Allocating PM(%i)\n", i);
 		pm = malloc( sizeof(ts2k_pm_t) );
 		if(pm == NULL)
 			return -RIG_ENOMEM;
@@ -352,10 +373,13 @@ int ts2k_pm_init(RIG *rig)
 		if(retval != RIG_OK)
 			return -RIG_EINVAL;
 
-		sleep(1);	// Enforce switch-over delay or we get aborted!
 */
+	//	sleep(1);	// Enforce switch-over delay or we get aborted!
+
 		for( j=0; j<2; j++) {
-			menus = malloc( sizeof(ts2k_menu_t *) * TS2K_MENU_COUNT );
+			rig_debug(RIG_DEBUG_WARN, __FUNCTION__ \
+				":\tAllocating Menu %i...\n", j);
+			menus = calloc(TS2K_MENU_COUNT, sizeof(ts2k_menu_t *));
 			pm->menu[j] = menus;
 			if(pm->menu[j] == NULL)
 				return -RIG_ENOMEM;
@@ -368,10 +392,9 @@ int ts2k_pm_init(RIG *rig)
 				menus[k]->menu[0] = M_MENU_NOT_INITIALIZED;
 			}
 		}
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__ \
+			": Finished PM(%i)\n", i);
 	}
-
-	rig->caps->pm = pm_all;
-
 	rig_debug(RIG_DEBUG_WARN, __FUNCTION__ ": Setting first available Public PM.\n");
 
 	// Set first PM that is public

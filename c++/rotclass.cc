@@ -11,7 +11,7 @@
  *  Hamlib C++ bindings - main file
  *  Copyright (c) 2002 by Stephane Fillod
  *
- *		$Id: rotclass.cc,v 1.1 2002-01-16 22:43:29 fillods Exp $
+ *		$Id: rotclass.cc,v 1.1.2.1 2003-02-25 06:00:46 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

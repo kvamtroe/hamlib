@@ -6,18 +6,23 @@ RUNTESTDEFAULTFLAGS = --tool rigctl --srcdir $$srcdir/testsuite RIGCTL=`pwd`/rig
 
 DISTCLEANFILES = rigctl.log rigctl.sum testbcd.log testbcd.sum
 
-bin_PROGRAMS = rigctl rotctl
+bin_PROGRAMS = rigctl rotctl \
+	testcmd testts2k testvfo tsctl
+
 man_MANS = rigctl.1 rotctl.1
 
 check_PROGRAMS = dumpmem testrig testtrn testbcd testfreq listrigs testloc @RIGMATRIX@
 
 rigctl_SOURCES = rigctl.c dumpcaps.c
 
-EXTRA_PROGRAMS = rigmatrix
+EXTRA_PROGRAMS = rigmatrix testts2k 
 
 # all the programs need this
-LDADD = $(top_builddir)/src/libhamlib.la $(top_builddir)/lib/libmisc.la
-DEPENDENCIES = $(top_builddir)/src/libhamlib.la
+LDADD = $(top_builddir)/src/libhamlib.la $(top_builddir)/lib/libmisc.la \
+	lex.rig_yy.o rig.tab.o rigcmd.o 
+
+DEPENDENCIES = $(top_builddir)/src/libhamlib.la \
+	lex.rig_yy.o rig.tab.o rigcmd.o 
 
 ## Linker options
 listrigs_LDFLAGS = @BACKENDLNK@
@@ -26,6 +31,8 @@ testrig_LDFLAGS = @BACKENDLNK@
 testtrn_LDFLAGS = @BACKENDLNK@
 rigctl_LDFLAGS = @BACKENDLNK@
 rotctl_LDFLAGS = @ROT_BACKENDLNK@
+# added by kd7eni
+testts2k_LDFLAGS = @BACKENDLNK@
  
 # temporary hack
 testbcd_LDFLAGS = -dlpreopen self
@@ -43,8 +50,9 @@ listrigs_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rigctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rotctl_DEPENDENCIES = $(DEPENDENCIES) @ROT_BACKENDEPS@
 rigmatrix_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
-
-
+# added by kd7eni
+testts2k_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+#rigcmd_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 
 rigmatrix.html: rigmatrix_head.html rigmatrix listrigs
 	mkdir -p html

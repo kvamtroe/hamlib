@@ -3,14 +3,9 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <hamlib/rig.h>
-#include "misc.h"
 #include "tests.h"
 #include "rigcmd.h"
-#include "rig.tab.h"
 
 int main(int argc, char *argv[])
 {

@@ -2,7 +2,7 @@
  *  Hamlib CI-V backend - main file
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: icom.c,v 1.61.2.1 2002-07-26 08:53:08 dedmons Exp $
+ *	$Id: icom.c,v 1.61.2.2 2003-02-25 06:00:52 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -192,7 +192,7 @@ struct icom_addr {
 
 const struct confparams icom_cfg_params[] = {
 	{ TOK_CIVADDR, "civaddr", "CI-V address", "Transceiver's CI-V address",
-			"0", RIG_CONF_NUMERIC, { n: { 0, 0xff, 1 } }
+			"0", RIG_CONF_NUMERIC, { .n = { 0, 0xff, 1 } }
 	},
 	{ TOK_MODE731, "mode731", "CI-V 731 mode", "CI-V operating frequency "
 			"data length, needed for IC731 and IC735",
@@ -392,14 +392,16 @@ int icom_get_freq(RIG *rig, vfo_t vfo, freq_t *freq)
 			return RIG_OK;
 		}
 
-		/*
-		 * TODO: older rig may return less than 4 or 5 bytes (for low freqs)!
-		 *  also if freq is undefined (i.e. blank memory) set freq to RIG_FREQ_NONE
-		 */
-		if (freq_len != (priv->civ_731_mode ? 4:5)) {
+		if (freq_len != 4 && freq_len != 5) {
 				rig_debug(RIG_DEBUG_ERR,"icom_get_freq: wrong frame len=%d\n",
 								freq_len);
 				return -RIG_ERJCTED;
+		}
+
+		if (freq_len != (priv->civ_731_mode ? 4:5)) {
+				rig_debug(RIG_DEBUG_WARN,"icom_get_freq: "
+						"freq len (%d) differs from "
+						"expected\n", freq_len);
 		}
 
 		/*
@@ -410,6 +412,38 @@ int icom_get_freq(RIG *rig, vfo_t vfo, freq_t *freq)
 		return RIG_OK;
 }
 
+int icom_set_rit(RIG *rig, vfo_t vfo, shortfreq_t rit)
+{
+		struct icom_priv_data *priv;
+		struct rig_state *rs;
+		unsigned char freqbuf[MAXFRAMELEN], ackbuf[MAXFRAMELEN];
+		int freq_len, ack_len, retval;
+
+		rs = &rig->state;
+		priv = (struct icom_priv_data*)rs->priv;
+
+
+		freq_len = 2;
+		/*
+		 * to_bcd requires nibble len
+		 */
+		to_bcd(freqbuf, rit, freq_len*2);
+
+		retval = icom_transaction (rig, C_SET_OFFS, -1, freqbuf, freq_len,
+						ackbuf, &ack_len);
+		if (retval != RIG_OK)
+				return retval;
+
+		if (ack_len != 1 || ackbuf[0] != ACK) {
+				rig_debug(RIG_DEBUG_ERR,"icom_set_rit: ack NG (%#.2x), "
+								"len=%d\n", ackbuf[0],ack_len);
+				return -RIG_ERJCTED;
+		}
+
+		return RIG_OK;
+}
+
+
 /*
  * icom_set_mode
  * Assumes rig!=NULL, rig->state.priv!=NULL
@@ -419,7 +453,8 @@ int icom_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 		struct icom_priv_data *priv;
 		struct rig_state *rs;
 		unsigned char ackbuf[MAXFRAMELEN];
-		char icmode, icmode_ext;
+		unsigned char icmode; 
+		signed char icmode_ext;
 		int ack_len, retval, err;
 
 		rs = &rig->state;
@@ -604,7 +639,8 @@ int icom_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val)
 			break;
 		case RIG_LEVEL_ATT:
 			lvl_cn = C_CTL_ATT;
-			lvl_sc = val.i;
+			/* attenuator level is dB, in BCD mode */
+			lvl_sc = (val.i/10)<<4 | (val.i%10);
 			lvl_len = 0;
 			break;
 		case RIG_LEVEL_AF:
@@ -878,7 +914,7 @@ int icom_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 			}
 			val->i = rs->preamp[icom_val-1];
 			break;
-		/* RIG_LEVEL_ATT: returned value is already an integer in dB ! */
+		/* RIG_LEVEL_ATT: returned value is already an integer in dB (coded in BCD) */
 		default:
 			if (RIG_LEVEL_IS_FLOAT(level))
 				val->f = (float)icom_val/255;
@@ -886,7 +922,7 @@ int icom_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 				val->i = icom_val;
 		}
 
-		rig_debug(RIG_DEBUG_VERBOSE,"get_level: %d %d %d %f\n", lvl_len,
+		rig_debug(RIG_DEBUG_TRACE,"icom_get_level: %d %d %d %f\n", lvl_len,
 						icom_val, val->i, val->f);
 
 		return RIG_OK;
@@ -1499,7 +1535,7 @@ int icom_set_func(RIG *rig, vfo_t vfo, setting_t func, int status)
 		/*
 		 * except for IC-R8500
 		 */
-		fctbuf[0] = status? 0x00:0x01;
+		fctbuf[0] = status? 0x01:0x00;
 		fct_len = rig->caps->rig_model == RIG_MODEL_ICR8500 ? 0 : 1;
 
 		/* Optimize:
@@ -1508,7 +1544,12 @@ int icom_set_func(RIG *rig, vfo_t vfo, setting_t func, int status)
 		switch (func) {
 		case RIG_FUNC_FAGC:
 			fct_cn = C_CTL_FUNC;
-			fct_sc = S_FUNC_AGC;	/* default to 0x01 super-fast */
+			fct_sc = S_FUNC_AGC;
+			/* note: should it be a LEVEL only, and no func? --SF */
+			if (status != 0)
+				fctbuf[0] = 0x01;	/* default to 0x01 super-fast */
+			else
+				fctbuf[0] = 0x02;
 			break;
 		case RIG_FUNC_NB:
 			fct_cn = C_CTL_FUNC;
@@ -1586,9 +1627,9 @@ int icom_set_func(RIG *rig, vfo_t vfo, setting_t func, int status)
 		if (retval != RIG_OK)
 				return retval;
 
-		if (fct_len != 2) {
+		if (acklen != 1) {
 				rig_debug(RIG_DEBUG_ERR,"icom_set_func: wrong frame len=%d\n",
-								fct_len);
+								acklen);
 				return -RIG_EPROTO;
 		}
 
@@ -1888,7 +1929,8 @@ int icr75_set_channel(RIG *rig, const channel_t *chan)
 		struct rig_state *rs;
 		unsigned char chanbuf[MAXFRAMELEN], ackbuf[MAXFRAMELEN];
 		int chan_len, freq_len, ack_len, retval;
-		char icmode, icmode_ext;
+		unsigned char icmode;
+		signed char icmode_ext;
 		int err;
 
 		rs = &rig->state;
@@ -2434,7 +2476,9 @@ int initrigs_icom(void *be_handle)
 	rig_register(&ic706mkii_caps);
 	rig_register(&ic706mkiig_caps);
 	rig_register(&ic718_caps);
+	rig_register(&ic725_caps);
 	rig_register(&ic735_caps);
+	rig_register(&ic737_caps);
 	rig_register(&ic775_caps);
 	rig_register(&ic756_caps);
 	rig_register(&ic756pro_caps);
@@ -2449,8 +2493,6 @@ int initrigs_icom(void *be_handle)
 
 	rig_register(&ic275_caps);
 	rig_register(&ic475_caps);
-
-	rig_register(&icall_caps);
 
 	rig_register(&os535_caps);
 	rig_register(&os456_caps);

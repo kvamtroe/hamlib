@@ -2,7 +2,7 @@
  *  Hamlib bindings - Rig interface
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *	$Id: rig.swg,v 1.5 2002-11-14 19:27:46 fillods Exp $
+ *	$Id: rig.swg,v 1.5.2.1 2003-02-25 06:00:45 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

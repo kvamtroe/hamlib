@@ -2,7 +2,7 @@
  *  Hamlib CI-V backend - Do it all Icom description for debugging
  *  Copyright (c) 2000,2001 by Stephane Fillod
  *
- *		$Id: icall.c,v 1.10 2002-04-23 22:01:16 fillods Exp $
+ *		$Id: icall.c,v 1.10.2.1 2003-02-25 06:00:52 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -202,8 +202,8 @@ set_split_mode: icom_set_split_mode,
 get_split_mode: icom_get_split_mode,
 set_split: icom_set_split,
 get_split: icom_get_split,
-set_ctcss_tone: icom_set_ctcss_tone,
-get_ctcss_tone: icom_get_ctcss_tone,
+set_ctcss: icom_set_ctcss_tone,
+get_ctcss: icom_get_ctcss_tone,
 set_ctcss_sql: icom_set_ctcss_sql,
 get_ctcss_sql: icom_get_ctcss_sql,
 };

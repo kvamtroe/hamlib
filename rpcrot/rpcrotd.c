@@ -4,7 +4,7 @@
  * This program let programs control a rotator through
  * the mean of RPC services using Hamlib.
  *
- * $Id: rpcrotd.c,v 1.1 2002-01-16 16:45:11 fgretief Exp $
+ * $Id: rpcrotd.c,v 1.1.2.1 2003-02-25 06:01:10 dedmons Exp $
  *
  *
  * This program is free software; you can redistribute it and/or

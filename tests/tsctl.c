@@ -7,7 +7,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: tsctl.c,v 1.1.2.1 2002-08-02 10:00:35 dedmons Exp $  
+ * $Id: tsctl.c,v 1.1.2.2 2003-02-25 06:01:19 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -731,7 +731,7 @@ declare_proto_rig(get_mode)
 		return status;
 	if (interactive)
 		printf("%s: ", cmd->arg1);
-	printf("%s\n", strmode(mode));
+	printf("%s\n", strrmode(mode));
 //      if (interactive)
 //              printf("%s: ", cmd->arg2);
 //      printf("%ld\n", width);
@@ -937,7 +937,7 @@ declare_proto_rig(get_split_mode)
 		return status;
 	if (interactive)
 		printf("%s: ", cmd->arg1);
-	printf("%s\n", strmode(mode));
+	printf("%s\n", strrmode(mode));
 //      if (interactive)
 //              printf("%s: ", cmd->arg2);
 //      printf("%ld\n", width);
@@ -1235,12 +1235,12 @@ void dump_chan(RIG * rig, channel_t * chan)
 	sprintf_freq(freqbuf, chan->freq);
 	sprintf_freq(widthbuf, chan->width);
 	printf("Freq:   %s\tMode:   %s\tWidth:   %s\n",
-	       freqbuf, strmode(chan->mode), widthbuf);
+	       freqbuf, strrmode(chan->mode), widthbuf);
 
 	sprintf_freq(freqbuf, chan->tx_freq);
 	sprintf_freq(widthbuf, chan->tx_width);
 	printf("txFreq: %s\ttxMode: %s\ttxWidth: %s\n",
-	       freqbuf, strmode(chan->tx_mode), widthbuf);
+	       freqbuf, strrmode(chan->tx_mode), widthbuf);
 
 	sprintf_freq(freqbuf, chan->rptr_offs);
 	printf("Shift: %s, Offset: %s%s, ", strptrshift(chan->rptr_shift),

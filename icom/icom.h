@@ -2,7 +2,7 @@
  *  Hamlib CI-V backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *	$Id: icom.h,v 1.45.2.1 2002-07-26 08:53:08 dedmons Exp $
+ *	$Id: icom.h,v 1.45.2.2 2003-02-25 06:00:52 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -35,6 +35,34 @@
 #define STR_CAL_LENGTH 16
 #define STR_CAL_S0 -54
 
+
+/*
+ * minimal channel caps.
+ * If your rig has better/lesser, don't modify this define but clone it,
+ * so you don't change other rigs.
+ */
+#define IC_MIN_MEM_CAP {	\
+	.freq = 1,	\
+	.mode = 1,	\
+	.width = 1,	\
+} 
+
+/*
+ * common channel caps.
+ * If your rig has better/lesser, don't modify this define but clone it,
+ * so you don't change other rigs.
+ */
+#define IC_MEM_CAP {	\
+	.freq = 1,	\
+	.mode = 1,	\
+	.width = 1,	\
+	.rptr_shift = 1,	\
+	.rptr_offs = 1,	\
+	.ctcss_tone = 1,	\
+	.ctcss_sql = 1,	\
+	.dcs_code = 1,	\
+	.dcs_sql = 1,	\
+} 
 
 struct ts_sc_list {
 	shortfreq_t ts;	/* tuning step */
@@ -70,6 +98,7 @@ int icom_init(RIG *rig);
 int icom_cleanup(RIG *rig);
 int icom_set_freq(RIG *rig, vfo_t vfo, freq_t freq);
 int icom_get_freq(RIG *rig, vfo_t vfo, freq_t *freq);
+int icom_set_rit(RIG *rig, vfo_t vfo, shortfreq_t rit);
 int icom_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
 int icom_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width);
 int icom_set_vfo(RIG *rig, vfo_t vfo);
@@ -118,7 +147,9 @@ extern const struct rig_caps ic706_caps;
 extern const struct rig_caps ic706mkii_caps;
 extern const struct rig_caps ic706mkiig_caps;
 extern const struct rig_caps ic718_caps;
+extern const struct rig_caps ic725_caps;
 extern const struct rig_caps ic735_caps;
+extern const struct rig_caps ic737_caps;
 extern const struct rig_caps ic756_caps;
 extern const struct rig_caps ic756pro_caps;
 extern const struct rig_caps ic756pro2_caps;
@@ -128,7 +159,6 @@ extern const struct rig_caps ic910_caps;
 extern const struct rig_caps ic970_caps;
 extern const struct rig_caps icr7000_caps;
 extern const struct rig_caps icr8500_caps;
-extern const struct rig_caps icall_caps;
 extern const struct rig_caps ic275_caps;
 extern const struct rig_caps ic475_caps;
 

@@ -2,7 +2,7 @@
  *  Hamlib Dummy backend - main file
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *	$Id: dummy.c,v 1.24.2.1 2002-07-26 08:53:08 dedmons Exp $
+ *	$Id: dummy.c,v 1.24.2.2 2003-02-25 06:00:48 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -38,6 +38,7 @@
 #include <serial.h>
 #include <misc.h>
 #include <tones.h>
+#include <idx_builtin.h>
 
 #include "dummy.h"
 
@@ -185,7 +186,7 @@ static int dummy_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 
   sprintf_freq(buf, width);
   rig_debug(RIG_DEBUG_VERBOSE,"%s called: %s %s %s\n", __FUNCTION__, 
-  		strvfo(vfo), strmode(mode), buf);
+  		strvfo(vfo), strrmode(mode), buf);
 
   curr->mode = mode;
   curr->width = width;
@@ -458,7 +459,7 @@ static int dummy_set_split_mode(RIG *rig, vfo_t vfo, rmode_t tx_mode, pbwidth_t 
 
   sprintf_freq(buf, tx_width);
   rig_debug(RIG_DEBUG_VERBOSE,"%s called: %s %s %s\n", __FUNCTION__,
-  		strvfo(vfo), strmode(tx_mode), buf);
+  		strvfo(vfo), strrmode(tx_mode), buf);
 
   curr->tx_mode = tx_mode;
   curr->tx_width = tx_width;
@@ -858,12 +859,29 @@ static int dummy_vfo_op(RIG *rig, vfo_t vfo, vfo_op_t op)
   return RIG_OK;
 }
 
-static int dummy_set_channel(RIG *rig, channel_t *chan)
+static int dummy_set_channel(RIG *rig, const channel_t *chan)
 {
   struct dummy_priv_data *priv = (struct dummy_priv_data *)rig->state.priv;
 
   rig_debug(RIG_DEBUG_VERBOSE, "%s called\n", __FUNCTION__);
-  memcpy(&priv->mem[chan->channel_num], chan, sizeof(channel_t));
+
+  /* TODO: check chan->channel_num is in a valid range */
+  switch (chan->vfo) {
+	  case RIG_VFO_MEM:
+	  	memcpy(&priv->mem[chan->channel_num], chan, sizeof(channel_t));
+		break;
+	  case RIG_VFO_A:
+	  	memcpy(&priv->vfo_a, chan, sizeof(channel_t));
+		break;
+	  case RIG_VFO_B:
+	  	memcpy(&priv->vfo_b, chan, sizeof(channel_t));
+		break;
+	  case RIG_VFO_CURR:
+	  	memcpy(priv->curr, chan, sizeof(channel_t));
+		break;
+	  default:
+		return -RIG_EINVAL;
+  }
 
   return RIG_OK;
 }
@@ -873,8 +891,25 @@ static int dummy_get_channel(RIG *rig, channel_t *chan)
 {
   struct dummy_priv_data *priv = (struct dummy_priv_data *)rig->state.priv;
 
-  memcpy(chan, &priv->mem[chan->channel_num], sizeof(channel_t));
   rig_debug(RIG_DEBUG_VERBOSE, "%s called\n", __FUNCTION__);
+
+  /* TODO: check chan->channel_num is in a valid range */
+  switch (chan->vfo) {
+	  case RIG_VFO_MEM:
+	  	memcpy(chan, &priv->mem[chan->channel_num], sizeof(channel_t));
+		break;
+	  case RIG_VFO_A:
+	  	memcpy(chan, &priv->vfo_a, sizeof(channel_t));
+		break;
+	  case RIG_VFO_B:
+	  	memcpy(chan, &priv->vfo_b, sizeof(channel_t));
+		break;
+	  case RIG_VFO_CURR:
+	  	memcpy(chan, priv->curr, sizeof(channel_t));
+		break;
+	  default:
+		return -RIG_EINVAL;
+  }
 
   return RIG_OK;
 }
@@ -942,109 +977,149 @@ static int dummy_send_morse(RIG *rig, vfo_t vfo, const char *msg)
 #define DUMMY_MODES (RIG_MODE_AM | RIG_MODE_CW | RIG_MODE_RTTY | \
                      RIG_MODE_SSB | RIG_MODE_FM | RIG_MODE_WFM)
 
+#define DUMMY_MEM_CAP {    \
+	.bank_num = 1,	\
+	.vfo = 1,	\
+	.ant = 1,	\
+	.freq = 1,	\
+	.mode = 1,	\
+	.width = 1,	\
+	.tx_freq = 1,	\
+	.tx_mode = 1,	\
+	.tx_width = 1,	\
+	.split = 1,	\
+	.rptr_shift = 1,	\
+	.rptr_offs = 1,	\
+	.tuning_step = 1,	\
+	.rit = 1,	\
+	.xit = 1,	\
+	.funcs = 1,	\
+	.levels = 1,	\
+	.ctcss_tone = 1,	\
+	.ctcss_sql = 1,	\
+	.dcs_code = 1,	\
+	.dcs_sql = 1,	\
+	.scan_group = 1,	\
+	.flags = 1,	\
+	.channel_desc = 1,	\
+	.ext_levels = 1,	\
+	}
+
 const struct rig_caps dummy_caps = {
-  rig_model:     RIG_MODEL_DUMMY,
-  model_name:    "Dummy",
-  mfg_name:      "Hamlib",
-  version:       "0.1",
-  copyright:	 "LGPL",
-  status:        RIG_STATUS_BETA,
-  rig_type:      RIG_TYPE_OTHER,
-  targetable_vfo:	 0,
-  ptt_type:      RIG_PTT_RIG,
-  dcd_type:      RIG_DCD_RIG,
-  port_type:     RIG_PORT_NONE,
-  has_get_func:  DUMMY_FUNC,
-  has_set_func:  DUMMY_FUNC,
-  has_get_level: DUMMY_LEVEL,
-  has_set_level: RIG_LEVEL_SET(DUMMY_LEVEL),
-  has_get_parm:	 DUMMY_PARM,
-  has_set_parm:	 RIG_PARM_SET(DUMMY_PARM),
-  ctcss_list:	 common_ctcss_list,
-  dcs_list:  	 full_dcs_list,
-  chan_list:	 {
-					{   0,  18, RIG_MTYPE_MEM, 0 },
-					{  19,  19, RIG_MTYPE_CALL, 0 },
-					{  20,  21, RIG_MTYPE_EDGE, 0 },
-					RIG_CHAN_END,
-				 },
-  scan_ops:		 DUMMY_SCAN,
-  vfo_ops:		 DUMMY_VFO_OP,
-  transceive:    RIG_TRN_OFF,
-  attenuator:    { 10, 20, 30, RIG_DBLST_END, },
-  preamp:		 { 10, RIG_DBLST_END, },
-  rx_range_list2: { {start:kHz(150),end:MHz(1500),modes:DUMMY_MODES,
-		    low_power:-1,high_power:-1,RIG_VFO_A|RIG_VFO_B},
+  .rig_model =      RIG_MODEL_DUMMY,
+  .model_name =     "Dummy",
+  .mfg_name =       "Hamlib",
+  .version =        "0.2",
+  .copyright = 	 "LGPL",
+  .status =         RIG_STATUS_BETA,
+  .rig_type =       RIG_TYPE_OTHER,
+  .targetable_vfo = 	 0,
+  .ptt_type =       RIG_PTT_RIG,
+  .dcd_type =       RIG_DCD_RIG,
+  .port_type =      RIG_PORT_NONE,
+  .has_get_func =   DUMMY_FUNC,
+  .has_set_func =   DUMMY_FUNC,
+  .has_get_level =  DUMMY_LEVEL,
+  .has_set_level =  RIG_LEVEL_SET(DUMMY_LEVEL),
+  .has_get_parm = 	 DUMMY_PARM,
+  .has_set_parm = 	 RIG_PARM_SET(DUMMY_PARM),
+  .level_gran =		{ [LVL_CWPITCH] = 10 },
+  .ctcss_list = 	 common_ctcss_list,
+  .dcs_list =   	 full_dcs_list,
+  .chan_list = 	 {
+			{   0,  18, RIG_MTYPE_MEM, DUMMY_MEM_CAP },
+			{  19,  19, RIG_MTYPE_CALL },
+			{  20,  21, RIG_MTYPE_EDGE },
+			RIG_CHAN_END,
+		 },
+  .scan_ops = 	 DUMMY_SCAN,
+  .vfo_ops = 	 DUMMY_VFO_OP,
+  .transceive =     RIG_TRN_OFF,
+  .attenuator =     { 10, 20, 30, RIG_DBLST_END, },
+  .preamp = 		 { 10, RIG_DBLST_END, },
+  .rx_range_list2 =  { {.start=kHz(150),.end=MHz(1500),.modes=DUMMY_MODES,
+		    .low_power=-1,.high_power=-1,RIG_VFO_A|RIG_VFO_B},
 		    RIG_FRNG_END, },
-  tx_range_list2: { RIG_FRNG_END, },
-  tuning_steps: { {DUMMY_MODES,1}, RIG_TS_END, },
-  priv: NULL,	/* priv */
+  .tx_range_list2 =  { RIG_FRNG_END, },
+  .tuning_steps =  { {DUMMY_MODES,1}, RIG_TS_END, },
+  .filters =  {
+	{RIG_MODE_SSB|RIG_MODE_CW|RIG_MODE_RTTY, kHz(2.4)},
+	{RIG_MODE_CW, Hz(500)},
+	{RIG_MODE_AM, kHz(8)},
+	{RIG_MODE_AM, kHz(2.4)},
+	{RIG_MODE_FM, kHz(15)},
+	{RIG_MODE_FM, kHz(8)},
+	{RIG_MODE_WFM, kHz(230)},
+	RIG_FLT_END,
+  },
 
-  rig_init:    dummy_init,
-  rig_cleanup: dummy_cleanup,
-  rig_open:    dummy_open,
-  rig_close:   dummy_close,
+  .priv =  NULL,	/* priv */
 
-  set_freq:    dummy_set_freq,
-  get_freq:    dummy_get_freq,
-  set_mode:    dummy_set_mode,
-  get_mode:    dummy_get_mode,
-  set_vfo:     dummy_set_vfo,
-  get_vfo:     dummy_get_vfo,
+  .rig_init =     dummy_init,
+  .rig_cleanup =  dummy_cleanup,
+  .rig_open =     dummy_open,
+  .rig_close =    dummy_close,
+
+  .set_freq =     dummy_set_freq,
+  .get_freq =     dummy_get_freq,
+  .set_mode =     dummy_set_mode,
+  .get_mode =     dummy_get_mode,
+  .set_vfo =      dummy_set_vfo,
+  .get_vfo =      dummy_get_vfo,
   
-  set_powerstat: dummy_set_powerstat,
-  get_powerstat: dummy_get_powerstat,
-  set_level:    dummy_set_level,
-  get_level:    dummy_get_level,
-  set_func:     dummy_set_func,
-  get_func:     dummy_get_func,
-  set_parm:     dummy_set_parm,
-  get_parm:     dummy_get_parm,
+  .set_powerstat =  dummy_set_powerstat,
+  .get_powerstat =  dummy_get_powerstat,
+  .set_level =     dummy_set_level,
+  .get_level =     dummy_get_level,
+  .set_func =      dummy_set_func,
+  .get_func =      dummy_get_func,
+  .set_parm =      dummy_set_parm,
+  .get_parm =      dummy_get_parm,
 
-  get_info:     dummy_get_info,
+  .get_info =      dummy_get_info,
 
 
-  set_ptt:	dummy_set_ptt,
-  get_ptt:	dummy_get_ptt,
-  get_dcd:	dummy_get_dcd,
-  set_rptr_shift:	dummy_set_rptr_shift,
-  get_rptr_shift:	dummy_get_rptr_shift,
-  set_rptr_offs:	dummy_set_rptr_offs,
-  get_rptr_offs:	dummy_get_rptr_offs,
-  set_ctcss_tone:	dummy_set_ctcss_tone,
-  get_ctcss_tone:	dummy_get_ctcss_tone,
-  set_dcs_code:	dummy_set_dcs_code,
-  get_dcs_code:	dummy_get_dcs_code,
-  set_ctcss_sql:	dummy_set_ctcss_sql,
-  get_ctcss_sql:	dummy_get_ctcss_sql,
-  set_dcs_sql:	dummy_set_dcs_sql,
-  get_dcs_sql:	dummy_get_dcs_sql,
-  set_split_freq:	dummy_set_split_freq,
-  get_split_freq:	dummy_get_split_freq,
-  set_split_mode:	dummy_set_split_mode,
-  get_split_mode:	dummy_get_split_mode,
-  set_split:	dummy_set_split,
-  get_split:	dummy_get_split,
-  set_rit:	dummy_set_rit,
-  get_rit:	dummy_get_rit,
-  set_xit:	dummy_set_xit,
-  get_xit:	dummy_get_xit,
-  set_ts:	dummy_set_ts,
-  get_ts:	dummy_get_ts,
-  set_ant:	dummy_set_ant,
-  get_ant:	dummy_get_ant,
-  set_bank:	dummy_set_bank,
-  set_mem:	dummy_set_mem,
-  get_mem:	dummy_get_mem,
-  vfo_op:	dummy_vfo_op,
-  scan:		dummy_scan,
-  send_dtmf: dummy_send_dtmf,
-  recv_dtmf: dummy_recv_dtmf,
-  send_morse: dummy_send_morse,
-  set_channel:	dummy_set_channel,
-  get_channel:	dummy_get_channel,
-  set_trn:	dummy_set_trn,
-  get_trn:	dummy_get_trn,
+  .set_ptt = 	dummy_set_ptt,
+  .get_ptt = 	dummy_get_ptt,
+  .get_dcd = 	dummy_get_dcd,
+  .set_rptr_shift = 	dummy_set_rptr_shift,
+  .get_rptr_shift = 	dummy_get_rptr_shift,
+  .set_rptr_offs = 	dummy_set_rptr_offs,
+  .get_rptr_offs = 	dummy_get_rptr_offs,
+  .set_ctcss_tone = 	dummy_set_ctcss_tone,
+  .get_ctcss_tone = 	dummy_get_ctcss_tone,
+  .set_dcs_code = 	dummy_set_dcs_code,
+  .get_dcs_code = 	dummy_get_dcs_code,
+  .set_ctcss_sql = 	dummy_set_ctcss_sql,
+  .get_ctcss_sql = 	dummy_get_ctcss_sql,
+  .set_dcs_sql = 	dummy_set_dcs_sql,
+  .get_dcs_sql = 	dummy_get_dcs_sql,
+  .set_split_freq = 	dummy_set_split_freq,
+  .get_split_freq = 	dummy_get_split_freq,
+  .set_split_mode = 	dummy_set_split_mode,
+  .get_split_mode = 	dummy_get_split_mode,
+  .set_split = 	dummy_set_split,
+  .get_split = 	dummy_get_split,
+  .set_rit = 	dummy_set_rit,
+  .get_rit = 	dummy_get_rit,
+  .set_xit = 	dummy_set_xit,
+  .get_xit = 	dummy_get_xit,
+  .set_ts = 	dummy_set_ts,
+  .get_ts = 	dummy_get_ts,
+  .set_ant = 	dummy_set_ant,
+  .get_ant = 	dummy_get_ant,
+  .set_bank = 	dummy_set_bank,
+  .set_mem = 	dummy_set_mem,
+  .get_mem = 	dummy_get_mem,
+  .vfo_op = 	dummy_vfo_op,
+  .scan = 		dummy_scan,
+  .send_dtmf =  dummy_send_dtmf,
+  .recv_dtmf =  dummy_recv_dtmf,
+  .send_morse =  dummy_send_morse,
+  .set_channel = 	dummy_set_channel,
+  .get_channel = 	dummy_get_channel,
+  .set_trn = 	dummy_set_trn,
+  .get_trn = 	dummy_get_trn,
 };
 
 int initrigs_dummy(void *be_handle)

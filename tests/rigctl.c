@@ -5,7 +5,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rigctl.c,v 1.30.2.3 2002-08-02 09:29:43 dedmons Exp $  
+ * $Id: rigctl.c,v 1.30.2.4 2003-02-25 06:01:18 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <getopt.h>
 
@@ -56,8 +57,6 @@
 #define ARG_IN  (ARG_IN1|ARG_IN2|ARG_IN3|ARG_IN4)
 #define ARG_OUT  (ARG_OUT1|ARG_OUT2|ARG_OUT3|ARG_OUT4)
 
-static channel_t MemChannels[300];
-
 struct test_table {
 	unsigned char cmd;
 	const char *name;
@@ -68,6 +67,13 @@ struct test_table {
 	const char *arg2;
 	const char *arg3;
 };
+
+
+/* 
+ * external prototype
+ */
+
+int dumpcaps (RIG *);
 
 /* 
  * Prototypes
@@ -86,6 +92,10 @@ int set_conf(RIG *my_rig, char *conf_parms);
 
 declare_proto_rig(set_freq);
 declare_proto_rig(get_freq);
+declare_proto_rig(set_rit);
+declare_proto_rig(get_rit);
+declare_proto_rig(set_xit);
+declare_proto_rig(get_xit);
 declare_proto_rig(set_mode);
 declare_proto_rig(get_mode);
 declare_proto_rig(set_vfo);
@@ -126,20 +136,25 @@ declare_proto_rig(get_channel);
 declare_proto_rig(set_trn);
 declare_proto_rig(get_trn);
 declare_proto_rig(get_info);
+declare_proto_rig(dump_caps);
+declare_proto_rig(set_ant);
+declare_proto_rig(get_ant);
 
 
 
 /*
  * convention: upper case cmd is set, lowercase is get
  *
- * TODO: add missing rig_set_/rig_get_: [rx]it, ant, sql, dcd, etc.
+ * TODO: add missing rig_set_/rig_get_: sql, dcd, etc.
  * NB: 'q' 'Q' '?' are reserved by interactive mode interface
  *
- *	Available letters: -.-------JK-----*-----W-YZ
+ *	Available alphabetic letters: -.--------K-----*-----W-YZ
  */
 struct test_table test_list[] = {
 		{ 'F', "set_freq", set_freq, ARG_IN, "Frequency" },
 		{ 'f', "get_freq", get_freq, ARG_OUT, "Frequency" },
+		{ 'J', "set_rit", set_rit, ARG_IN, "RIT" },
+		{ 'j', "get_rit", get_rit, ARG_OUT, "RIT" },
 		{ 'M', "set_mode", set_mode, ARG_IN, "Mode", "Passband" },
 		{ 'm', "get_mode", get_mode, ARG_OUT, "Mode", "Passband" },
 		{ 'V', "set_vfo", set_vfo, ARG_IN, "VFO" },
@@ -172,14 +187,18 @@ struct test_table test_list[] = {
 		{ 'e', "get_mem", get_mem, ARG_OUT, "Memory#" },
 		{ 'G', "vfo_op", vfo_op, ARG_IN, "Mem/VFO op" },
 		{ 'g', "scan", scan, ARG_IN, "Scan fct", "Channel" },
-		{ 'H', "set_channel", set_channel, ARG_IN, "MemChannel#", "VFO" },
-//		{ 'h', "get_channel", get_channel, ARG_OUT, "VFO", "Channel#" },
-		{ 'h', "get_channel", get_channel, ARG_IN1|ARG_IN2|ARG_OUT1|ARG_OUT2, "VFO", "Chan#" },
+		{ 'H', "set_channel", set_channel, ARG_IN,  /* huh! */ },
+		{ 'h', "get_channel", get_channel, ARG_IN, "Channel" },
 		{ 'A', "set_trn", set_trn, ARG_IN, "Transceive" },
 		{ 'a', "get_trn", get_trn, ARG_OUT, "Transceive" },
 		{ 'B', "set_bank", set_bank, ARG_IN, "Bank" },
 		{ '_', "get_info", get_info, ARG_OUT, "Info" },
 		{ '2', "power2mW", power2mW },
+		{ 0x80, "dump_caps", dump_caps },
+		{ 0x81, "set_xit", set_xit, ARG_IN, "XIT" },
+		{ 0x82, "get_xit", get_xit, ARG_OUT, "XIT" },
+		{ 0x83, "set_ant", set_ant, ARG_IN, "Antenna" },
+		{ 0x84, "get_ant", get_ant, ARG_OUT, "Antenna" },
 		{ 0x00, "", NULL },
 
 };
@@ -190,7 +209,7 @@ struct test_table test_list[] = {
  * NB: do NOT use -W since it's reserved by POSIX.
  * TODO: add an option to read from a file
  */
-#define SHORT_OPTIONS "m:r:p:P:d:D:c:s:C:LvhVl"
+#define SHORT_OPTIONS "m:r:p:d:P:D:s:c:lC:LuvhV"
 static struct option long_options[] =
 {
 	{"model",    1, 0, 'm'},
@@ -204,6 +223,7 @@ static struct option long_options[] =
 	{"list",     0, 0, 'l'},
 	{"set-conf", 1, 0, 'C'},
 	{"show-conf",0, 0, 'L'},
+	{"dump-caps",  0, 0, 'u'},
 	{"verbose",  0, 0, 'v'},
 	{"help",     0, 0, 'h'},
 	{"version",  0, 0, 'V'},
@@ -222,8 +242,6 @@ struct test_table *find_cmd_entry(int cmd)
 
 	return &test_list[i];
 }
-
-
 /*
  * TODO: use Lex
  */
@@ -245,11 +263,12 @@ int main (int argc, char *argv[])
 
 	int interactive=1;	/* if no cmd on command line, switch to interactive */
 	int retcode;		/* generic return code from functions */
-	char cmd;
+	unsigned char cmd;
 	struct test_table *cmd_entry;
 
 	int verbose = 0;
 	int show_conf = 0;
+	int dump_caps_opt = 0;
 	const char *rig_file=NULL, *ptt_file=NULL, *dcd_file=NULL;
 	ptt_type_t ptt_type = RIG_PTT_NONE;
 	dcd_type_t dcd_type = RIG_DCD_NONE;
@@ -306,14 +325,36 @@ int main (int argc, char *argv[])
 							usage();	/* wrong arg count */
 							exit(1);
 					}
-					ptt_type = atoi(optarg);
+					if (!strcmp(optarg, "RIG"))
+						ptt_type = RIG_PTT_RIG;
+					else if (!strcmp(optarg, "DTR"))
+						ptt_type = RIG_PTT_SERIAL_DTR;
+					else if (!strcmp(optarg, "RTS"))
+						ptt_type = RIG_PTT_SERIAL_RTS;
+					else if (!strcmp(optarg, "PARALLEL"))
+						ptt_type = RIG_PTT_PARALLEL;
+					else if (!strcmp(optarg, "NONE"))
+						ptt_type = RIG_PTT_NONE;
+					else
+						ptt_type = atoi(optarg);
 					break;
 			case 'D':
 					if (!optarg) {
 							usage();	/* wrong arg count */
 							exit(1);
 					}
-					dcd_type = atoi(optarg);
+					if (!strcmp(optarg, "RIG"))
+						dcd_type = RIG_DCD_RIG;
+					else if (!strcmp(optarg, "DSR"))
+						dcd_type = RIG_DCD_SERIAL_DSR;
+					else if (!strcmp(optarg, "CTS"))
+						dcd_type = RIG_DCD_SERIAL_CTS;
+					else if (!strcmp(optarg, "PARALLEL"))
+						dcd_type = RIG_DCD_PARALLEL;
+					else if (!strcmp(optarg, "NONE"))
+						dcd_type = RIG_DCD_NONE;
+					else
+						dcd_type = atoi(optarg);
 					break;
 			case 'c':
 					if (!optarg) {
@@ -347,6 +388,9 @@ int main (int argc, char *argv[])
 			case 'l':
 					list_models();
 					exit(0);
+			case 'u':
+					dump_caps_opt++;
+					break;
 			default:
 					usage();	/* unknown option? */
 					exit(1);
@@ -408,6 +452,16 @@ int main (int argc, char *argv[])
 			rig_token_foreach(my_rig, print_conf_list, (rig_ptr_t)my_rig);
 	}
 
+	/*
+	 * print out conf parameters, and exists immediately
+	 * We may be interested only in only caps, and rig_open may fail.
+	 */
+	if (dump_caps_opt) {
+		dumpcaps(my_rig);
+		rig_cleanup(my_rig); /* if you care about memory */
+		exit(0);
+	}
+
 	retcode = rig_open(my_rig);
 	if (retcode != RIG_OK) {
 	  		fprintf(stderr,"rig_open: error = %s \n", rigerror(retcode));
@@ -432,6 +486,20 @@ int main (int argc, char *argv[])
 
 				do {
 					scanf("%c", &cmd);
+
+					/* command by name */
+					if (cmd == '\\') {
+						unsigned char cmd_name[MAXNAMSIZ], *pcmd = cmd_name;
+						int c_len = MAXNAMSIZ;
+
+						scanf("%c", pcmd);
+						while(c_len-- && (isalnum(*pcmd) || *pcmd == '_' ))
+							scanf("%c", ++pcmd);
+						*pcmd = '\0';
+						cmd = parse_arg(cmd_name);
+						break;
+					}
+
 					if (cmd == 0x0a || cmd == 0x0d) {
 						if (last_was_ret) {
 							printf("? for help, q to quit.\n");
@@ -444,12 +512,12 @@ int main (int argc, char *argv[])
 
 				last_was_ret = 0;
 
+				/* comment line */
 				if (cmd == '#' || cmd == ';') {
 					while( cmd != '\n' && cmd != '\r')
 						scanf("%c", &cmd);
 					continue;
 				}
-
 				if (cmd == 'Q' || cmd == 'q')
 						break;
 				if (cmd == '?') {
@@ -544,7 +612,7 @@ void usage_rig()
 
 		printf("Commands (may not be available for this rig):\n");
 		for (i=0; test_list[i].cmd != 0; i++) {
-			printf("%c: %-16s(", test_list[i].cmd, test_list[i].name);
+			printf("%c: %-16s(", isprint(test_list[i].cmd)?test_list[i].cmd:'?', test_list[i].name);
 			if (test_list[i].arg1)
 					printf("%s", test_list[i].arg1);
 			if (test_list[i].arg2)
@@ -576,6 +644,7 @@ void usage()
 	"  -C, --set-conf=PARM=VAL    set config parameters\n"
 	"  -L, --show-conf            list all config parameters\n"
 	"  -l, --list                 list all model numbers and exit\n"
+	"  -u, --dump-caps            dump capabilities and exit\n"
 	"  -v, --verbose              set verbose mode, cumulative\n"
 	"  -h, --help                 display this help and exit\n"
 	"  -V, --version              output version information and exit\n\n"
@@ -687,6 +756,51 @@ declare_proto_rig(get_freq)
 		return status;
 }
 
+declare_proto_rig(set_rit)
+{
+		shortfreq_t rit;
+
+		sscanf(arg1, "%ld", &rit);
+		return rig_set_rit(rig, RIG_VFO_CURR, rit);
+}
+
+declare_proto_rig(get_rit)
+{
+		int status;
+		shortfreq_t rit;
+
+		status = rig_get_rit(rig, RIG_VFO_CURR, &rit);
+		if (status != RIG_OK)
+				return status;
+		if (interactive)
+			printf("%s: ", cmd->arg1);
+		printf("%ld\n", rit);
+		return status;
+}
+
+declare_proto_rig(set_xit)
+{
+		shortfreq_t xit;
+
+		sscanf(arg1, "%ld", &xit);
+		return rig_set_xit(rig, RIG_VFO_CURR, xit);
+}
+
+declare_proto_rig(get_xit)
+{
+		int status;
+		shortfreq_t xit;
+
+		status = rig_get_xit(rig, RIG_VFO_CURR, &xit);
+		if (status != RIG_OK)
+				return status;
+		if (interactive)
+			printf("%s: ", cmd->arg1);
+		printf("%ld\n", xit);
+		return status;
+}
+
+
 declare_proto_rig(set_mode)
 {
 		rmode_t mode;
@@ -709,7 +823,7 @@ declare_proto_rig(get_mode)
 				return status;
 		if (interactive)
 			printf("%s: ", cmd->arg1);
-		printf("%s\n", strmode(mode));
+		printf("%s\n", strrmode(mode));
 		if (interactive)
 			printf("%s: ", cmd->arg2);
 		printf("%ld\n", width);
@@ -906,7 +1020,7 @@ declare_proto_rig(get_split_mode)
 				return status;
 		if (interactive)
 			printf("%s: ", cmd->arg1);
-		printf("%s\n", strmode(mode));
+		printf("%s\n", strrmode(mode));
 		if (interactive)
 			printf("%s: ", cmd->arg2);
 		printf("%ld\n", width);
@@ -1009,7 +1123,7 @@ declare_proto_rig(set_level)
 				sscanf(arg2, "%f", &val.f);
 				break;
 			case RIG_CONF_STRING:
-				val.s = arg2;
+				val.cs = arg2;
 				break;
 			default:
 				return -RIG_ECONF;
@@ -1127,7 +1241,7 @@ declare_proto_rig(set_parm)
 				sscanf(arg2, "%f", &val.f);
 				break;
 			case RIG_CONF_STRING:
-				val.s = arg2;
+				val.cs = arg2;
 				break;
 			default:
 				return -RIG_ECONF;
@@ -1246,73 +1360,80 @@ declare_proto_rig(scan)
 		return rig_scan(rig, RIG_VFO_CURR, op, ch);
 }
 
-static int memnum=0;
-/* Restore from MemChannels[n] */
-/* memnum = source, mem = dest */
 declare_proto_rig(set_channel)
 {
-	int retval, mem;
-	vfo_t vfo;
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__":\n");
-	vfo = parse_vfo(arg2);
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		":\n vfo=%s\n", strvfo(vfo));
-
-	sscanf(arg1, "%d", (int*)&mem);
-
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-		"memnum=%i\n", memnum);	// read previous get_channel data
-
-	MemChannels[memnum].vfo = vfo;
-	MemChannels[memnum].channel_num = mem;
-	dump_chan(rig, &MemChannels[memnum]);	// display source
-	retval = rig_set_channel(rig, &MemChannels[memnum]);
-	if(retval != RIG_OK) return -RIG_EINVAL;
-
-	dump_chan(rig, &MemChannels[memnum]);	// display dest
-
-	return RIG_OK;
+		fprintf(stderr,"rigctl set_channel not implemented yet!\n");
+		return -RIG_ENIMPL;
 }
 
 
-/* Save to MemChannels[n] --Dale */
 declare_proto_rig(get_channel)
 {
-	int status;
-	vfo_t vfo;
+		int status;
+		channel_t chan;
 
-	fprintf(stderr, __FUNCTION__": arg1=%s, arg2=%s\n", arg1, arg2);
+		if (isdigit(arg1[0])) {
+			chan.vfo = RIG_VFO_MEM;
+			if (sscanf(arg1, "%d", &chan.channel_num) != 1)
+				return -RIG_EINVAL;
+		} else {
+			chan.vfo = parse_vfo(arg1);
+			chan.channel_num = 0;
+		}
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ":\n");
-	sscanf(arg2, "%d", &memnum);
-	rig_debug(RIG_DEBUG_ERR, 
-		"memnum=%i\n", memnum);
-
-	rig_debug(RIG_DEBUG_ERR,
-		": vfo=%s ", arg1);
-
-	vfo = parse_vfo(arg1);
-	rig_debug(RIG_DEBUG_ERR,
-		": vfo=%s ", strvfo(vfo));
-
-	MemChannels[memnum].vfo = vfo;
-	MemChannels[memnum].channel_num = memnum;
-	status = rig_get_channel(rig, &MemChannels[memnum]);
-	if (status != RIG_OK)
+		status = rig_get_channel(rig, &chan);
+		if (status != RIG_OK)
+				return status;
+		dump_chan(rig, &chan);
 		return status;
-	dump_chan(rig, &MemChannels[memnum]);
-	return status;
 }
 
+static int myfreq_event(RIG *rig, vfo_t vfo, freq_t freq, rig_ptr_t arg)
+{
+	printf("Event: freq changed to %lliHz on %s\n", freq, strvfo(vfo));
+	return 0;
+}
+
+static int mymode_event(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width, rig_ptr_t arg)
+{
+	printf("Event: mode changed to %s, width %liHz on %s\n", strrmode(mode),
+			width, strvfo(vfo));
+	return 0;
+}
+
+static int myvfo_event(RIG *rig, vfo_t vfo, rig_ptr_t arg)
+{
+	printf("Event: vfo changed to %s\n", strvfo(vfo));
+	return 0;
+}
+
+static int myptt_event(RIG *rig, vfo_t vfo, ptt_t ptt, rig_ptr_t arg)
+{
+	printf("Event: PTT changed to %i on %s\n", ptt, strvfo(vfo));
+	return 0;
+}
+
+static int mydcd_event(RIG *rig, vfo_t vfo, dcd_t dcd, rig_ptr_t arg)
+{
+	printf("Event: DCD changed to %i on %s\n", dcd, strvfo(vfo));
+	return 0;
+}
 
 declare_proto_rig(set_trn)
 {
-		int trn;
+	int trn;
 
-		sscanf(arg1, "%d", &trn);
-		return rig_set_trn(rig, trn);
+	sscanf(arg1, "%d", &trn);
+
+	if (trn != RIG_TRN_OFF) {
+		rig_set_freq_callback(rig, myfreq_event, NULL);
+		rig_set_mode_callback(rig, mymode_event, NULL);
+		rig_set_vfo_callback (rig, myvfo_event, NULL);
+		rig_set_ptt_callback (rig, myptt_event, NULL);
+		rig_set_dcd_callback (rig, mydcd_event, NULL);
+	}
+
+	return rig_set_trn(rig, trn);
 }
 
 
@@ -1358,12 +1479,12 @@ void dump_chan(RIG *rig, channel_t *chan)
 	sprintf_freq(freqbuf, chan->freq);
 	sprintf_freq(widthbuf, chan->width);
 	printf("Freq:   %s\tMode:   %s\tWidth:   %s\n", 
-						freqbuf, strmode(chan->mode), widthbuf);
+						freqbuf, strrmode(chan->mode), widthbuf);
 
 	sprintf_freq(freqbuf, chan->tx_freq);
 	sprintf_freq(widthbuf, chan->tx_width);
 	printf("txFreq: %s\ttxMode: %s\ttxWidth: %s\n", 
-						freqbuf, strmode(chan->tx_mode), widthbuf);
+						freqbuf, strrmode(chan->tx_mode), widthbuf);
 
 	sprintf_freq(freqbuf,chan->rptr_offs);
 	printf("Shift: %s, Offset: %s%s, ", strptrshift(chan->rptr_shift),
@@ -1405,4 +1526,34 @@ void dump_chan(RIG *rig, channel_t *chan)
 	}
 	printf("\n");
 }
+
+declare_proto_rig(dump_caps)
+{
+		dumpcaps(rig);
+
+		return RIG_OK;
+}
+
+declare_proto_rig(set_ant)
+{
+	ant_t ant;
+
+	sscanf(arg1, "%d", &ant);
+	return rig_set_ant(rig, RIG_VFO_CURR, rig_idx2setting(ant));
+}
+
+declare_proto_rig(get_ant)
+{
+	int status;
+	ant_t ant;
+
+	status = rig_get_ant(rig, RIG_VFO_CURR, &ant);
+	if (status != RIG_OK)
+		return status;
+	if (interactive)
+		printf("%s: ", cmd->arg1);
+	printf("%d\n", rig_setting2idx(ant));
+	return status;
+}
+
 

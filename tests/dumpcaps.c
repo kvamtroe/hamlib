@@ -1,9 +1,9 @@
 /*
- * dumpcaps.c - Copyright (C) 2000,2001,2002 Stephane Fillod
+ * dumpcaps.c - Copyright (C) 2000-2002 Stephane Fillod
  * This programs dumps the capabilities of a backend rig.
  *
  *
- *    $Id: dumpcaps.c,v 1.31.2.2 2002-07-26 08:53:10 dedmons Exp $  
+ *    $Id: dumpcaps.c,v 1.31.2.3 2003-02-25 06:01:18 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -31,36 +31,29 @@
 #include "misc.h"
 
 
+static int print_ext(RIG *rig, const struct confparams *cfp, rig_ptr_t ptr);
 static const char *decode_mtype(enum chan_type_e type);
 int range_sanity_check(const struct freq_range_list range_list[], int rx);
 int ts_sanity_check(const struct tuning_step_list tuning_step[]);
+static void dump_chan_caps(const channel_cap_t *chan);
 
-int main (int argc, char *argv[])
+/*
+ * the rig may be in rig_init state, but not openned
+ */
+int dumpcaps (RIG* rig)
 { 
 	const struct rig_caps *caps;
 	int status,i;
 	char freqbuf[20];
 	int backend_warnings=0;
-	int rig_model;
 	char prntbuf[256];
 
-	if (argc != 2) {
-			fprintf(stderr,"%s <rig_num>\n",argv[0]);
-			exit(1);
-	}
+	if (!rig || !rig->caps)
+		return -RIG_EINVAL;
 
-	rig_model = atoi(argv[1]);
-	
-	rig_check_backend(rig_model);
+	caps = rig->caps;
 
-	caps = rig_get_caps(rig_model);
-	if (!caps) {
-			fprintf(stderr,"Unknown rig num: %d\n", rig_model);
-			fprintf(stderr,"Please check riglist.h\n");
-			exit(2);
-	}
-
-	printf("Rig dump for model %d\n",caps->rig_model);
+	printf("Caps dump for model %d\n",caps->rig_model);
 	printf("Model name:\t%s\n",caps->model_name);
 	printf("Mfg name:\t%s\n",caps->mfg_name);
 	printf("Backend version:\t%s\n",caps->version);
@@ -91,6 +84,9 @@ int main (int argc, char *argv[])
 			break;
 	case RIG_TYPE_COMPUTER:
 			printf("Computer\n");
+			break;
+	case RIG_TYPE_TUNER:
+			printf("Tuner\n");
 			break;
 	case RIG_TYPE_OTHER:
 			printf("Other\n");
@@ -224,6 +220,9 @@ int main (int argc, char *argv[])
 			printf("Warning: backend can set readonly levels!\n");
 			backend_warnings++;
 	}
+	printf("Extra levels:");
+	rig_ext_level_foreach(rig, print_ext, NULL);
+	printf("\n");
 
 	sprintf_parm(prntbuf, caps->has_get_parm);
 	printf("Get parameters: %s\n", prntbuf);
@@ -234,6 +233,9 @@ int main (int argc, char *argv[])
 			printf("Warning: backend can set readonly parms!\n");
 			backend_warnings++;
 	}
+	printf("Extra parameters:");
+	rig_ext_parm_foreach(rig, print_ext, NULL);
+	printf("\n");
 
 #if 0
 	/* FIXME: use rig->state.vfo_list instead */
@@ -254,9 +256,11 @@ int main (int argc, char *argv[])
 
 	printf("Memories:");
 	for (i=0; i<CHANLSTSIZ && caps->chan_list[i].type; i++) {
-			printf("\n\t%d..%d:   \t%s", caps->chan_list[i].start,
-							caps->chan_list[i].end,
-							decode_mtype(caps->chan_list[i].type));
+		printf("\n\t%d..%d:   \t%s", caps->chan_list[i].start,
+						caps->chan_list[i].end,
+						decode_mtype(caps->chan_list[i].type));
+		printf("\n\t  mem caps: ");
+		dump_chan_caps(&caps->chan_list[i].mem_caps);
 	}
 	if (i == 0)
 		printf(" none");
@@ -301,6 +305,24 @@ int main (int argc, char *argv[])
 	if (i==0) {
 			printf(" none! This backend might be bogus!");
 			backend_warnings++;
+	}
+	printf("\n");
+
+        printf("Bandwidths:");
+	for (i=1; i < 1<<10; i<<=1) {
+		pbwidth_t pbnorm = rig_passband_normal(rig, i);
+
+		if (pbnorm == 0)
+			continue;
+
+		sprintf_freq(freqbuf, pbnorm);
+		printf("\n\t%s\tnormal: %s,\t", strrmode(i), freqbuf);
+
+		sprintf_freq(freqbuf, rig_passband_narrow(rig, i));
+		printf("narrow: %s,\t", freqbuf);
+
+		sprintf_freq(freqbuf, rig_passband_wide(rig, i));
+		printf("wide: %s", freqbuf);
 	}
 	printf("\n");
 
@@ -349,7 +371,7 @@ int main (int argc, char *argv[])
 	printf("Can get DCS squelch:\t%c\n",caps->get_dcs_sql!=NULL?'Y':'N');
 	printf("Can set power stat:\t%c\n",caps->set_powerstat!=NULL?'Y':'N');
 	printf("Can get power stat:\t%c\n",caps->get_powerstat!=NULL?'Y':'N');
-	printf("Can get reset:\t%c\n",caps->reset!=NULL?'Y':'N');
+	printf("Can reset:\t%c\n",caps->reset!=NULL?'Y':'N');
 	printf("Can get ant:\t%c\n",caps->get_ant!=NULL?'Y':'N');
 	printf("Can set ant:\t%c\n",caps->set_ant!=NULL?'Y':'N');
 	printf("Can set transceive:\t%c\n",caps->set_trn!=NULL?'Y':'N');
@@ -377,6 +399,14 @@ int main (int argc, char *argv[])
 	printf("\nOverall backend warnings: %d\n", backend_warnings);
 
 	return backend_warnings;
+}
+
+
+static int print_ext(RIG *rig, const struct confparams *cfp, rig_ptr_t ptr)
+{
+	printf(" %s", cfp->name);
+
+	return 1;       /* process them all */
 }
 
 
@@ -468,4 +498,32 @@ int ts_sanity_check(const struct tuning_step_list tuning_step[])
 	return 0;
 }
 
+
+static void dump_chan_caps(const channel_cap_t *chan)
+{
+  if (chan->bank_num) printf("BANK ");
+  if (chan->ant) printf("ANT ");
+  if (chan->freq) printf("FREQ ");
+  if (chan->mode) printf("MORE ");
+  if (chan->width) printf("WIDTH ");
+  if (chan->tx_freq) printf("TXFREQ ");
+  if (chan->tx_mode) printf("TXMODE ");
+  if (chan->tx_width) printf("TXWIDTH ");
+  if (chan->split) printf("SPLIT ");
+  if (chan->rptr_shift) printf("RPTRSHIFT ");
+  if (chan->rptr_offs) printf("RPTROFS ");
+  if (chan->tuning_step) printf("TS ");
+  if (chan->rit) printf("RIT ");
+  if (chan->xit) printf("XIT ");
+  if (chan->funcs) printf("FUNC ");
+  if (chan->levels) printf("LEVEL ");
+  if (chan->ctcss_tone) printf("TONE ");
+  if (chan->ctcss_sql) printf("CTCSS ");
+  if (chan->dcs_code) printf("DCSCODE ");
+  if (chan->dcs_sql) printf("DCSSQL ");
+  if (chan->scan_group) printf("SCANGRP ");
+  if (chan->flags) printf("FLAG ");    /* RIG_CHFLAG's */
+  if (chan->channel_desc) printf("NAME ");
+  if (chan->ext_levels) printf("EXTLVL ");
+}
 

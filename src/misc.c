@@ -2,7 +2,7 @@
  *  Hamlib Interface - toolbox
  *  Copyright (c) 2000-2002 by Stephane Fillod and Frank Singleton
  *
- *		$Id: misc.c,v 1.18.2.4 2002-08-02 09:29:42 dedmons Exp $
+ *		$Id: misc.c,v 1.18.2.5 2003-02-25 06:01:13 dedmons Exp $
  * 
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -254,7 +254,7 @@ int sprintf_freq(char *str, freq_t freq)
 		return sprintf (str, "%g %s", f, hz);
 }
 
-const char * strmode(rmode_t mode)
+const char * strrmode(rmode_t mode)
 {
 	switch (mode) {
     case RIG_MODE_AM: return "AM";
@@ -309,6 +309,7 @@ const char *strvfo(vfo_t vfo)
 		case RIG_CTRL_SCAN:	j += sprintf(&tmp[j], "SCAN"); break;
 		case RIG_CTRL_SAT:	j += sprintf(&tmp[j], "SAT"); break;
 		case RIG_CTRL_CROSS:	j += sprintf(&tmp[j], "RPTR"); break;
+		case RIG_CTRL_TRACE:	j += sprintf(&tmp[j], "TRACE"); break;
 
 		default:	j += sprintf(&tmp[j], "%c", (vfo & i)? '1': '0'); break;
 		}
@@ -342,18 +343,22 @@ const char *strvfo(vfo_t vfo)
 		j += sprintf(&tmp[j], "Main"); c=1; break;
 	case	RIG_VFO_SUB:
 		j += sprintf(&tmp[j], "Sub"); c=1; break;
-	case	RIG_VFO_MEM_A:
+	case	RIG_MEM_A:
 		j += sprintf(&tmp[j], "MEMA"); c=1; break;
-	case	RIG_VFO_MEM_C:
+	case	RIG_MEM_C:
 		j += sprintf(&tmp[j], "MEMC"); c=1; break;
-	case	RIG_VFO_CALL_A:
+	case	RIG_CALL_A:
 		j += sprintf(&tmp[j], "CALLA"); c=1; break;
-	case	RIG_VFO_CALL_C:
+	case	RIG_CALL_C:
 		j += sprintf(&tmp[j], "CALLC"); c=1; break;
 	case	RIG_VFO_AB:
 		j += sprintf(&tmp[j], "VFOAB"); c=1; break;
 	case	RIG_VFO_BA:
 		j += sprintf(&tmp[j], "VFOBA"); c=1; break;
+	case	RIG_SAT_UPLINK:
+		j += sprintf(&tmp[j], "UPLINK"); c=1; break;
+	case	RIG_SAT_DNLINK:
+		j += sprintf(&tmp[j], "DNLINK"); c=1; break;
 	}
 
 	// Special modes (non-standard RIG_VFO_*)
@@ -544,7 +549,7 @@ int sprintf_mode(char *str, rmode_t mode)
 				return 0;
 
 		for (i = 0; i < 30; i++) {
-				const char *ms = strmode(mode & (1UL<<i));
+				const char *ms = strrmode(mode & (1UL<<i));
 				if (!ms || !ms[0])
 						continue;	/* unknown, FIXME! */
 				strcat(str, ms);
@@ -690,11 +695,11 @@ static struct {
 	{ RIG_VFO_C, "VFOC" },
 	{ RIG_VFO_AB, "VFOAB" },
 	{ RIG_VFO_BA, "VFOBA" },
-	{ RIG_VFO_MEM_A, "MEMA" },
-	{ RIG_VFO_MEM_C, "MEMC" },
+	{ RIG_MEM_A, "MEMA" },
+	{ RIG_MEM_C, "MEMC" },
 	{ RIG_CTRL_SAT, "SAT" },
-	{ RIG_VFO_CALL_A, "CALLA" },
-	{ RIG_VFO_CALL_C, "CALLC" },
+	{ RIG_CALL_A, "CALLA" },
+	{ RIG_CALL_C, "CALLC" },
 	{ RIG_VFO_MAIN, "Main" },
 	{ RIG_VFO_SUB, "Sub" },
 // one or more of the following may be ambiguous	--Dale

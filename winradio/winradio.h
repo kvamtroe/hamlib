@@ -2,7 +2,7 @@
  *  Hamlib WiNRADiO backend - main header
  *  Copyright (c) 2000,2001,2002 by Stephane Fillod
  *
- *		$Id: winradio.h,v 1.7 2001-12-28 20:28:04 fillods Exp $
+ *		$Id: winradio.h,v 1.7.2.1 2003-02-25 06:01:21 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

@@ -11,7 +11,7 @@
  *  Hamlib Interface - locator and bearing conversion calls
  *  Copyright (c) 2001 by Stephane Fillod
  *
- *		$Id: locator.c,v 1.2 2001-12-28 20:33:27 fillods Exp $
+ *		$Id: locator.c,v 1.2.2.1 2003-02-25 06:01:13 dedmons Exp $
  *
  *	Code to determine bearing and range was taken from the Great Circle, 
  *	by S. R. Sampson, N5OWK.

@@ -2,7 +2,7 @@
  *  Hamlib Interface - list of known rigs
  *  Copyright (c) 2000-2003 by Stephane Fillod and Frank Singleton
  *
- *	$Id: riglist.h,v 1.27.2.2 2003-02-25 04:13:11 dedmons Exp $
+ *	$Id: riglist.h,v 1.27.2.3 2003-02-25 06:00:54 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
