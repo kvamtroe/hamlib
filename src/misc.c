@@ -2,8 +2,8 @@
  *  Hamlib Interface - toolbox
  *  Copyright (c) 2000-2002 by Stephane Fillod and Frank Singleton
  *
- *	$Id: misc.c,v 1.18.2.2 2002-07-26 08:53:10 dedmons Exp $
- *
+ *		$Id: misc.c,v 1.18.2.3 2002-07-26 12:19:58 dedmons Exp $
+ * 
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
  *   published by the Free Software Foundation; either version 2 of
@@ -37,8 +37,6 @@
 #include <hamlib/rig.h>
 
 #include "misc.h"
-
-
 
 static int rig_debug_level = RIG_DEBUG_TRACE;
 
@@ -267,6 +265,7 @@ const char * strmode(rmode_t mode)
 	case RIG_MODE_FM: return "FM";
 	case RIG_MODE_WFM: return "WFM";
 	case RIG_MODE_NONE: return "";
+	default: break;
 	}
 	return NULL;
 }
@@ -277,25 +276,97 @@ const char * strmode(rmode_t mode)
  */
 const char *strvfo(vfo_t vfo)
 {
-	switch (vfo) {
-	case	RIG_VFO_A:
-			return "VFOA";
-	case	RIG_VFO_B:
-			return "VFOB";
-	case	RIG_VFO_C:
-			return "VFOC";
-	case	RIG_VFO_CURR:
-			return "currVFO";
-	case	RIG_VFO_MEM:
-			return "MEM";
-	case	RIG_VFO_VFO:
-			return "VFO";
-	case	RIG_VFO_MAIN:
-			return "Main";
-	case	RIG_VFO_SUB:
-			return "Sub";
+	unsigned int i, j, k, c;
+	static char tmp[80];
+	vfo_t tvfo;	// tmp for display purposes
+
+	// Mask out PTT/CTRL so standard VFO's will work
+	tvfo = vfo & (RIG_VFO_VALID & ~(RIG_VFO_CTRL | RIG_VFO_PTT));
+
+/* special cases and debug	--Dale */
+#define _SHOW_BITS
+#ifdef _SHOW_BITS
+	j=0; k=0;
+	for(i = 1<<(RIG_MAJOR+1);
+		(i >= 0x0001) && (j < 60) && (k < RIG_MAJOR); i = i>>1) {
+		switch(vfo & i) {
+		case RIG_VFO_CTRL:	j += sprintf(&tmp[j], "CTRL"); break;
+		case RIG_VFO_PTT:	j += sprintf(&tmp[j], "PTT"); break;
+		case RIG_VFO1:	j += sprintf(&tmp[j], "VFO1"); break;
+		case RIG_VFO2:	j += sprintf(&tmp[j], "VFO2"); break;
+		case RIG_VFO3:	j += sprintf(&tmp[j], "VFO3"); break;
+		case RIG_VFO4:	j += sprintf(&tmp[j], "VFO4"); break;
+		case RIG_VFO5:	j += sprintf(&tmp[j], "VFO5"); break;
+		case RIG_CTRL_FAKE:	j += sprintf(&tmp[j], "FAKE"); break;
+		case RIG_CTRL_MAIN:	j += sprintf(&tmp[j], "MAIN"); break;
+		case RIG_CTRL_SUB:	j += sprintf(&tmp[j], "SUB"); break;
+		case RIG_CTRL_MEM:	j += sprintf(&tmp[j], "MEM"); break;
+		case RIG_CTRL_CALL:	j += sprintf(&tmp[j], "CALL"); break;
+		case RIG_CTRL_REV:	j += sprintf(&tmp[j], "REV"); break;
+		case RIG_CTRL_RIT:	j += sprintf(&tmp[j], "RIT"); break;
+		case RIG_CTRL_XIT:	j += sprintf(&tmp[j], "XIT"); break;
+		case RIG_CTRL_SPLIT:	j += sprintf(&tmp[j], "SPLT"); break;
+		case RIG_CTRL_SCAN:	j += sprintf(&tmp[j], "SCAN"); break;
+		case RIG_CTRL_SAT:	j += sprintf(&tmp[j], "SAT"); break;
+		case RIG_CTRL_CROSS:	j += sprintf(&tmp[j], "RPTR"); break;
+
+		default:	j += sprintf(&tmp[j], "%c", (vfo & i)? '1': '0'); break;
+		}
+		j += sprintf(&tmp[j], ",");
+		k++;
 	}
-	return NULL;
+#endif
+
+	// the --j is to remove the last erroneous comma
+	j += sprintf(&tmp[--j], " = ");
+//	rig_debug(RIG_DEBUG_TRACE, "%s--> ", tmp);
+
+	c=0;	// Nothing below set yet
+
+	switch (tvfo) {
+	case	RIG_VFO_A:
+		j += sprintf(&tmp[j], "VFOA"); c=1; break;
+	case	RIG_VFO_B:
+		j += sprintf(&tmp[j], "VFOB"); c=1; break;
+	case	RIG_VFO_C:
+		j += sprintf(&tmp[j], "VFOC"); c=1; break;
+	case	RIG_VFO_CURR:
+		j += sprintf(&tmp[j], "VFOcurr"); c=1; break;
+	case	RIG_VFO_ALL:
+		j += sprintf(&tmp[j], "VFOall"); c=1; break;
+	case	RIG_VFO_MEM:
+		j += sprintf(&tmp[j], "MEM"); c=1; break;
+	case	RIG_VFO_VFO:
+		j += sprintf(&tmp[j], "VFO"); c=1; break;
+	case	RIG_VFO_MAIN:
+		j += sprintf(&tmp[j], "Main"); c=1; break;
+	case	RIG_VFO_SUB:
+		j += sprintf(&tmp[j], "Sub"); c=1; break;
+	case	RIG_VFO_MEM_A:
+		j += sprintf(&tmp[j], "MEMA"); c=1; break;
+	case	RIG_VFO_MEM_C:
+		j += sprintf(&tmp[j], "MEMC"); c=1; break;
+	case	RIG_VFO_CALL_A:
+		j += sprintf(&tmp[j], "CALLA"); c=1; break;
+	case	RIG_VFO_CALL_C:
+		j += sprintf(&tmp[j], "CALLC"); c=1; break;
+	case	RIG_VFO_AB:
+		j += sprintf(&tmp[j], "VFOAB"); c=1; break;
+	case	RIG_VFO_BA:
+		j += sprintf(&tmp[j], "VFOBA"); c=1; break;
+	}
+
+	// Special modes (non-standard RIG_VFO_*)
+	if(c==0) {
+		if( vfo & RIG_CTRL_SAT)	
+			j += sprintf(&tmp[j], "SAT");
+		else
+			j += sprintf(&tmp[j], "Special");
+	}
+
+	tmp[j+1] = '\0';
+
+	return tmp;
 }
 
 const char *strfunc(setting_t func)
@@ -329,9 +400,9 @@ const char *strfunc(setting_t func)
 	case RIG_FUNC_SATMODE: return "SATMODE";
 	case RIG_FUNC_SCOPE: return "SCOPE";
 	case RIG_FUNC_RESUME: return "RESUME";
-	case RIG_FUNC_TBURST: return "TBURST";
 
 	case RIG_FUNC_NONE: return "";
+	default: break;
 	}
 	return NULL;
 }
@@ -369,6 +440,7 @@ const char *strlevel(setting_t level)
 	case RIG_LEVEL_STRENGTH: return "STRENGTH";
 
 	case RIG_LEVEL_NONE: return "";
+	default: break;
 	}
 	return NULL;
 }
@@ -384,6 +456,7 @@ const char *strparm(setting_t parm)
 	case RIG_PARM_BAT: return "BAT";
 
 	case RIG_PARM_NONE: return "";
+	default: break;
 	}
 	return NULL;
 }
@@ -395,6 +468,7 @@ const char *strptrshift(rptr_shift_t shift)
 	case RIG_RPT_SHIFT_PLUS: return "-";
 
 	case RIG_RPT_SHIFT_NONE: return "None";
+	default: break;
 	}
 	return NULL;
 }
@@ -415,6 +489,7 @@ const char *strvfop(vfo_op_t op)
 	case RIG_OP_RIGHT: return "RIGHT";
 
 	case RIG_OP_NONE: return "";
+	default: break;
 	}
 	return NULL;
 }
@@ -429,10 +504,12 @@ const char *strscan(scan_t rscan)
 	case RIG_SCAN_PROG: return "PROG";
 	case RIG_SCAN_DELTA: return "DELTA";
 	case RIG_SCAN_VFO: return "VFO";
+	default: break;
 	}
 	return NULL;
 }
 
+/* *INDENT-OFF* */
 const char *strstatus(enum rig_status_e status)
 {
 	switch (status) {
@@ -448,9 +525,12 @@ const char *strstatus(enum rig_status_e status)
 			return "Buggy";
 	case RIG_STATUS_NEW:
 			return "New";
+	default:
+			return "";
+	break;
 	}
-	return "";
 }
+/* *INDENT-ON* */
 
 int sprintf_mode(char *str, rmode_t mode)
 {
@@ -584,6 +664,7 @@ static struct {
 	{ RIG_MODE_RTTY, "RTTY" },
 	{ RIG_MODE_WFM, "WFM" },
 	{ RIG_MODE_NONE, NULL },
+	{0,0}
 };
 
 
@@ -601,15 +682,26 @@ static struct {
 		vfo_t vfo ;
 		const char *str;
 } vfo_str[] = {
-		{ RIG_VFO_A, "VFOA" },
-		{ RIG_VFO_B, "VFOB" },
-		{ RIG_VFO_C, "VFOC" },
-		{ RIG_VFO_CURR, "currVFO" },
-		{ RIG_VFO_MEM, "MEM" },
-		{ RIG_VFO_VFO, "VFO" },
-		{ RIG_VFO_MAIN, "Main" },
-		{ RIG_VFO_SUB, "Sub" },
-		{ RIG_VFO_NONE, NULL },
+	{ RIG_VFO_A, "VFOA" },
+	{ RIG_VFO_B, "VFOB" },
+	{ RIG_VFO_C, "VFOC" },
+	{ RIG_VFO_AB, "VFOAB" },
+	{ RIG_VFO_BA, "VFOBA" },
+	{ RIG_VFO_MEM_A, "MEMA" },
+	{ RIG_VFO_MEM_C, "MEMC" },
+	{ RIG_CTRL_SAT, "SAT" },
+	{ RIG_VFO_CALL_A, "CALLA" },
+	{ RIG_VFO_CALL_C, "CALLC" },
+	{ RIG_VFO_MAIN, "Main" },
+	{ RIG_VFO_SUB, "Sub" },
+// one or more of the following may be ambiguous	--Dale
+	{ RIG_VFO_CURR, "currVFO" },
+	{ RIG_VFO_VFO, "VFO" },
+	{ RIG_VFO_MEM, "MEM" },
+//	{ RIG_VFO_ALL, "allVFO" },
+
+	{ RIG_VFO_NONE, NULL },
+	{0,0}
 };
 
 vfo_t parse_vfo(const char *s)
@@ -654,8 +746,8 @@ static struct {
 	{ RIG_FUNC_SATMODE, "SATMODE" },
 	{ RIG_FUNC_SCOPE, "SCOPE" },
 	{ RIG_FUNC_RESUME, "RESUME" },
-	{ RIG_FUNC_TBURST, "TBURST" },
 	{ RIG_FUNC_NONE, NULL },
+	{0,0}
 };
 
 setting_t parse_func(const char *s)
@@ -701,6 +793,7 @@ static struct {
 	{ RIG_LEVEL_SQLSTAT, "SQLSTAT" },
 	{ RIG_LEVEL_STRENGTH, "STRENGTH" },
 	{ RIG_LEVEL_NONE, NULL },
+	{0,0}
 };
 
 setting_t parse_level(const char *s)
@@ -724,6 +817,7 @@ static struct {
 	{ RIG_PARM_TIME, "TIME" },
 	{ RIG_PARM_BAT, "BAT" },
 	{ RIG_PARM_NONE, NULL },
+	{0,0}
 };
 
 setting_t parse_parm(const char *s)
@@ -752,6 +846,7 @@ static struct {
 	{ RIG_OP_LEFT, "LEFT" },
 	{ RIG_OP_RIGHT, "RIGHT" },
 	{ RIG_OP_NONE, NULL },
+	{0,0}
 };
 
 vfo_op_t parse_vfo_op(const char *s)
@@ -765,7 +860,7 @@ vfo_op_t parse_vfo_op(const char *s)
 }
 
 static struct { 
-		scan_t rscan;
+		scan_t SCan;
 		const char *str;
 } scan_str[] = {
 	{ RIG_SCAN_STOP, "STOP" },
@@ -776,15 +871,18 @@ static struct {
 	{ RIG_SCAN_DELTA, "DELTA" },
 	{ RIG_SCAN_VFO, "VFO" },
 	{ RIG_SCAN_NONE, NULL },
+	{0,0}
 };
 
 scan_t parse_scan(const char *s)
 {
 	int i;
 
+	printf(__FUNCTION__": parsing %s...\n",s);
+
 	for (i=0 ; scan_str[i].str != NULL; i++) {
 		if (strcmp(s, scan_str[i].str) == 0) {
-			return scan_str[i].rscan;
+			return scan_str[i].SCan;
 		}
 	}
 
@@ -793,11 +891,51 @@ scan_t parse_scan(const char *s)
 
 rptr_shift_t parse_rptr_shift(const char *s)
 {
+	switch(s[0]) {
+	case '+':	return RIG_RPT_SHIFT_PLUS;
+	case '-':	return RIG_RPT_SHIFT_MINUS;
+	case '=':	return RIG_RPT_SHIFT_1750;
+	default:	return RIG_RPT_SHIFT_NONE;
+		break;
+	}
+/* old
 	if (strcmp(s, "+") == 0)
 		return RIG_RPT_SHIFT_PLUS;
 	else if (strcmp(s, "-") == 0)
 		return RIG_RPT_SHIFT_MINUS;
+	else if (strcmp(s, "=") == 0)
+		return RIG_RPT_SHIFT_1750;
 	else
 		return RIG_RPT_SHIFT_NONE;
+*/
 }
 
+/* simple all-in-one function to open rig */
+int rig_setup(RIG *rig, rig_model_t model, char *port)
+{
+	int retval;
+
+	rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+		": rig=%x, model=%i, port=%s\n", rig, model, port);
+
+	rig = rig_init(model);
+	if(rig == NULL) {
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": rig_init() returned NULL!\n");
+		return -RIG_EINVAL;
+	}
+
+	strncpy(rig->state.rigport.pathname, port, FILPATHLEN);
+	retval = rig_open(rig);
+	if(retval != RIG_OK) {
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+			": rig_open() returned %s!\n", rigerror(retval));
+	}
+
+	rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+		": rig=%x, model=%i, port=%s\n", rig, model, port);
+
+	return retval;
+}
+
+// end
