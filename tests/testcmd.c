@@ -9,6 +9,8 @@
 #include <hamlib/rig.h>
 #include "misc.h"
 #include "tests.h"
+#include "rigcmd.h"
+#include "rig.tab.h"
 
 int main(int argc, char *argv[])
 {
@@ -21,7 +23,7 @@ int main(int argc, char *argv[])
 	retval = 0;
 	while(!retval) {
 		fprintf(stdout, "\n%s> ", argv[0]);
-		retval = ts2k_yyparse();
+		retval = yyparse();
 	}
 
 

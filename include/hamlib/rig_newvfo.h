@@ -134,10 +134,10 @@ struct channel {
 	int bank_num;
 	vfo_t vfo;
 	int ant;
-	char lock;		/* added, I use this --kd7eni */
 	freq_t freq;
 	rmode_t mode;
 	pbwidth_t width;
+	vfo_t tx_vfo;	// This may not stay 
 	freq_t tx_freq;
 	rmode_t tx_mode;
 	pbwidth_t tx_width;
@@ -150,7 +150,7 @@ struct channel {
 	setting_t funcs;
 	value_t levels[RIG_SETTING_MAX];
 	tone_t tone;		/* added --Dale kd7eni */
-	tone_t tone_sql;	/* added --Dale kd7eni */
+	tone_t tone_sql;	/* tone => tx, ctcss => rx */
 	tone_t ctcss_tone;
 	tone_t ctcss;
 	tone_t ctcss_sql;
@@ -159,9 +159,9 @@ struct channel {
 	tone_t dcs_sql;
 	scan_t scan;
 	int scan_group;		/* added, I use this often --kd7eni */
-	int flags;		/* to be defined */
+	int flags;		/* RIG_CHFLAGS... */
 	char channel_desc[MAXCHANDESC];
-	struct ext_list *ext_levels;
+	struct ext_list *ext_levels;	/* none for ts2000 --Dale */
 };
 
 # undef _RIG_NEWVFO_PART_3

@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS2000 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2000.c,v 1.9.2.2 2002-07-26 08:53:09 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.3 2002-08-02 09:29:42 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -316,7 +316,7 @@ set_xit:	ts2000_set_xit,
  *  Copyright (c) 2000-2002 by Stephane Fillod
  * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
  *
- *		$Id: ts2000.c,v 1.9.2.2 2002-07-26 08:53:09 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.3 2002-08-02 09:29:42 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -2259,20 +2259,26 @@ int ts2000_get_channel(RIG * rig, channel_t * chan)
 	// (keep same order as channel struct to ease debugging!)
 //       chan->channel_num = ;   // already set?
 
+	chan->flags = 0;
 // The following may be used to indicate we're reading limits (290-299).
 // At any rate, it's currently unused. 
 	chan->bank_num = 0;	// I merge the two--do not use! --Dale
 	/* chan->channel_num set by caller! */
 	chan->vfo = RIG_VFO_MEM;
-	chan->ant = 0;		// n/i
-	chan->lock = int_n(tmp, &mrtxt[0][18], 1);
+	chan->ant = 0;		// NIMPL
+	chan->flags |= (mrtxt[0][18] = '0')? RIG_CHFLAG_SKIP : 0;
 	chan->freq = int_n(tmp, &mrtxt[0][06], 11);
 	chan->mode = ts2000_mode_list[int_n(tmp, &mrtxt[0][17], 1)];
-	chan->width = 0;	// n/i
+	chan->width = 0;	// NIMPL
 	chan->tx_freq = int_n(tmp, &mrtxt[1][06], 11);
 	chan->tx_mode = ts2000_mode_list[int_n(tmp, &mrtxt[1][17], 1)];
-	chan->tx_width = 0;	// n/i
-	chan->split = RIG_SPLIT_OFF;	// n/i
+	chan->tx_width = 0;	// NIMPL
+	i = chan->freq != chan->tx_freq;
+	i |= chan->mode != chan->tx_mode;
+	if( i )
+		chan->split = RIG_SPLIT_ON;
+	else
+		chan->split = RIG_SPLIT_OFF;
 	chan->rptr_shift = int_n(tmp, &mrtxt[0][28], 1);
 	chan->rptr_offs = int_n(tmp, &mrtxt[0][29], 9);
 	if (chan->mode == RIG_MODE_AM || chan->mode == RIG_MODE_FM)
@@ -2303,9 +2309,7 @@ int ts2000_get_channel(RIG * rig, channel_t * chan)
 	/* i still valid */
 	chan->dcs_sql = (i == 3) ? 1 : 0;
 	chan->scan = RIG_SCAN_NONE;	// n/a for memory read  
-	chan->flags = 0;	// n/i in Hamlib yet
 	chan->scan_group = int_n(tmp, &mrtxt[0][40], 1);
-//       chan->flags = curr_vfo; // n/a
 	// FIXME : The following may have trailing garbage
 	strncpy(chan->channel_desc, &mrtxt[0][41], 8);
 	chan->channel_desc[8] = '\0';
@@ -2367,7 +2371,7 @@ int ts2000_set_channel(RIG * rig, channel_t * chan)
 				break;
 		}
 		p5 = (unsigned int) j;	// FIXME: either not found, or last!
-		p6 = (unsigned int) chan->lock;
+		p6 = (unsigned int) (chan->flags == RIG_CHFLAG_SKIP)? 1 : 0 ;
 		p7 = 0;		// FIXME: to lazy to sort this out right now
 		p8 = 0;		//       "        "       "       "       "
 		p9 = 0;		//       "        "       "       "       "

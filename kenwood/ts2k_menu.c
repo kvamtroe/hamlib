@@ -86,7 +86,7 @@ int ts2k_menu_init(RIG * rig, ts2k_menu_t * Menus[])
 int ts2k_get_menu(RIG * rig, ts2k_menu_t *Menus[], int item, int *val)
 {
 	int retval, acklen, cmdlen, i;
-	char ack[30], cmd[30], tmp[10];
+	char ack[30], cmd[30];
 	ts2k_menu_t *mnu;
 
 	if (Menus == NULL)
@@ -131,7 +131,7 @@ int ts2k_get_menu(RIG * rig, ts2k_menu_t *Menus[], int item, int *val)
 	case 51*100 + 5:
 	case 59*100 + 0:	//	59
 	case 62*100 + 3:	//	62C
-		mnu->val = int_n(tmp, &ack[9], 2);
+		mnu->val = int_n(&ack[9], 2);
 		mnu->txt_val[0] = '\0';
 		break;
 
@@ -152,7 +152,7 @@ int ts2k_get_menu(RIG * rig, ts2k_menu_t *Menus[], int item, int *val)
 		break;
 	
 	case 61*100 + 3:
-		mnu->val = int_n(tmp, &ack[9], 3);
+		mnu->val = int_n(&ack[9], 3);
 		mnu->txt_val[0] = '\0';
 		break;
 
@@ -307,7 +307,7 @@ int ts2k_pm_init(RIG *rig)
 {
 	char pmcmd[10], mfcmd[10];
 	int retval, i, j, k, pm_orig, pmsiz, mfsiz, mf_orig, dummy;
-	ts2k_menu_t **menus, *m;
+	ts2k_menu_t **menus;
 	ts2k_pm_t **pm_all, *pm;
 //	ts2k_pm_t *pm_all[TS2K_PMSIZ], *pm;
 
@@ -478,7 +478,16 @@ int ts2k_set_pm(RIG *rig, int pm_no)
 	int retval;
 	char pmcmd[] = "pm0;";
 	ts2k_pm_t **pm;
+	vfo_t vtmp;
 
+	retval = rig_get_vfo(rig, &vtmp);
+	CHKERR(retval);
+
+	/* PM won't change if in SCAN */
+	if( vtmp & RIG_CTRL_SCAN ) {
+		retval = rig_set_vfo(rig, vtmp & ~RIG_CTRL_SCAN);
+		CHKERR(retval);
+	}
 
 	pm = (ts2k_pm_t **)rig->caps->pm;
 	if(pm_no >= TS2K_PMSIZ)

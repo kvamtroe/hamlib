@@ -1,5 +1,5 @@
 
-bin_PROGRAMS = rigctl rotctl
+bin_PROGRAMS = rigctl rotctl tsctl
 man_MANS = rigctl.1 rotctl.1
 
 noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testptt testts2k \
@@ -8,8 +8,8 @@ noinst_PROGRAMS = dumpcaps dumpmem testcaps testrig testptt testts2k \
 EXTRA_PROGRAMS = rigmatrix
 
 # all the programs need this
-LDADD = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
-DEPENDENCIES = ../src/libhamlib.la ts2k.tab.o lex.ts2k_yy.o
+LDADD = ../src/libhamlib.la rig.tab.o lex.rig_yy.o
+DEPENDENCIES = ../src/libhamlib.la rig.tab.o lex.rig_yy.o
 
 ## Linker options
 listrigs_LDFLAGS = @BACKENDLNK@
@@ -23,6 +23,7 @@ testcmd_LDFLAGS = @BACKENDLNK@
 testtrn_LDFLAGS = @BACKENDLNK@
 testfreq_LDFLAGS = @BACKENDLNK@
 rigctl_LDFLAGS = @BACKENDLNK@
+tsctl_LDFLAGS = @BACKENDLNK@
 rotctl_LDFLAGS = @ROT_BACKENDLNK@
  
 # temporary hack
@@ -44,6 +45,7 @@ testcmd_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 testtrn_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 listrigs_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rigctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+tsctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 rotctl_DEPENDENCIES = $(DEPENDENCIES) @ROT_BACKENDEPS@
 rigmatrix_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 

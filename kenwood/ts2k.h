@@ -2,7 +2,7 @@
  *  Hamlib TS2K backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.3.2.3 2002-07-26 08:53:09 dedmons Exp $
+ *		$Id: ts2k.h,v 1.3.2.4 2002-08-02 09:29:42 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -146,7 +146,7 @@ int ts2k_vfo_op(RIG *rig, vfo_t vfo, vfo_op_t op);
 /*
  * functions I've written -- Dale KD7ENI
  */
-int int_n(char *tmp, char *src, int cnt);
+long int int_n(char *src, int cnt);
 int ts2k_scan(RIG *rig, vfo_t vfo, scan_t scan, int ch);
 int ts2k_scan_on(RIG *rig, char ch);
 int ts2k_scan_off(RIG *rig);
@@ -181,8 +181,12 @@ int ts2k_set_ts(RIG *rig, vfo_t vfo, shortfreq_t ts);
 int ts2k_get_xit(RIG *rig, vfo_t vfo, shortfreq_t *freq);
 int ts2k_set_xit(RIG *rig, vfo_t vfo, shortfreq_t  freq);
 /* Redsigned Functions */
-int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo);
 int ts2k_uniq_GetCtrl(RIG *rig, vfo_t *vfo);
+int ts2k_uniq_GetMemChan(RIG *rig, channel_t *chan);
+int ts2k_uniq_GetSatChan(RIG *rig, channel_t *chan);
+int ts2k_uniq_GetSplitChan(RIG *rig, channel_t *chan);
+int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo);
+int ts2k_uniq_GetVfoChan(RIG *rig, channel_t *chan);
 int ts2k_uniq_LockPanel(RIG *rig);
 int ts2k_uniq_MemOff(RIG *rig, vfo_t);
 int ts2k_uniq_MemOn(RIG *rig, vfo_t);
@@ -192,9 +196,11 @@ int ts2k_uniq_SendScan(RIG *rig, vfo_t, char sc);
 int ts2k_uniq_SendVfo(RIG *rig, vfo_t, char v);
 int ts2k_uniq_SetCtrl(RIG *rig, vfo_t vfo);
 int ts2k_uniq_SetMajor(RIG *rig, vfo_t);
+int ts2k_uniq_SetMemChan(RIG *rig, channel_t *chan);
 int ts2k_uniq_SetMinor(RIG *rig, vfo_t);
 int ts2k_uniq_SetSat(RIG *rig, vfo_t);
 int ts2k_uniq_SetScan(RIG *rig, vfo_t);
+int ts2k_uniq_SetSplitChan(RIG *rig, channel_t *chan);
 int ts2k_uniq_SetVfo(RIG *rig, vfo_t);
 int ts2k_uniq_ScanOff(RIG *rig, vfo_t);
 int ts2k_uniq_ScanOn(RIG *rig, vfo_t);
@@ -281,7 +287,7 @@ extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
 #define MD_FSKR	'9'
 
 
-// Added the following two lists --Dale, kd7eni
+// Added the following lists --Dale, kd7eni
 // FIXME: RIG_MODE_[FSKR|CWR] undefined in rig.h
 static const int ts2k_mode_list[] = {
 	RIG_MODE_NONE, RIG_MODE_LSB, RIG_MODE_USB, RIG_MODE_CW,
@@ -294,6 +300,11 @@ static long int ts2k_steps[2][10] = {
 	{5000, 6250, 10000, 12500, 15000, 20000,
 	 25000, 30000, 50000, 100000}	// am/fm
 };
+
+static const int ts2k_shift_list[] = {
+	RIG_RPT_SHIFT_NONE, RIG_RPT_SHIFT_PLUS,
+	RIG_RPT_SHIFT_MINUS, RIG_RPT_SHIFT_1750
+};	// This is the way it is.  I didn't build the rig.
 
 
 struct ts2k_id {

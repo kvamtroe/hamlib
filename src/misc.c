@@ -2,7 +2,7 @@
  *  Hamlib Interface - toolbox
  *  Copyright (c) 2000-2002 by Stephane Fillod and Frank Singleton
  *
- *		$Id: misc.c,v 1.18.2.3 2002-07-26 12:19:58 dedmons Exp $
+ *		$Id: misc.c,v 1.18.2.4 2002-08-02 09:29:42 dedmons Exp $
  * 
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -464,11 +464,14 @@ const char *strparm(setting_t parm)
 const char *strptrshift(rptr_shift_t shift)
 {
 	switch (shift) {
-	case RIG_RPT_SHIFT_MINUS: return "+";
-	case RIG_RPT_SHIFT_PLUS: return "-";
+	case RIG_RPT_SHIFT_MINUS: return "-";
+	case RIG_RPT_SHIFT_PLUS: return "+";
+	case RIG_RPT_SHIFT_1750: return "=";
 
-	case RIG_RPT_SHIFT_NONE: return "None";
-	default: break;
+	case RIG_RPT_SHIFT_NONE:
+	default:
+		return "None";
+		break;
 	}
 	return NULL;
 }

@@ -1,8 +1,9 @@
 /*
  *  Hamlib Kenwood backend - TS2K description
  *  Copyright (c) 2000-2002 by Stephane Fillod
+ *  Copyright (c) 2002 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.5.2.3 2002-07-26 08:53:09 dedmons Exp $
+ *		$Id: ts2k.c,v 1.5.2.4 2002-08-02 09:29:42 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -89,44 +90,12 @@ transceive: RIG_TRN_RIG,
 bank_qty:  0,
 chan_desc_sz: 8,
 
-/* set up the memories.  See also, rig.h --D.E. kd7eni */
-
-/* The following are suggested 'modes' and when the following may
- *  be accessed:
- *
- *	MTYPE		MSTATE		Description
- *
- *	MEM		M_MEM		main, sub
- *	EDGE		M_MEM		main, sub (vhf/uhf)
- *	MEMOPAD		M_VFO		e.g. main&&sub in vfo (both!)
- *	CALL		M_ANY		at least VFO and MEM (others?)
- *	SAT		M_SAT		only (uses both main+sub)
- *	PCT		M_PCT		when P.C.T. enabled on sub+tnc
- *	MENU		M_MOST		rig does it if it feels like it :)
- *	SETUP		M_UNKNOWN	twilight zone stuff...
- */
 chan_list: {
 	{ 0, 289, RIG_MTYPE_MEM, 0 },		/* regular memories */
-	/* Note: each memory is receive+transmit an RX != TX is split memory. */
 	{ 290, 299, RIG_MTYPE_EDGE, 0 },	/* band tune limits (not scan-only) */
 	{ 0, 9, RIG_MTYPE_MEMOPAD, 0 },		/* Quick Memories, Main+sub both saved:) */
 	{ 0, 1, RIG_MTYPE_CALL, 0 },		/* each TX band has one call */
 	{ 0, 9, RIG_MTYPE_SAT, 0 },		/* direct operation from these */
-//	{ 0, 9, RIG_MTYPE_PCT, 0 },		/* packet clusters buffered as
-//						   they come in */
-//	{ 0, 1, RIG_MTYPE_MENU, 0 },		/* There are two menus, A/B. I
-//						   set one for HF, one for VHF/UHF*/
-//	{ 0, 5, RIG_MTYPE_SETUP, 0 },		/* See: "pm;" command.  ;) */
-	/* This seems to be undocumented and not accesible to the front panel.
-	   When operated it seems to be an independently settable menu. Thus,
-	   more than just A/B are available.  I don't know if the memopad
-	   quick memories are involved but the regular MEM ones are *NOT*
-	   duplicated.  The manual only says: 0=PM off, 1-5=channel 1-5.
-	   Kenwood calls this "Programmable Memory".  I haven't used this
-	   in some time but 0-5 seems more appropriate than 1-5.  I'll
-	   investigate more after hamlib-1.1.3 (gnurig's target release). */
-
-/*	{ 0, , RIG_MTYPE_, 0 },*/
 	RIG_CHAN_END,
    },
 rx_range_list1: {
@@ -315,41 +284,6 @@ set_xit:	ts2k_set_xit,
  */
 };
 
-/*
- * Function definitions below
- */
-
-/*
- *  Hamlib Kenwood backend - TS2K description
- *  Copyright (c) 2000-2002 by Stephane Fillod
- * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
- *
- *		$Id: ts2k.c,v 1.5.2.3 2002-07-26 08:53:09 dedmons Exp $
- *
- *   This library is free software; you can redistribute it and/or modify
- *   it under the terms of the GNU Library General Public License as
- *   published by the Free Software Foundation; either version 2 of
- *   the License, or (at your option) any later version.
- *
- *   This program is distributed in the hope that it will be useful,
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *   GNU Library General Public License for more details.
- *
- *   You should have received a copy of the GNU Library General Public
- *   License along with this library; if not, write to the Free Software
- *   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- *
- */
-
-/*
- * This code is has been substantially altered from the original
- * author's.  Also, many new functions have been added and are
- * (C) Copyrighted 2002 by Dale E. Edmons (KD7ENI).  The license
- * is unchanged, and fitness disclaimers still apply.  The file
- * kenwwood.c was the original source.		--Dale
- */
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -357,18 +291,6 @@ set_xit:	ts2k_set_xit,
 #include <ctype.h>
 #include <hamlib/rig.h>
 #include "ts2k.h"
-
-
-/*
- * I just read in kenwood.c and will modify the functions here.  This way,
- * kenwood functions that actually work on other rigs won't be broken by
- * my hacks.  Anything that works for all can be sent back over to kenwood.c
- *
- * Note: due to my compulsive laziness, I often abbreviate Kenwood TS-2k
- *	as simply ts2k, especially for code!
- *
- * Dale kd7eni
- */
 
 #include <stdlib.h>
 #include <stdio.h>		/* Standard input/output definitions */
@@ -597,8 +519,9 @@ int ts2k_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 	char vfo_letter;
 	vfo_t vtmp, ptt_ctrl;
 
-	retval = rig_get_vfo(rig, &vtmp);
-	CHKERR(retval);
+//	retval = rig_get_vfo(rig, &vtmp);
+	vtmp = rig->state.current_vfo;
+//	CHKERR(retval);
 
 	if(vfo == RIG_VFO_VFO) {
 		vfo = vtmp & (RIG_VFO_MASK | RIG_CTRL_MAIN | RIG_CTRL_SUB);
@@ -680,9 +603,10 @@ int ts2k_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
  */
 int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 {
-	char tmp[20], ack[40];
+	char ack[40];
 	int retval, acklen, getvfo;
 	vfo_t vtmp;
+	channel_t ctmp;
 //      const struct rig_caps *caps;
 
 	/*
@@ -701,30 +625,23 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 	getvfo = (RIG_VFO_CURR == vfo) \
 	    || (RIG_VFO_VFO == vfo) || (RIG_VFO_MEM == vfo);
 
+	vtmp = rig->state.current_vfo;
 	if (getvfo) {
 		rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": getting exact vfo\n");
-		retval = rig_get_vfo(rig, &vtmp);
-		if (retval != RIG_OK) {
-			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-				": error getting rig's vfo\n");
-			return retval;
-		}
+//		retval = rig_get_vfo(rig, &vtmp);
+//		if (retval != RIG_OK) {
+//			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+//				": error getting rig's vfo\n");
+//			return retval;
+//		}
 		vfo = vtmp;	// change the Arg on the Stack
 		// removing previous line is a wicked bug to fix
 	}
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": vfo = %s\n", strvfo(vfo));
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": vtmp = %s\n", strvfo(vtmp));
 
-// FIXME:  The following hack removes the CTRL/PTT bits 'cause nothing's written for 'em
 	vfo = vfo & ~(RIG_VFO_CTRL | RIG_VFO_PTT);
 	vtmp = vtmp & ~(RIG_VFO_CTRL | RIG_VFO_PTT);
-
-// TODO: How do we handle scans?  Right now we abort
-	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__
-		": checking scan... (vfo & RIG_CTRL_SCAN) = %0x\n",
-			vfo & RIG_CTRL_SCAN);
-//	if(vfo & RIG_CTRL_SCAN)
-//		return -RIG_EINVAL;	// Can't hit a moving target yet!
 
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__ ": setting tmp vfo\n");
 	retval = rig_set_vfo(rig, vfo);
@@ -734,19 +651,24 @@ int ts2k_get_freq(RIG * rig, vfo_t vfo, freq_t * freq)
 	/* the following switch() uses default:, others are error or special */
 
 	switch (vfo) {
-		/* Direct mem access not allowed since we don't have the channel# */
-	case RIG_VFO_MEM:
 	case RIG_VFO_MEM_A:
 	case RIG_VFO_MEM_C:
-		retval = -RIG_ENIMPL;
-		break;
+		retval = rig_get_mem(rig, vfo, &ctmp.channel_num);
+		ctmp.vfo = vfo;
+		retval = rig_get_channel(rig, &ctmp);
+		*freq = ctmp.freq;
+
+		/* Direct mem access not allowed since we don't have the channel# */
+//	case RIG_VFO_MEM:
+//		retval = -RIG_ENIMPL;
+//		break;
 
 		/* since we temporarily change vfo most everything works here */
 	default:
 		acklen = 40;
 		retval = ts2k_transaction(rig, "if;", 3, ack, &acklen);
 		if (retval == RIG_OK)
-			*freq = (int) int_n(tmp, &ack[2], 11);
+			*freq = (int) int_n(&ack[2], 11);
 		else
 			return retval;
 		break;
@@ -771,9 +693,10 @@ int ts2k_set_mode(RIG * rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 	int mdbuf_len, ack_len = 0, kmode, retval;
 	vfo_t vtmp;
 
+	vtmp = rig->state.current_vfo;
 	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
-		retval = rig_get_vfo(rig, &vtmp);
-		CHKERR(retval);
+//		retval = rig_get_vfo(rig, &vtmp);
+//		CHKERR(retval);
 		retval = rig_set_vfo(rig, vfo);
 		CHKERR(retval);
 	}
@@ -825,14 +748,15 @@ int ts2k_get_mode(RIG * rig, vfo_t vfo, rmode_t * mode, pbwidth_t * width)
 	int mode_len, retval;
 	vfo_t vtmp;
 
+	vtmp = rig->state.current_vfo;
 	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
-		retval = rig_get_vfo(rig, &vtmp);
-		CHKERR(retval);
+//		retval = rig_get_vfo(rig, &vtmp);
+//		CHKERR(retval);
 		retval = rig_set_vfo(rig, vfo);
 		CHKERR(retval);
 	}
 
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__": vtmp = %s\n", strvfo(vtmp));
+	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": vtmp = %s\n", strvfo(vtmp));
 
 	mode_len = 50;
 	retval = ts2k_transaction(rig, "md;", 3, modebuf, &mode_len);
@@ -901,8 +825,9 @@ int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t val)
 		ts2k_val = val.i;
 
 	if (vfo == RIG_VFO_CURR) {
-		if (rig_get_vfo(rig, &vfo) != RIG_OK)
-			return -RIG_EINVAL;
+		vfo = rig->state.current_vfo;
+//		if (rig_get_vfo(rig, &vfo) != RIG_OK)
+//			return -RIG_EINVAL;
 	}
 /* Several commands need to know status of CTRL */
 
@@ -1376,9 +1301,10 @@ int ts2k_set_Tones(RIG * rig, vfo_t vfo, tone_t tone, const char ct)
 	int tone_len, ack_len = 0, i, retval;
 	vfo_t vtmp;
 
+	vtmp = rig->state.current_vfo;
 	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
-		retval = rig_get_vfo(rig, &vtmp);
-		CHKERR(retval);
+//		retval = rig_get_vfo(rig, &vtmp);
+//		CHKERR(retval);
 		retval = rig_set_vfo(rig, vfo);
 		CHKERR(retval);
 	}
@@ -1430,9 +1356,10 @@ int ts2k_get_Tones(RIG * rig, vfo_t vfo, tone_t * tone, const char *ct)
 	unsigned int tone_idx;
 	vfo_t vtmp;
 
+	vtmp = rig->state.current_vfo;
 	if((vfo != RIG_VFO_CURR) && (vfo != RIG_VFO_VFO)) {
-		retval = rig_get_vfo(rig, &vtmp);
-		CHKERR(retval);
+//		retval = rig_get_vfo(rig, &vtmp);
+//		CHKERR(retval);
 		retval = rig_set_vfo(rig, vfo);
 		CHKERR(retval);
 	}
@@ -1896,19 +1823,20 @@ int ts2k_cleanup(RIG * rig)
 #define STUFF(c)	int retval, acklen=(c); char ack[c]
 //#define STUFF(c)       static int retval, acklen=(c); static char ack[c]
 
-// The following two are expensive but convenient!
-
-int ncpy(char *tmp, char *src, int cnt)
+/*
+ * FIXME: simple ascii to integer converter--expensive!
+ *	Prevents trashing original string, otherwise
+ *	just drop a (char)0 where you need it.
+ */
+//int ts2k_get_int(char *src, int cnt)
+long int int_n(char *src, int cnt)
 {
-	strncpy(tmp, src, cnt);
-	tmp[cnt] = '\0';
-	return RIG_OK;
-}
-
-int int_n(char *tmp, char *src, const int cnt)
-{
-	ncpy(tmp, src, cnt);
-	return atoi(tmp);
+//	static char buf[20];
+	char buf[20];	// enough for 1e20 - 1
+	strncpy(buf, src, cnt);
+	buf[cnt] = (char) 0;
+	return atol(buf);
+//	return atoi(buf);
 }
 
 /*
@@ -1967,19 +1895,6 @@ int ts2k_set_ctrl(RIG * rig, int ptt, int ctrl)
 	retval = ts2k_transaction(rig, buf, 5, NULL, NULL);
 	CHKERR(retval);
 	return RIG_OK;
-}
-
-/*
- * FIXME: simple ascii to integer converter--expensive!
- *	Prevents trashing original string, otherwise
- *	just drop a (char)0 where you need it.
- */
-int ts2k_get_int(char *src, int cnt)
-{
-	static char buf[20];
-	strncpy(buf, src, cnt);
-	buf[cnt] = (char) 0;
-	return atoi(buf);
 }
 
 int ts2k_get_rit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
@@ -2134,36 +2049,20 @@ int ts2k_set_rptr_offs(RIG * rig, vfo_t vfo, shortfreq_t rptr_offs)
 int ts2k_get_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t * rptr_shift)
 {
 	STUFF(20);
+//	int i;
 	vfo_t vfo_tmp;
 	// FIXME: I don't know if I should change back to currVFO, but I do.
-	retval = rig_get_vfo(rig, &vfo_tmp);
-	CHKERR(retval);
+	vfo_tmp = rig->state.current_vfo;
+//	retval = rig_get_vfo(rig, &vfo_tmp);
+//	CHKERR(retval);
 	retval = ts2k_transaction(rig, "os;", 3, ack, &acklen);
 	CHKERR(retval);
 	retval = ts2k_vfo_ctrl(rig, vfo);
 	if (ack[0] != 'O' || ack[1] != 'S')
 		return -RIG_EINVAL;
 	//if(acklen != 4) return -RIG_EINVAL;
-	switch (ack[2]) {
-	case '0':
-		*rptr_shift = RIG_RPT_SHIFT_NONE;
-		break;
-	case '1':
-		*rptr_shift = RIG_RPT_SHIFT_MINUS;
-		break;
-	case '2':
-		*rptr_shift = RIG_RPT_SHIFT_PLUS;
-		break;
 
-// TODO: FIXME: Help!  I didn't make this up, really!
-//	case '3':
-//		*rptr_shift = RIG_RPT_SHIFT_1750;	// "They're comming to take me away--ha, ha!"
-//		break;
-
-	default:
-		return -RIG_EINVAL;
-		break;
-	}
+	*rptr_shift = ts2k_shift_list[ack[2] - '0'];
 
 	// FIXME: I don't know if I should change back to currVFO, but I do.
 	retval = ts2k_set_vfo(rig, vfo_tmp);
@@ -2283,28 +2182,94 @@ int ts2k_set_split_freq(RIG * rig, vfo_t vfo, freq_t tx_freq)
  */
 int ts2k_get_channel(RIG * rig, channel_t * chan)
 {
-	char mrtxt[2][60], mrcmd[15], ack[60], tmp[20];
-	int i, check, retval, mrtxt_len, mrcmd_len, ack_len, curr_mem;
-	vfo_t curr_vfo;
-	vfo_t vfo;
-	if (chan == NULL)
+	int retval;
+	vfo_t vfo, vtmp;
+
+	if(chan == NULL)
 		return -RIG_EINVAL;
-#undef _USEVFO
-#ifdef _USEVFO
-	vfo = chan->vfo;
-	// check the memory bit
-	if (!(vfo & RIG_CTRL_MEM) && 0) {	// disabled
-		rig_debug(RIG_DEBUG_ERR, __FUNCTION__
-			  ": Non Memory VFO='%u', vfo=%u\n",
-			  chan->vfo, vfo); return -RIG_EINVAL;	// not a channel!
+
+	vtmp = rig->state.current_vfo;
+	vfo = chan->vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
+
+	retval = rig_set_vfo(rig, vfo);
+	CHKERR(retval);
+
+	switch(vfo) {
+	case RIG_VFO_MEM:
+		retval = ts2k_uniq_GetMemChan(rig, chan); break;
+
+	case RIG_VFO_MEM_A:
+	case RIG_VFO_MEM_C:
+		retval = rig_get_mem(rig, vfo, &chan->channel_num);
+		CHKERR(retval);
+		retval = ts2k_uniq_GetMemChan(rig, chan); break;
+
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_C:
+	case RIG_VFO_CALL_A:
+	case RIG_VFO_CALL_C:
+		retval = ts2k_uniq_GetVfoChan(rig, chan); break;
+
+	case RIG_VFO_AB:
+	case RIG_VFO_BA:
+		retval = ts2k_uniq_GetSplitChan(rig, chan); break;
+
+	case RIG_SAT_UPLINK:
+	case RIG_SAT_DNLINK:
+//		chan->vfo = vfo & ~RIG_CTRL_SAT;
+		retval = ts2k_uniq_GetVfoChan(rig, chan);
+//		chan->vfo = vfo;
+		break;
+
+	default:
+		break;	// everything else handled below
 	}
-#endif
-// get needed info if rig's mem pointers used
-	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": using rig's ptr\n");
-	retval = rig_get_vfo(rig, &curr_vfo);
+
+	
+	if(vfo & RIG_CTRL_SAT) {
+		return ts2k_uniq_GetSplitChan(rig, chan);
+	}
+
+	CHKERR(rig_set_vfo(rig, vtmp));
+
+	return retval;
+}
+
+int ts2k_uniq_GetSplitChan(RIG *rig, channel_t *chan)
+{
+	int retval;
+	vfo_t vtmp;
+
+	switch(chan->vfo) {
+	case RIG_VFO_AB:
+	case RIG_SAT_DNLINK:
+		vtmp = RIG_VFO_B;
+	case RIG_VFO_BA:
+	case RIG_SAT_UPLINK:
+		vtmp = RIG_VFO_A;
+	default:
+		return -RIG_EINVAL;
+	}
+	retval = ts2k_uniq_GetVfoChan(rig, chan);
 	CHKERR(retval);
-	retval = rig_get_mem(rig, curr_vfo, &curr_mem);
+
+	retval = rig_get_freq(rig, vtmp, &chan->tx_freq);
 	CHKERR(retval);
+
+	return rig_get_mode(rig, vtmp, &chan->tx_mode, &chan->tx_width);
+}
+
+/*
+ *	status: no checks since we're called by ts2k_get_channel()
+ */
+int ts2k_uniq_GetMemChan(RIG * rig, channel_t * chan)
+{
+	char mrtxt[2][60], mrcmd[15], ack[60];
+	int i, j, check, retval, mrtxt_len, mrcmd_len, ack_len;
+//	vfo_t curr_vfo;
+//	vfo_t vfo;
+
 	mrtxt_len = ack_len = 60;
 	mrcmd_len = 15;
 // send request for both rx mem and tx mem
@@ -2323,7 +2288,7 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 		check = (ack[0] != 'M');
 		check |= (ack[1] != 'R');
 		check |= (ack[2] != ((i == 0) ? '0' : '1'));
-		check |= (chan->channel_num != int_n(tmp, &ack[3], 3));
+		check |= (chan->channel_num != int_n(&ack[3], 3));
 		if (check) {
 			rig_debug(RIG_DEBUG_ERR,
 				  __FUNCTION__ ":check failed!\n");
@@ -2334,14 +2299,14 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 	}
 	// FIXME: handle mem split
 	// final check on data. (if RX!=TX mem split, or limit!)
-	if (strncmp(&mrtxt[0][3], &mrtxt[1][3], 41 - 3)
+/*	if (strncmp(&mrtxt[0][3], &mrtxt[1][3], 41 - 3)
 	    != 0) {
 		rig_debug(RIG_DEBUG_ERR,
 			  "\n" __FUNCTION__
 			  ": MEM split and band limits not yet supported!\n");
 		return -RIG_ENIMPL;	// FIXME: sending proper error?
 	}
-	// FIXME: 1) Since chan is not an array, we fudge and only do TX!
+*/	// FIXME: 1) Since chan is not an array, we fudge and only do TX!
 	//                  even if split!!!!!!!!
 	// FIXME: 2) we only handle regular memories, not everything
 	// FIXME: 3) I store only data ts2k actually saves in memory
@@ -2350,27 +2315,43 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 	// (keep same order as channel struct to ease debugging!)
 //       chan->channel_num = ;   // already set?
 
+	chan->flags = 0;
 // The following may be used to indicate we're reading limits (290-299).
 // At any rate, it's currently unused. 
 	chan->bank_num = 0;	// I merge the two--do not use! --Dale
 	/* chan->channel_num set by caller! */
-	chan->vfo = RIG_VFO_MEM;
+//	chan->vfo = RIG_VFO_MEM;	// set by caller!
 	chan->ant = 0;		// n/i
-	chan->lock = int_n(tmp, &mrtxt[0][18], 1);
-	chan->freq = int_n(tmp, &mrtxt[0][06], 11);
-	chan->mode = ts2k_mode_list[int_n(tmp, &mrtxt[0][17], 1)];
+	chan->flags |= (mrtxt[0][18] == '1')? RIG_CHFLAG_SKIP : 0;
+	chan->freq = int_n(&mrtxt[0][06], 11);
+	chan->mode = ts2k_mode_list[int_n(&mrtxt[0][17], 1)];
 	chan->width = 0;	// n/i
-	chan->tx_freq = int_n(tmp, &mrtxt[1][06], 11);
-	chan->tx_mode = ts2k_mode_list[int_n(tmp, &mrtxt[1][17], 1)];
+	chan->tx_freq = int_n(&mrtxt[1][06], 11);
+	chan->tx_mode = ts2k_mode_list[int_n(&mrtxt[1][17], 1)];
 	chan->tx_width = 0;	// n/i
-	chan->split = RIG_SPLIT_OFF;	// n/i
-	chan->rptr_shift = int_n(tmp, &mrtxt[0][28], 1);
-	chan->rptr_offs = int_n(tmp, &mrtxt[0][29], 9);
+	if(chan->freq != chan->tx_freq)
+		chan->split = RIG_SPLIT_ON;
+	else
+		chan->split = RIG_SPLIT_OFF;
+	switch(mrtxt[0][28]) {
+	case '0':	chan->rptr_shift = RIG_RPT_SHIFT_NONE; break;
+	case '1':	chan->rptr_shift = RIG_RPT_SHIFT_PLUS; break;
+	case '2':	chan->rptr_shift = RIG_RPT_SHIFT_MINUS; break;
+	case '3':	chan->rptr_shift = RIG_RPT_SHIFT_1750; break;
+	default:	chan->rptr_shift = RIG_RPT_SHIFT_NONE; break;
+	}
+	chan->rptr_offs = int_n(&mrtxt[0][29], 9);
 	if (chan->mode == RIG_MODE_AM || chan->mode == RIG_MODE_FM)
 		i = 1;
 	else
 		i = 0;
-	chan->tuning_step = ts2k_steps[i][int_n(tmp, &mrtxt[0][38], 2)];
+	for (j = 0;
+	     j < (sizeof(ts2k_steps) / sizeof(int))-1; j++) {
+		if((chan->tuning_step >= ts2k_steps[i][j])
+		   && (chan->tuning_step < ts2k_steps[i][j+1]))
+			break;
+	}
+	chan->tuning_step = ts2k_steps[i][int_n(&mrtxt[0][38], 2)];
 	chan->rit = 0;		// n/a for memory
 	chan->xit = 0;		// n/a for memory
 	chan->funcs = 0;	// n/a for memory
@@ -2383,35 +2364,148 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
 			chan->levels[i].i = 0;
 	}
 	/* ctcss and tone use the same list except for 1750 */
-	chan->tone = ts2k_ctcss_list[int_n(tmp, &mrtxt[0][20], 2) - 1];
-	i = int_n(tmp, &mrtxt[1][19], 1);
+	chan->tone = ts2k_ctcss_list[int_n(&mrtxt[0][20], 2) - 1];
+	i = int_n(&mrtxt[1][19], 1);
 	chan->tone_sql = (i == 1) ? 1 : 0;	// FIXME: What value is ON?
 	chan->ctcss =
-	    ts2k_ctcss_list[int_n(tmp, &mrtxt[0][22], 2) - 1];
+	    ts2k_ctcss_list[int_n(&mrtxt[0][22], 2) - 1];
 	/* i still valid */
 	chan->ctcss_sql = (i == 2) ? 1 : 0;	// FIXME: What value is ON?
-	chan->dcs = ts2k_dcs_list[int_n(tmp, &mrtxt[0][24], 3) - 1];
+	chan->dcs = ts2k_dcs_list[int_n(&mrtxt[0][24], 3) - 1];
 	/* i still valid */
 	chan->dcs_sql = (i == 3) ? 1 : 0;
 	chan->scan = RIG_SCAN_NONE;	// n/a for memory read  
 	chan->flags = 0;	// n/i in Hamlib yet
-	chan->scan_group = int_n(tmp, &mrtxt[0][40], 1);
+	chan->scan_group = int_n(&mrtxt[0][40], 1);
 //       chan->flags = curr_vfo; // n/a
 	// FIXME : The following may have trailing garbage
-	strncpy(chan->channel_desc, &mrtxt[0][41], 8);
-	chan->channel_desc[8] = '\0';
-#ifdef _USEVFO
-// if curr mem is changed at top, this'll restore it
-	if ((vfo == RIG_VFO_MEM_A || vfo == RIG_VFO_MEM_C)) {
-		retval = rig_set_vfo(rig, curr_vfo);
-		CHKERR(retval);
+	for(i=0; (i<8) && (mrtxt[0][i] != ';') && (mrtxt[0][i] != '\0'); i++) {
+		if(mrtxt[0][41+i] == ';') {
+			chan->channel_desc[i] = '\0';
+			chan->channel_desc[++i] = '\0';
+			break;
+		}
+		chan->channel_desc[i] = mrtxt[0][41+i];
+	}
+	chan->channel_desc[i] = '\0'; 
+
+	return RIG_OK;
+}
+
+/*
+ *	status: 
+ *
+ *	requires:	expects to be called by ts2k_get_channel()	
+ */
+int ts2k_uniq_GetVfoChan(RIG * rig, channel_t * chan)
+{
+#define CMDS 5
+	char iftxt[60], ack[60];
+	int i, j, check, retval, iftxtlen, acklen;
+	vfo_t curr_vfo;
+	vfo_t vfo;
+
+	vfo = chan->vfo;
+	curr_vfo = rig->state.current_vfo;
+
+	retval = rig_set_vfo(rig, vfo);
+	CHKERR(retval);
+
+	iftxtlen = acklen = 60;
+	retval = ts2k_transaction(rig, "if;", 3, ack, &acklen);
+	CHKERR(retval);
+
+	// watch out.  |= and != look the same!
+	// Perform checks on data.
+	check = (ack[0] != 'I');
+	check |= (ack[1] != 'F');
+	check |= (ack[32] == '0')? 0 : 1;	// split?
+
+	switch(chan->vfo) {
+	case RIG_VFO_A:
+	case RIG_VFO_C:
+		check |= (ack[30] == '0')? 0 : 1; break;
+	case RIG_VFO_B:
+		check |= (ack[30] == '1')? 0 : 1; break;
+
+	default:
+		rig_debug(RIG_DEBUG_ERR,
+			  __FUNCTION__ ":check failed!\n");
+		return -RIG_EINVAL;	// correct error type?
+		break;
 	}
 
-	rig_debug(RIG_DEBUG_ERR,
-		  __FUNCTION__ ": restored mem=%i\n", curr_mem);
-	retval = ts2k_set_mem(rig, curr_vfo, curr_mem);
+	iftxtlen = acklen = 60;
+	retval = ts2k_transaction(rig, "if;", 3, ack, &acklen);
 	CHKERR(retval);
-#endif
+
+	if (check) {
+		rig_debug(RIG_DEBUG_ERR,
+			  __FUNCTION__ ":check failed!\n");
+		return -RIG_EINVAL;	// correct error type?
+	}
+	ack[50] = '\0';	// May be too far, but helps.
+
+	strncpy(iftxt, ack, iftxtlen);
+
+	chan->flags = 0;
+// The following may be used to indicate we're reading limits (290-299).
+// At any rate, it's currently unused. 
+	chan->channel_num = 0;
+	chan->bank_num = 0;	// I merge the two--do not use! --Dale
+	//chan->vfo = RIG_VFO_MEM;	// must be set by caller
+//	chan->ant = ts2k_get_ant(rig, vfo);
+	chan->flags = 0;
+	chan->tx_freq = chan->freq = int_n(&iftxt[2], 11);
+	chan->tx_mode = chan->mode = ts2k_mode_list[int_n(&iftxt[17], 1)];
+//	chan->width = ts2k_get_width(rig, vfo);	// n/i
+	chan->split = 0;	// checked above!
+	chan->rptr_shift = ts2k_shift_list[iftxt[36] - '0'];
+	retval = ts2k_get_rptr_offs(rig, vfo, &chan->rptr_offs);
+	CHKERR(retval);
+	if (chan->mode == RIG_MODE_AM || chan->mode == RIG_MODE_FM)
+		i = 1;
+	else
+		i = 0;
+/*	for (j = 0;
+	     j < (sizeof(ts2k_steps) / sizeof(int))-1; j++) {
+		if(chan->tuning_step == ts2k_steps[i][j])
+			break;
+		if((chan->tuning_step > ts2k_steps[i][j])
+		   && (chan->tuning_step < ts2k_steps[i][j+1]))
+			break;
+	}*/
+	chan->tuning_step = ts2k_steps[i][int_n(&iftxt[38], 2)];
+//	retval = ts2k_get_ts(rig, vfo, &chan->tuning_step);
+	CHKERR(retval);
+	// both the following iftxt[17]'s are correct --Dale
+	chan->rit = (iftxt[23] == '1')? int_n(&iftxt[17], 6) : 0;
+	chan->xit = (iftxt[24] == '1')? int_n(&iftxt[17], 6) : 0;
+	chan->funcs = 0;	// n/i
+	for (i = 0; i < RIG_SETTING_MAX; i++) {	// n/i
+		// the following shamelessly stolen from rigctl.c  --Dale
+		setting_t level = rig_idx2setting(i);	// now, I understand
+		if (RIG_LEVEL_IS_FLOAT(level))
+			chan->levels[i].f = 0.0;	// I'd figured this out.
+		else
+			chan->levels[i].i = 0;
+	}
+	/* ctcss and tone use the same list except for 1750 */
+	chan->tone = ts2k_ctcss_list[int_n(&iftxt[20], 2) - 1];
+	chan->tone_sql = (iftxt[33] == 1) ? 1 : 0;
+	chan->ctcss = 0; // broken n/i
+	chan->ctcss_sql = (iftxt[33] == 1) ? 1 : 0;
+	chan->dcs = 0; // broken n/i 
+	chan->dcs_sql = (iftxt[33] == 1) ? 1 : 0;
+	chan->scan = (iftxt[31] == '0')? RIG_SCAN_STOP : RIG_SCAN_VFO;
+//	chan->flags = 0;	// n/i
+	chan->scan_group = 0;	// n/i 
+	strncpy(chan->channel_desc, "VFO", 8);	// Just for kicks.
+
+// Return to original VFO
+	retval = rig_set_vfo(rig, curr_vfo);
+	CHKERR(retval);
+
 	return RIG_OK;
 }
 
@@ -2420,8 +2514,119 @@ int ts2k_get_channel(RIG * rig, channel_t * chan)
  */
 int ts2k_set_channel(RIG * rig, channel_t * chan)
 {
-	char mrtxt[2][60], ack[60];
-	int retval, i, j, mr_len[2], ack_len;
+	int retval;
+	vfo_t vfo, vtmp, vtmp2;
+
+	vtmp = rig->state.current_vfo;
+	vfo = chan->vfo & ~(RIG_VFO_PTT | RIG_VFO_CTRL);
+
+	if(vfo != RIG_VFO_CALL_A || vfo != RIG_VFO_CALL_C) {
+		retval = rig_set_vfo(rig, vfo);
+		CHKERR(retval);
+	} else {
+		if(RIG_VFO_CALL_A)
+			retval = rig_set_vfo(rig, RIG_VFO_A);
+		else
+			retval = rig_set_vfo(rig, RIG_VFO_C);
+	}
+
+	if(chan == NULL)
+		return -RIG_EINVAL;
+
+	switch(vfo) {
+
+	// user sets VFO and channel_num
+	case RIG_VFO_MEM:
+		retval = ts2k_uniq_SetMemChan(rig, chan); break;
+
+	// user sets VFO only
+	case RIG_VFO_MEM_A:
+	case RIG_VFO_MEM_C:
+		retval = rig_get_mem(rig, vfo, &chan->channel_num);
+		CHKERR(retval);
+		retval = ts2k_uniq_SetMemChan(rig, chan); break;
+
+	case RIG_VFO_A:
+	case RIG_VFO_B:
+	case RIG_VFO_C:
+		vtmp2 = rig->state.current_vfo;
+		retval = generic_restore_channel(rig, chan);
+		chan->vfo = vtmp2;
+		break;
+
+	case RIG_VFO_CALL_A:
+	case RIG_VFO_CALL_C:	// special handling needed (send "ci;" from VFO mode)
+		CHKERR(retval);
+		vtmp2 = rig->state.current_vfo;
+		retval = generic_restore_channel(rig, chan);
+		chan->vfo = vtmp2;
+		retval = ts2k_transaction(rig, "ci;", 3, NULL, NULL);
+		break;
+
+	case RIG_VFO_AB:
+	case RIG_VFO_BA:
+		retval = ts2k_uniq_SetSplitChan(rig, chan); break;
+
+	case RIG_SAT_UPLINK:
+	case RIG_SAT_DNLINK:
+		vtmp2 = rig->state.current_vfo;
+		chan->vfo = vfo & ~RIG_CTRL_SAT;
+		retval = generic_restore_channel(rig, chan);
+		chan->vfo = vtmp2;
+		break;
+
+	default:
+		retval = -RIG_ENIMPL;
+		break;	// everything else handled below
+	}
+	
+	if((vfo & RIG_CTRL_SAT) && 
+	    !(vfo == RIG_SAT_UPLINK || vfo == RIG_SAT_DNLINK)) {
+		retval = ts2k_uniq_SetSplitChan(rig, chan);
+	}
+	CHKERR(retval);
+
+	CHKERR(rig_set_vfo(rig, vtmp));
+
+	return RIG_OK;
+}
+
+int ts2k_uniq_SetSplitChan(RIG * rig, channel_t * chan)
+{
+	int retval;
+	vfo_t vtmp, vtmp2;
+
+	vtmp = chan->vfo;
+
+	switch(vtmp) {
+	case RIG_VFO_AB:
+	case RIG_SAT_DNLINK:
+		vtmp2 = RIG_VFO_B;
+		chan->vfo = RIG_VFO_A; break;
+	case RIG_VFO_BA:
+	case RIG_SAT_UPLINK:
+		vtmp2 = RIG_VFO_A;
+		chan->vfo = RIG_VFO_B; break;
+
+	default:
+		return -RIG_ENAVAIL;
+	}
+	retval = generic_restore_channel(rig, chan);
+	CHKERR(retval);
+	chan->vfo = vtmp2;
+
+	retval = rig_set_freq(rig, vtmp2, chan->tx_freq);
+	CHKERR(retval);
+	retval = rig_set_mode(rig, vtmp2, chan->tx_mode, chan->tx_width);
+
+	return retval;
+}
+
+int ts2k_uniq_SetMemChan(RIG * rig, channel_t *chan)
+{
+	char mrtxt[2][60];
+	int retval, j, mr_len[2], ack_len;
+	unsigned int i;
 	// the following are the actual memory data to be written.
 	unsigned int p1,	// RX/TX (bool)
 	 p2p3,			// this is not a bug--I combine bank/channel
@@ -2437,46 +2642,121 @@ int ts2k_set_channel(RIG * rig, channel_t * chan)
 	 p13,			// offset freq
 	 p14,			// step size
 	 p15;			// memory group (0-9)
-	char *p16;		// 8 char + 1 null byte
+	char p16[20];		// 8 char + 1 null byte
 	ack_len = 10;
 	/*
 	 * Write everthing in order.
 	 */
 	/* FIXME: we are required to have RX/TX match */
-	if (chan->freq != chan->tx_freq)
-		return -RIG_EINVAL;	// should be 'unimplemented'
+	if (chan->freq != chan->tx_freq) {
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__": Can't restore split memories yet.\n");
+		return -RIG_ENIMPL;
+	}
+
+// the following is when we can do split.  disabled for now.
 	for (i = 0; i < 2; i++) {
-		p1 = (unsigned int) i;	// 0=RX, 1=TX
-		p2p3 = (unsigned int) chan->channel_num;	// we'll compare 'em later
-		if (i == 0)
-			p4 = (unsigned int) chan->freq;
-		else
-			p4 = (unsigned int) chan->tx_freq;
+//	for (i = 0; i < 1; i++) {
+		p1 = (i>9)? 0: i;	// 0=RX, 1=TX
+		//p2p3 = (i>999)? 0: chan->channel_num;	// we'll compare 'em later
+		if(i > 301) {
+			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+				": FIXME: Max memory set at 301\n");
+			return -RIG_EINTERNAL;
+		} else {
+			p2p3 = chan->channel_num;
+		}
+		p4 = (i == 0)? chan->freq : chan->tx_freq;
 		for (j = 0;
 		     j < (sizeof(ts2k_mode_list) / sizeof(int)); j++) {
 			if (chan->mode == ts2k_mode_list[j])
 				break;
 		}
-		p5 = (unsigned int) j;	// FIXME: either not found, or last!
-		p6 = (unsigned int) chan->lock;
-		p7 = 0;		// FIXME: to lazy to sort this out right now
-		p8 = 0;		//       "        "       "       "       "
-		p9 = 0;		//       "        "       "       "       "
-		p10 = 0;	//      "         "       "       "       "
-		p11 = 0;	//      "         "       "       "       "
-		p12 = 0;	//      "         "       "       "       "
-		p13 = 0;	//      "         "       "       "       "
-		p14 = 0;	//      "         "       "       "       "
-		p15 = (unsigned int) chan->scan_group;
-		p16 = (char *) &(chan->channel_desc[0]);
+		p5 = (j>9)? 9 : j;	// FIXME: either not found, or last!
+		p6 = (chan->flags == RIG_CHFLAG_SKIP)? 1 : 0;
+		if(chan->tone_sql)
+			p7 = 1;
+		else if(chan->ctcss_sql)
+			p7 = 2;
+		else if(chan->dcs_sql)
+			p7 = 3;
+		else
+			p7 = 0;
+		for (j = 0;
+		     j < (sizeof(ts2k_ctcss_list) / sizeof(int))-1; j++) {
+			if((chan->tone >= ts2k_ctcss_list[j])
+			   &&(chan->tone < ts2k_ctcss_list[j+1]))
+				break;
+		}
+		p8 = j;	// FIXME: Should be nearest. 
+		for (j = 0;
+		     j < (sizeof(ts2k_ctcss_list) / sizeof(int))-1; j++) {
+			if((chan->ctcss_tone >= ts2k_ctcss_list[j])
+			   &&(chan->ctcss_tone < ts2k_ctcss_list[j+1]))
+				break;
+		}
+		p9 = j;	// FIXME: Should be nearest. 
+		for (j = 0;
+		     j < (sizeof(ts2k_dcs_list) / sizeof(int))-2; j++) {
+			if((chan->dcs_code >= ts2k_dcs_list[j])
+			   &&(chan->dcs_code < ts2k_dcs_list[j+1]))
+				break;
+		}
+		p10 = j;
+		p11 = 0;	// Reverse
+		switch(chan->rptr_shift) {
+		case RIG_RPT_SHIFT_NONE:	p12 = 0; break;
+		case RIG_RPT_SHIFT_PLUS:	p12 = 1; break;
+		case RIG_RPT_SHIFT_MINUS:	p12 = 2; break;
+		case RIG_RPT_SHIFT_1750:	p12 = 3; break;
+		default: return -RIG_EINVAL; break;
+		}
+		p13 = (chan->rptr_offs > 999999999)? 0: chan->rptr_offs;
+
+		rig_debug(RIG_DEBUG_ERR,__FUNCTION__": tune step = %i\n", chan->tuning_step);
+		if (chan->mode == RIG_MODE_AM || chan->mode == RIG_MODE_FM)
+			i = 1;
+		else
+			i = 0;
+		for (j = 0; j < 8; j++) {
+			if(chan->tuning_step <= ts2k_steps[i][j])
+				break;
+		}
+		p14 = (j > 9)? 0 : j;
+		p15 = (chan->scan_group > 9)? 0: chan->scan_group;
+		for(i=0; i<8; i++) {
+			if(chan->channel_desc[i] == ';') {
+				break;
+			}
+			p16[i] = chan->channel_desc[i];
+		}
+		chan->channel_desc[i] = '\0';
+			
 		mr_len[i] = sprintf(&(mrtxt[i][0]),
-				    "mr%1u%3u%11u%1u%1u%1u%2u%2u%3u%1u%1u%9u%2u%1u%s;",
-				    p1, p2p3, p4, p5, p6, p7,
-				    p8, p9, p10, p11, p12, p13, p14, p15, p16);	// yikes!
+			"mw"
+			"%1u"	// p1
+			"%03u"	// p2,3
+			"%011u"	// p4
+			"%1u"	// p5
+			"%1u"	// p6
+			"%1u"	// p7
+			"%02u"	// p8
+			"%02u"	// p9
+			"%03u"	// p10
+			"%1u"	// p11
+			"%1u"	// p12
+			"%09u"	// p13
+			"%02u"	// p14
+			"%1u"	// p15
+			"%s"	// p16
+			";",
+			p1, p2p3, p4, p5, p6, p7, p8, p9,
+			p10, p11, p12, p13, p14, p15, p16);	// yikes!
+			
 		retval =
-		    ts2k_transaction(rig, &mrtxt[i][0], mr_len[i],
-				     ack, &ack_len);
+		    ts2k_transaction(rig, &mrtxt[i][0], mr_len[i], NULL, NULL);
 		CHKERR(retval);
+
+		rig_debug(RIG_DEBUG_ERR, __FUNCTION__": mw=%s\n", &mrtxt[i][0]);
 		// FIXME: now readback the string and make sure it worked!
 	}
 
@@ -2534,12 +2814,12 @@ int ts2k_vfo_ctrl(RIG * rig, vfo_t vfo)
  */
 int ts2k_get_dcs(RIG * rig, vfo_t vfo, tone_t * tone)
 {
-	char ack[10], tmp[10];
+	char ack[10];
 	int retval, acklen, i;
 	acklen = 10;
 	retval = ts2k_transaction(rig, "qc;", 6, ack, &acklen);
 	CHKERR(retval);
-	i = int_n(tmp, &ack[2], 3);
+	i = int_n(&ack[2], 3);
 	*tone = ts2k_dcs_list[i];
 	return RIG_OK;
 }
@@ -2615,8 +2895,9 @@ int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ": starting...\n");
 	if (vfo == RIG_VFO_CURR) {
-		retval = rig_get_vfo(rig, &v);
-		CHKERR(retval);
+		v = rig->state.current_vfo;
+//		retval = rig_get_vfo(rig, &v);
+//		CHKERR(retval);
 	} else
 		v = vfo;
 	// hopefully, this'll work.  rig does nothing if already in scan!
@@ -2712,7 +2993,7 @@ int ts2k_get_parm(RIG * rig, setting_t parm, value_t * val)
 			val->f = (float) (ack[9] - '0');
 			break;
 		case RIG_PARM_APO:
-			val->i = (int) int_n(cmd, &ack[9], 2);	// cmd is TMP now
+			val->i = (int) int_n(&ack[9], 2);	// cmd is TMP now
 			break;
 		default:
 			return -RIG_EINTERNAL;
@@ -2836,7 +3117,7 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 
 	cv = 0;
 	/* From Past experience, things can change on us.  Now we lock the controls! */
-	ts2k_uniq_LockPanel(rig);
+//	ts2k_uniq_LockPanel(rig);
 
 	retval = ts2k_uniq_GetCtrl(rig, &cv);
 	CHKERR(retval);
@@ -2856,12 +3137,12 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 
 			*vfo = cv;
 
-			ts2k_uniq_UnlockPanel(rig);	// Oops!
+//			ts2k_uniq_UnlockPanel(rig);	// Oops!
 
 			return RIG_OK;	// Nothing left to do.
 		}		// otherwise, continue checks...
 	} else {
-		ts2k_uniq_UnlockPanel(rig);	// Oops!
+//		ts2k_uniq_UnlockPanel(rig);	// Oops!
 		return retval;
 	}
 
@@ -2873,7 +3154,7 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 			cv |= RIG_CTRL_SCAN;
 		}		// continue checks
 	} else {
-		ts2k_uniq_UnlockPanel(rig);	// Oops!
+//		ts2k_uniq_UnlockPanel(rig);	// Oops!
 		return retval;
 	}
 
@@ -2914,7 +3195,7 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 		case '1':
 			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_B;
 			else if(cv & RIG_CTRL_SUB) {
-				ts2k_uniq_UnlockPanel(rig);	// Oops!
+//				ts2k_uniq_UnlockPanel(rig);	// Oops!
 				return -RIG_EPROTO;
 			}
 			break;
@@ -2932,14 +3213,14 @@ int ts2k_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 		default:
 			rig_debug(RIG_DEBUG_ERR, __FUNCTION__
 				": Unknown reply from rig: \'%s\'\n", rx);
-			ts2k_uniq_UnlockPanel(rig);	// Oops!
+//			ts2k_uniq_UnlockPanel(rig);	// Oops!
 			return -RIG_EPROTO;
 		}
 	}
 
 	rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": cv=%s\n", strvfo(cv));
 	/* Unlock the panel now.  Evil User's have been prevented! */
-	for(i=10; (retval=ts2k_uniq_UnlockPanel(rig)) != RIG_OK; i++)
+//	for(i=10; (retval=ts2k_uniq_UnlockPanel(rig)) != RIG_OK; i++)
 		/* empty */ ;
 	*vfo = cv;	// This is fairly important.  Things break if its forgotten.
 
@@ -2991,8 +3272,8 @@ int ts2k_uniq_SwitchVfo(RIG *rig, vfo_t vfo)
 {
 #define ACKLEN 60
 	vfo_t from_vfo, to_vfo, any_vfo;
-	int retval, acklen, to, from, any; 
-	char ack[ACKLEN];
+	int retval, to, from; 
+//	char ack[ACKLEN];
 
 	if(rig == NULL)
 		return -RIG_EINTERNAL;	// Way late for this, so it's internal.
@@ -3257,7 +3538,7 @@ int ts2k_uniq_SatOff(RIG * rig)
 /* we just turn SAT on here. It'll take some doing to run it! */
 int ts2k_uniq_SetSat(RIG * rig, vfo_t vfo)
 {
-	char cmd[20], ack[20];
+	char ack[20];
 	int acklen;
 
 	acklen = 20;
@@ -3302,7 +3583,7 @@ int ts2k_uniq_SetSat(RIG * rig, vfo_t vfo)
 	else
 		ack[5] = '0';	// sat CTRL on main
 
-STest:	// FIXME: To be removed when testing is complete!
+//STest:	// FIXME: To be removed when testing is complete!
 	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
 		  ": Sending\tsat = %s,\n\t vfo = %s\n", ack, strvfo(vfo));
 	// of course, this is *required* too!
@@ -3311,8 +3592,8 @@ STest:	// FIXME: To be removed when testing is complete!
 
 int ts2k_uniq_SendScan(RIG * rig, vfo_t vfo, char sc)
 {
-	char cmd[] = "sc0;", ack[10];
-	int retval, acklen;
+	char cmd[] = "sc0;";
+	int retval;
 
 	switch(vfo & (RIG_CTRL_MAIN | RIG_CTRL_SUB)) {
 	case RIG_CTRL_MAIN:
@@ -3370,7 +3651,5 @@ int ts2k_open(RIG *rig)
 
 #undef CHKERR
 #undef STUFF
-
-
 
 // End

@@ -5,7 +5,7 @@
  * It takes commands in interactive mode as well as 
  * from command line options.
  *
- * $Id: rigctl.c,v 1.30.2.2 2002-07-26 08:53:10 dedmons Exp $  
+ * $Id: rigctl.c,v 1.30.2.3 2002-08-02 09:29:43 dedmons Exp $  
  *
  *
  * This program is free software; you can redistribute it and/or
@@ -55,6 +55,8 @@
 
 #define ARG_IN  (ARG_IN1|ARG_IN2|ARG_IN3|ARG_IN4)
 #define ARG_OUT  (ARG_OUT1|ARG_OUT2|ARG_OUT3|ARG_OUT4)
+
+static channel_t MemChannels[300];
 
 struct test_table {
 	unsigned char cmd;
@@ -170,8 +172,9 @@ struct test_table test_list[] = {
 		{ 'e', "get_mem", get_mem, ARG_OUT, "Memory#" },
 		{ 'G', "vfo_op", vfo_op, ARG_IN, "Mem/VFO op" },
 		{ 'g', "scan", scan, ARG_IN, "Scan fct", "Channel" },
-		{ 'H', "set_channel", set_channel, ARG_IN,  /* huh! */ },
-		{ 'h', "get_channel", get_channel, ARG_IN, "Channel" },
+		{ 'H', "set_channel", set_channel, ARG_IN, "MemChannel#", "VFO" },
+//		{ 'h', "get_channel", get_channel, ARG_OUT, "VFO", "Channel#" },
+		{ 'h', "get_channel", get_channel, ARG_IN1|ARG_IN2|ARG_OUT1|ARG_OUT2, "VFO", "Chan#" },
 		{ 'A', "set_trn", set_trn, ARG_IN, "Transceive" },
 		{ 'a', "get_trn", get_trn, ARG_OUT, "Transceive" },
 		{ 'B', "set_bank", set_bank, ARG_IN, "Bank" },
@@ -219,6 +222,8 @@ struct test_table *find_cmd_entry(int cmd)
 
 	return &test_list[i];
 }
+
+
 /*
  * TODO: use Lex
  */
@@ -1241,33 +1246,64 @@ declare_proto_rig(scan)
 		return rig_scan(rig, RIG_VFO_CURR, op, ch);
 }
 
+static int memnum=0;
+/* Restore from MemChannels[n] */
+/* memnum = source, mem = dest */
 declare_proto_rig(set_channel)
 {
-		fprintf(stderr,"rigctl set_channel not implemented yet!\n");
-		return -RIG_ENIMPL;
+	int retval, mem;
+	vfo_t vfo;
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__":\n");
+	vfo = parse_vfo(arg2);
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		":\n vfo=%s\n", strvfo(vfo));
+
+	sscanf(arg1, "%d", (int*)&mem);
+
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__
+		"memnum=%i\n", memnum);	// read previous get_channel data
+
+	MemChannels[memnum].vfo = vfo;
+	MemChannels[memnum].channel_num = mem;
+	dump_chan(rig, &MemChannels[memnum]);	// display source
+	retval = rig_set_channel(rig, &MemChannels[memnum]);
+	if(retval != RIG_OK) return -RIG_EINVAL;
+
+	dump_chan(rig, &MemChannels[memnum]);	// display dest
+
+	return RIG_OK;
 }
 
 
+/* Save to MemChannels[n] --Dale */
 declare_proto_rig(get_channel)
 {
-		int status;
-		channel_t chan;
-		vfo_t vfo;
+	int status;
+	vfo_t vfo;
 
-		vfo = parse_vfo(arg1);
-		if (vfo != RIG_VFO_CURR) {
-			vfo = RIG_VFO_MEM;
-			if (sscanf(arg1, "%d", &chan.channel_num) != 1)
-				return -RIG_EINVAL;
-		} else
-			chan.channel_num = 0;
+	fprintf(stderr, __FUNCTION__": arg1=%s, arg2=%s\n", arg1, arg2);
 
-		chan.vfo = vfo;
-		status = rig_get_channel(rig, &chan);
-		if (status != RIG_OK)
-				return status;
-		dump_chan(rig, &chan);
+	rig_debug(RIG_DEBUG_ERR, __FUNCTION__ ":\n");
+	sscanf(arg2, "%d", &memnum);
+	rig_debug(RIG_DEBUG_ERR, 
+		"memnum=%i\n", memnum);
+
+	rig_debug(RIG_DEBUG_ERR,
+		": vfo=%s ", arg1);
+
+	vfo = parse_vfo(arg1);
+	rig_debug(RIG_DEBUG_ERR,
+		": vfo=%s ", strvfo(vfo));
+
+	MemChannels[memnum].vfo = vfo;
+	MemChannels[memnum].channel_num = memnum;
+	status = rig_get_channel(rig, &MemChannels[memnum]);
+	if (status != RIG_OK)
 		return status;
+	dump_chan(rig, &MemChannels[memnum]);
+	return status;
 }
 
 

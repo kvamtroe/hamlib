@@ -1,0 +1,13 @@
+
+Build:
+	cd ${SRCDIR}/tests/rc; make	# only if parser has changed
+	cd ${BLDDIR}; make		
+	make install
+
+Files:	parser.y		# Grammar, semantics, and actions
+	scanner.l		# lexical scanner
+	base.y			# Grammar only (for testing changes)
+	lex_rigs.h		# Model symbols from rig_list.h
+	# all remaining files are generated.  do not edit
+
+
