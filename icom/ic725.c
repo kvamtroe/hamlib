@@ -2,7 +2,7 @@
  *  Hamlib CI-V backend - description of IC-725 and variations
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *	$Id: ic725.c,v 1.2 2002-12-26 11:43:20 fillods Exp $
+ *	$Id: ic725.c,v 1.2.2.1 2003-02-25 16:15:37 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
