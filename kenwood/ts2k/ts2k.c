@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.6 2003-03-02 21:50:14 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.7 2003-03-03 14:27:18 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -247,10 +247,10 @@ const struct rig_caps ts2k_caps = {
 	set_split_mode:	ts2k_set_split_mode,
 	get_channel:	ts2k_get_channel,	// "qr;", ...
 	set_channel:	ts2k_set_channel,
+	scan:		ts2k_scan,		// "sc;"
 
 /* comming soon... */	/* highest */
 //	get_info:	ts2k_get_info,		// "ty;"=firmware, "id;"=019=ts2k
-//	scan:		ts2k_scan,		// "sc;"
 //	get_ts:		ts2k_get_ts,
 //	vfo_op:		ts2k_vfo_op,
 //	set_ts:		ts2k_set_ts,
@@ -275,10 +275,18 @@ const struct rig_caps ts2k_caps = {
 //	decode_event:	ts2k_decode_event,
 	/* lowest */
 
+/* New function I want to create */
+//	set_menu:	ts2k_set_menu,		// set menu parameter
+//	get_menu:	ts2k_get_menu,		// get menu parameter
+//	list_menu:	ts2k_list_menu,		// string text of menu_t
+
+//	In src/rig.c:
+//		rig_to_rig(RIG* dest, channel_t * dstlst, RIG* src, channel_t src_lst);
+
 /* and never... */
 //	set_bank:		/* I abuse this for other purposes */
 /*
- * end ts2k
+ * end ts2k_caps
  */
 };
 
@@ -1282,6 +1290,7 @@ int ts2k_get_ts(RIG * rig, vfo_t vfo, shortfreq_t * ts)
 
 	RESETVFO(skip);
 
+	return -RIG_ENIMPL;	// untested
 	return retval;
 }
 
@@ -1300,6 +1309,7 @@ int ts2k_set_ts(RIG * rig, vfo_t vfo, shortfreq_t ts)
 
 	RESETVFO(skip);
 
+	return -RIG_ENIMPL;	// untested
 	return retval;
 }
 
@@ -1599,19 +1609,7 @@ int ts2k_set_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t rptr_shift)
 
 	TESTVFO(skip);
 
-	switch(rptr_shift) {
-
-	case RIG_RPT_SHIFT_NONE:	param.p1 = 0; break;
-	case RIG_RPT_SHIFT_PLUS:	param.p1 = 1; break;
-	case RIG_RPT_SHIFT_MINUS:	param.p1 = 2; break;
-	case RIG_RPT_SHIFT_1750:	param.p1 = 3; break;
-
-	default:
-		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
-			": Invalid Repeater Shift.\n");
-		retval = rig_set_vfo(rig, vorig);
-		return -RIG_EINVAL;
-	}
+	param.p1 = ts2k_uniq_shift2idx(rptr_shift);
 	retval = ts2k_s_os(rig, &param);
 
 	RESETVFO(skip);
@@ -1957,23 +1955,443 @@ int ts2k_set_channel(RIG * rig, channel_t * chan)
  */
 int ts2k_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_SC_T param;
+
+	if(vfo == RIG_VFO_CURR) {
+		retval = rig_get_vfo(rig, &vfo);
+		CHKERR(retval);
+	}
+
+	TESTVFO(skip);
+
+	switch(scan) {
+	case RIG_SCAN_STOP:
+		param.p1 = 0;
+		break;
+
+	// The following three require proper VFO's
+	case RIG_SCAN_VFO:
+	case RIG_SCAN_MEM:
+	case RIG_SCAN_PRIO:
+		param.p1 = 1;
+		break;
+
+	case RIG_SCAN_SLCT:
+		return -RIG_ENIMPL;
+		break;
+
+	case RIG_SCAN_PROG:
+		return -RIG_ENIMPL;
+		break;
+
+	case RIG_SCAN_DELTA:
+		return -RIG_ENIMPL;
+		break;
+
+	default:
+		return -RIG_ENAVAIL;
+	}
+
+	retval = ts2k_s_sc(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
 /*
  *	status:	untested
  */
-int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t val)
+int ts2k_set_level(RIG * rig, vfo_t vfo, setting_t level, value_t value)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	int ret, val;	// return value for set func
+	int Main;
+	union {
+		TS2K_AG_T	ag;	// AF gain
+		TS2K_AM_T	am;	// auto mode
+		TS2K_BC_T	bc;	// BC on/off
+		TS2K_GT_T	gt;	// AGC speed
+		TS2K_LK_T	lk;	// Lock
+		TS2K_ML_T	ml;	// Output Monitor
+		TS2K_NB_T	nb;	// NB on/off
+		TS2K_NR_T	nr;	// NR on/off
+		TS2K_NT_T	nt;	// A.Notch on/off
+		TS2K_SA_A_T	sa;	// SAT
+		TS2K_SC_T	sc;	// band scan, sort-of
+		TS2K_SD_T	sd;	// CW break-in
+		TS2K_SQ_T	sq;	// Squelch
+		TS2K_TN_T	tn;	// Tone sql
+		TS2K_TO_T	to;	// Tone val
+		TS2K_VX_T	vx;	// VOX on/off
+		//TS2K_NB_T	nb;	// 
+	} param;
+
+	Main = (vfo & RIG_CTRL_MAIN)? 0: 1;	// Main=0, Sub=1
+	val = value.i;
+
+	TESTVFO(skip);
+
+#define ON_OFF	(val > 0)? 1: 0
+#define MAX(_v)	(val > _v)? _v: val
+
+	switch(level) {
+
+	case RIG_FUNC_FAGC:	/* Fast AGC */
+		param.gt.p1 = MAX(20);
+		ret = ts2k_s_gt(rig, &param.gt);
+		break;
+
+	case RIG_FUNC_NB:	/* Noise Blanker */
+		param.nb.p1 = ON_OFF;
+		ret = ts2k_s_nb(rig, &param.nb);
+		break;
+
+	case RIG_FUNC_COMP:	/* Compression */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_VOX:	/* VOX */
+		param.vx.p1 = ON_OFF;
+		ret = ts2k_s_vx(rig, &param.vx);
+		break;
+
+	/* Duplicate!!! Use rig_set_tone() or move DCS/CTCSS here! */
+	case RIG_FUNC_TONE:	/* Tone */
+		param.tn.p1 = ts2k_uniq_tone2idx(val); 
+		ret = ts2k_s_tn(rig, &param.tn);
+		break;
+
+	/* Duplicate!!! Use rig_set_tone_sql() */
+	case RIG_FUNC_TSQL:	/* may require a tone field */
+		param.to.p1 = ON_OFF;
+		ret = ts2k_s_to(rig, &param.to);
+		break;
+
+	case RIG_FUNC_SBKIN:	/* Semi Break-in */
+		param.sd.p1 = MAX(1000);
+		ret = ts2k_s_sd(rig, &param.sd);
+		break;
+
+	case RIG_FUNC_FBKIN:	/* Full Break-in, for CW mode */
+		param.sd.p1 = ON_OFF;
+		ret = ts2k_s_sd(rig, &param.sd);
+		break;
+
+	case RIG_FUNC_ANF:	/* Automatic Notch Filter (DSP) */
+		param.nt.p1 = ON_OFF;
+		ret = ts2k_s_nt(rig, &param.nt);
+		break;
+
+	case RIG_FUNC_NR:	/* Noise Reduction (DSP) */
+		param.nr.p1 = ON_OFF;
+		ret = ts2k_s_nr(rig, &param.nr);
+		break;
+
+	case RIG_FUNC_AIP:	/* AIP (Kenwood) */
+		ret = -RIG_ENIMPL;	// Huh?
+		break;
+
+	case RIG_FUNC_APF:	/* Auto Passband Filter */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_MON:	/* Monitor transmitted signal, != rev */
+		param.ml.p1 = ON_OFF;
+		ret = ts2k_s_ml(rig, &param.ml);
+		break;
+
+	case RIG_FUNC_MN:	/* Manual Notch (Icom) */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_RNF:	/* RTTY Filter Notch (Icom) */
+		ret = -RIG_ENAVAIL;	// menu(50A) on + "sl;", "sh;"?
+		break;
+
+	case RIG_FUNC_ARO:	/* Auto Repeater Offset */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_LOCK:	/* Lock */
+		param.lk.p1 = MAX(2);
+		param.lk.p2 = 0;
+		ret = ts2k_s_lk(rig, &param.lk);
+		break;
+
+	/* I mute both Main and Sub */
+	case RIG_FUNC_MUTE:	/* Mute, could be emulated by LEVEL_AF */
+		param.ag.p1 = 0;	// Main
+		param.ag.p2 = MAX(50);	// Audio Gain
+		ret = ts2k_s_ag(rig, &param.ag);
+		param.ag.p1 = 1;	// Sub
+		param.ag.p2 = MAX(50);	// (max=255, but 50 is loud!)
+		ret = ts2k_s_ag(rig, &param.ag);
+		break;
+
+	case RIG_FUNC_VSC:	/* Voice Scan Control */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_SQL:	/* Turn Squelch on/off */
+		param.sq.p1 = Main;	// Main=0, Sub=1
+		param.sq.p2 = MAX(255);
+		ret = ts2k_s_sq(rig, &param.sq);
+		break;
+
+	case RIG_FUNC_ABM:	/* Auto Band Mode */
+		param.am.p1 = ON_OFF;
+		ret = ts2k_s_am(rig, &param.am);
+		break;
+
+	case RIG_FUNC_BC:	/* Beat Canceller */
+		param.bc.p1 = ON_OFF;
+		ret = ts2k_s_bc(rig, &param.bc);
+		break;
+
+	case RIG_FUNC_MBC:	/* Manual Beat Canceller */
+		param.bc.p1 = (val>0)? 2: 0;
+		ret = ts2k_s_bc(rig, &param.bc);
+		break;
+
+	case RIG_FUNC_LMP:	/* LCD lamp ON/OFF */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_AFC:	/* Auto Frequency Control ON/OFF */
+		ret = -RIG_ENIMPL;
+		break;
+
+	/* Caution: The following depends up the TS2K_SA_S_T and
+	 * TS2K_SA_A_T being aligned in the above union.  If SAT
+	 * don't work using this function, this is the reason! */
+
+	case RIG_FUNC_SATMODE:	/* Satellite mode ON/OFF (IC-910H) */
+		ret = ts2k_g_sa(rig, &param.sa);	// Read current values
+		param.sa.p1 = ON_OFF;
+		ret = ts2k_s_sa(rig, (TS2K_SA_S_T *) &param.sa);	// Just toggle on/off
+		break;
+
+	/* No bandscope, but I turn on a similar function... */
+	case RIG_FUNC_SCOPE:	/* Simple bandscope ON/OFF (IC-910H) */
+		param.sc.p1 = (val>0)? 3: 0;
+		ret = ts2k_s_sc(rig, &param.sc);
+		break;
+
+	case RIG_FUNC_RESUME:	/* Scan resume */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_TBURST:	/* 1750 Hz tone burst */
+		ret = -RIG_ENIMPL;
+		break;
+
+	default:
+		ret = -RIG_ENAVAIL;
+		break;
+	}
+
+#undef ON_OFF
+#undef MAX
+
+	RESETVFO(skip);
+
+	return ret;
 }
 
 /*
  *	status:	untested
  */
-int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * val)
+int ts2k_get_level(RIG * rig, vfo_t vfo, setting_t level, value_t * value)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	int ret, val;
+	int Main;
+	union {
+		TS2K_AG_T	ag;	// AF gain
+		TS2K_AM_T	am;	// auto mode
+		TS2K_BC_T	bc;	// BC on/off
+		TS2K_GT_T	gt;	// AGC speed
+		TS2K_LK_T	lk;	// Lock
+		TS2K_ML_T	ml;	// Output Monitor
+		TS2K_NB_T	nb;	// NB on/off
+		TS2K_NR_T	nr;	// NR on/off
+		TS2K_NT_T	nt;	// A.Notch on/off
+		TS2K_SA_R_T	sa;	// SAT
+		TS2K_SC_T	sc;	// band scan, sort-of
+		TS2K_SD_T	sd;	// CW break-in
+		TS2K_SQ_T	sq;	// Squelch
+		TS2K_TN_T	tn;	// Tone sql
+		TS2K_TO_T	to;	// Tone val
+		TS2K_VX_T	vx;	// VOX on/off
+		//TS2K_NB_T	nb;	// 
+	} param;
+
+	Main = (vfo & RIG_CTRL_MAIN)? 0: 1;	// Main=0, Sub=1
+	val = 0;
+
+	TESTVFO(skip);
+
+#define TRUEVAL(_p, _v)	val = (_p == _v)? 1: 0
+#define MAX(_v)	(val > _v)? _v: val
+
+	switch(level) {
+
+	case RIG_FUNC_FAGC:	/* Fast AGC */
+		ret = ts2k_g_gt(rig, &param.gt);
+		val = param.gt.p1;
+		break;
+
+	case RIG_FUNC_NB:	/* Noise Blanker */
+		ret = ts2k_g_nb(rig, &param.nb);
+		val = param.nb.p1;
+		break;
+
+	case RIG_FUNC_COMP:	/* Compression */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_VOX:	/* VOX */
+		ret = ts2k_g_vx(rig, &param.vx);
+		val = param.vx.p1;
+		break;
+
+	/* Duplicate!!! Use rig_set_tone() or move DCS/CTCSS here! */
+	case RIG_FUNC_TONE:	/* Tone */
+		ret = ts2k_g_tn(rig, &param.tn);
+		val = param.tn.p1;
+		break;
+
+	/* Duplicate!!! Use rig_set_tone_sql() */
+	case RIG_FUNC_TSQL:	/* may require a tone field */
+		ret = ts2k_g_to(rig, &param.to);
+		val = param.to.p1;
+		break;
+
+	case RIG_FUNC_SBKIN:	/* Semi Break-in */
+		ret = ts2k_g_sd(rig, &param.sd);
+		val = param.sd.p1;
+		break;
+
+	case RIG_FUNC_FBKIN:	/* Full Break-in, for CW mode */
+		ret = ts2k_g_sd(rig, &param.sd);
+		val = param.sd.p1;
+		break;
+
+	case RIG_FUNC_ANF:	/* Automatic Notch Filter (DSP) */
+		ret = ts2k_g_nt(rig, &param.nt);
+		val = param.nt.p1;
+		break;
+
+	case RIG_FUNC_NR:	/* Noise Reduction (DSP) */
+		ret = ts2k_g_nr(rig, &param.nr);
+		val = param.nr.p1;
+		break;
+
+	case RIG_FUNC_AIP:	/* AIP (Kenwood) */
+		ret = -RIG_ENIMPL;	// Huh?
+		break;
+
+	case RIG_FUNC_APF:	/* Auto Passband Filter */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_MON:	/* Monitor transmitted signal, != rev */
+		ret = ts2k_g_ml(rig, &param.ml);
+		val = param.ml.p1;
+		break;
+
+	case RIG_FUNC_MN:	/* Manual Notch (Icom) */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_RNF:	/* RTTY Filter Notch (Icom) */
+		ret = -RIG_ENAVAIL;	// menu(50A) on + "sl;", "sh;"?
+		break;
+
+	case RIG_FUNC_ARO:	/* Auto Repeater Offset */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_LOCK:	/* Lock */
+		ret = ts2k_g_lk(rig, &param.lk);
+		val = param.lk.p1;
+		break;
+
+	/* I mute both Main and Sub */
+	case RIG_FUNC_MUTE:	/* Mute, could be emulated by LEVEL_AF */
+		param.ag.p1 = Main;	// Sub
+		ret = ts2k_g_ag(rig, &param.ag);
+		val = param.ag.p2;	// p2 is correct
+		break;
+
+	case RIG_FUNC_VSC:	/* Voice Scan Control */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_SQL:	/* Turn Squelch on/off */
+		param.sq.p1 = Main;	// Main=0, Sub=1
+		ret = ts2k_g_sq(rig, &param.sq);
+		val = param.sq.p2;	// p2 is correct
+		break;
+
+	case RIG_FUNC_ABM:	/* Auto Band Mode */
+		ret = ts2k_g_am(rig, &param.am);
+		val = param.am.p1;	// p2 is correct
+		break;
+
+	case RIG_FUNC_BC:	/* Beat Canceller */
+		ret = ts2k_g_bc(rig, &param.bc);
+		val = TRUEVAL(param.bc.p1, 1);
+		break;
+
+	case RIG_FUNC_MBC:	/* Manual Beat Canceller */
+		ret = ts2k_g_bc(rig, &param.bc);
+		val = TRUEVAL(param.bc.p1, 2);
+		break;
+
+	case RIG_FUNC_LMP:	/* LCD lamp ON/OFF */
+		ret = -RIG_ENIMPL;
+		break;
+
+	case RIG_FUNC_AFC:	/* Auto Frequency Control ON/OFF */
+		ret = -RIG_ENIMPL;
+		break;
+
+	/* Caution: The following depends up the TS2K_SA_S_T and
+	 * TS2K_SA_A_T being aligned in the above union.  If SAT
+	 * don't work using this function, this is the reason! */
+
+	case RIG_FUNC_SATMODE:	/* Satellite mode ON/OFF (IC-910H) */
+		ret = ts2k_g_sa(rig, (TS2K_SA_A_T *) &param.sa);	// Read current values
+		TRUEVAL(param.sa.p1, 1);
+		break;
+
+	/* No bandscope, but I turn on a similar function... */
+	case RIG_FUNC_SCOPE:	/* Simple bandscope ON/OFF (IC-910H) */
+		ret = ts2k_g_sc(rig, &param.sc);
+		TRUEVAL(param.sc.p1, 3);
+		break;
+
+	case RIG_FUNC_RESUME:	/* Scan resume */
+		ret = -RIG_ENAVAIL;
+		break;
+
+	case RIG_FUNC_TBURST:	/* 1750 Hz tone burst */
+		ret = -RIG_ENIMPL;
+		break;
+
+	default:
+		ret = -RIG_ENAVAIL;
+		break;
+	}
+
+	value->i = val;	// to lazy to write casts on everything!!!
+
+	RESETVFO(skip);
+
+	return ret;
 }
 
 /*
@@ -2722,6 +3140,26 @@ int ts2k_uniq_tone2idx(int tone)
 		"\t: Done: lo = %i, i = %i, hi = %i\n", low_idx, i, hi_idx);
 
 	return i+1;	// only the index is returned
+}
+
+int ts2k_uniq_shift2idx(rptr_shift_t shift)
+{
+	int i;
+
+	switch(shift) {
+
+	case RIG_RPT_SHIFT_NONE:	i = 0; break;
+	case RIG_RPT_SHIFT_PLUS:	i = 1; break;
+	case RIG_RPT_SHIFT_MINUS:	i = 2; break;
+	case RIG_RPT_SHIFT_1750:	i = 3; break;
+
+	default:
+		rig_debug(RIG_DEBUG_WARN, __FUNCTION__
+			": Invalid Repeater Shift.\n");
+		return 0;
+	}
+
+	return i;
 }
 
 /****************************************
