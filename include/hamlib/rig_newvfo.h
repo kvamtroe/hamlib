@@ -2,6 +2,8 @@
  * Differences between branch_ts2k and HEAD	--Dale
  */
 
+//#include "ts2k_menu.h"
+
 #ifdef _RIG_NEWVFO_PART_1
 
 enum rptr_shift_e {
@@ -10,6 +12,43 @@ enum rptr_shift_e {
 	RIG_RPT_SHIFT_PLUS,
 	RIG_RPT_SHIFT_1750	// ts2000 E-type '='
 };
+
+enum ts2k_m_parm_e {
+	M_END = 0, M_ON, M_OFF, M_TO, M_CO, M_H_BOOST, M_B_BOOST, M_F_PASS,
+	M_CONVEN, M_USER, M_AUTO, M_NORM, M_INV, M_LOW, M_MID, M_HI,
+	M_BURST, M_CONT, M_SLOW, M_FAST, M_MAIN, M_SUB, M_TNC_BAND,
+	M_MAIN_SUB, M_MAN, M_MORSE, M_VOICE, M_NEG, M_POS, M_LOCKED,
+	M_CROSS, M_CLIENT, M_COMMANDER, M_TRANSPORTER, M_FONT1, M_FONT2,
+	M_TBD, M_NUM, M_TEXT, M_MENU_NOT_INITIALIZED = (0xCEEE + 0xDEE), M_NULL
+};
+
+typedef struct {
+	char *menu_no;
+	char *txt;
+	enum ts2k_m_parm_e param[10];
+	char txt_val[20];
+	int menu[4];
+	int val;		// same as P5
+} ts2k_menu_t;
+
+/*
+ * Items related to menu structure
+ */
+
+// Programmable memories
+typedef struct {
+	int	curr;	// PM now in use
+	int	orig;	// what PM to restore on exit
+	int	orig_menu;	// orignal menu in effect
+
+	int	menu_no;	// menuA or menuB of current PM
+	ts2k_menu_t	**menu[2];	// pointer to actual menuA/B array
+
+	// the following set which PM's are private or public
+	// they are set on init and enforced until exit
+	unsigned int	pub;
+	unsigned int	priv;
+} ts2k_pm_t;
 
 # undef _RIG_NEWVFO_PART_1
 #endif
@@ -34,7 +73,7 @@ enum rptr_shift_e {
  *	   Major       minor
  */
 //typedef unsigned int vfo_t;
-typedef unsigned long int vfo_t;
+typedef signed long int vfo_t;	// changed to signed to match Stephane's
 
 #define BIT(a)	( ((vfo_t) 1) << (a))
 //#define BIT(a)	(1L << (a))
@@ -51,8 +90,8 @@ typedef unsigned long int vfo_t;
 #define RIG_VFO1	RIG_SET_VFO(0, BIT(2))	// VFO_A
 #define RIG_VFO2	RIG_SET_VFO(0, BIT(3))	// VFO_B
 #define RIG_VFO3	RIG_SET_VFO(0, BIT(4))	// VFO_C
-#define RIG_VFO4	RIG_SET_VFO(0, BIT(5))	// MEM
-#define RIG_VFO5	RIG_SET_VFO(0, BIT(6))	// CALL
+#define RIG_VFO4	RIG_SET_VFO(0, BIT(5))	// MEMO
+#define RIG_VFO5	RIG_SET_VFO(0, BIT(6))	// spare 2
 /*					   |
  * RIG_MINOR = n :== MAX >-----------------'
  */
@@ -69,17 +108,24 @@ typedef unsigned long int vfo_t;
 #define RIG_CTRL_SCAN	RIG_SET_VFO(BIT(8), 0)
 #define RIG_CTRL_SAT	RIG_SET_VFO(BIT(9), 0)
 #define RIG_CTRL_CROSS	RIG_SET_VFO(BIT(10), 0)
-#define RIG_CTRL_FAKE	RIG_SET_VFO(BIT(11), 0)
+#define RIG_CTRL_TRACE	RIG_SET_VFO(BIT(11), 0)
+#define RIG_CTRL_FAKE	RIG_SET_VFO(BIT(12), 0)
 /*					|
  * RIG_MAJOR = n :== MAX >--------------'
  */
-#define RIG_MAJOR (RIG_MINOR + 11)
+#define RIG_MAJOR (RIG_MINOR + 12)
+
+// The following sets the sign to warn of uniq modes! (per Stephane's recent vfo_t)
+#define RIG_CTRL_UNIQ	RIG_SET_VFO(BIT(sizeof(vfo_t)*8-1), 0)
 
 /* VFO stuff that may be handy. */
 #define RIG_VFO_MASK	(RIG_VFO1 | RIG_VFO2 | RIG_VFO3 | RIG_VFO4 | RIG_VFO5)
 #define RIG_CTRL_MASK	(RIG_CTRL_MAIN | RIG_CTRL_SUB | RIG_CTRL_MEM \
-			| RIG_CTRL_CALL | RIG_CTRL_SPLIT | RIG_CTRL_SCAN \
-			| RIG_CTRL_SAT | RIG_CTRL_REV)
+			| RIG_CTRL_CALL | RIG_CTRL_SPLIT | RIG_CTRL_RIT \
+			| RIG_CTRL_XIT | RIG_CTRL_REV | RIG_CTRL_SCAN \
+			| RIG_CTRL_SAT | RIG_CTRL_CROSS | RIG_CTRL_TRACE \
+			| RIG_CTRL_FAKE | RIG_CTRL_UNIQ)
+
 #define RIG_VFO_VALID	(RIG_CTRL_MASK | RIG_VFO_MASK)
 #define RIG_VFO_TEST(v)	(((v) & ~RIG_VFO_VALID) == 0)
 
@@ -91,26 +137,47 @@ typedef unsigned long int vfo_t;
 #define RIG_VFO_C	(RIG_CTRL_SUB  | RIG_VFO3)
 
 /* More standard VFO's but these are new! */
-// How is it possible for rig_get_vfo() to tell use we're split otherwise?
+// How is it possible for rig_get_vfo() to tell us we're split otherwise?
 #define RIG_VFO_AB	((RIG_CTRL_SPLIT | RIG_CTRL_MAIN) | (RIG_VFO1 | RIG_VFO2))
-#define RIG_VFO_BA	((RIG_CTRL_REV | RIG_CTRL_SPLIT | RIG_CTRL_MAIN) \
-						 | (RIG_VFO1 | RIG_VFO2))
-#define RIG_SAT_DNLINK	(RIG_CTRL_SAT | RIG_VFO_A)
-#define RIG_SAT_UPLINK	(RIG_CTRL_SAT | RIG_VFO_B)
+#define RIG_VFO_BA	(RIG_CTRL_REV | RIG_VFO_AB)
 
-/* memories (except temp) */
-#define RIG_VFO_MEM_A	((RIG_CTRL_MEM | RIG_CTRL_MAIN) | RIG_VFO4)
-#define RIG_VFO_MEM_C	((RIG_CTRL_MEM | RIG_CTRL_SUB)  | RIG_VFO4)
-#define RIG_VFO_CALL_A	((RIG_CTRL_MEM | RIG_CTRL_MAIN) | RIG_VFO5)
-#define RIG_VFO_CALL_C	((RIG_CTRL_MEM | RIG_CTRL_SUB)  | RIG_VFO5)
+/* Satelite */
+#define RIG_SAT_TRACE	(RIG_CTRL_SAT | RIG_CTRL_TRACE)
+#define RIG_SAT_TRACE_R	(RIG_CTRL_TRACE | RIG_CTRL_REV)
+#define RIG_SAT_UPLINK	(RIG_CTRL_SAT | RIG_VFO_A)
+#define RIG_SAT_DNLINK	(RIG_CTRL_SAT | RIG_VFO_C)
+#define RIG_SAT_MEM	(RIG_CTRL_SAT | RIG_CTRL_MEM)
+
+/* memories (VFO_B is just in case somebody needs it) */
+#define RIG_MEM_A	(RIG_CTRL_MEM | RIG_VFO_A)
+#define RIG_MEM_B	(RIG_CTRL_MEM | RIG_VFO_B)
+#define RIG_MEM_C	(RIG_CTRL_MEM | RIG_VFO_C)
+#define RIG_CALL_A	(RIG_CTRL_CALL | RIG_VFO_A)
+#define RIG_CALL_B	(RIG_CTRL_CALL | RIG_VFO_B)
+#define RIG_CALL_C	(RIG_CTRL_CALL | RIG_VFO_C)
+#define RIG_MEMO	(RIG_CTRL_MEM | RIG_VFO4)
+
+/* scan */
+#define RIG_SCAN_VFOA	(RIG_CTRL_SCAN | RIG_VFO_A)
+#define RIG_SCAN_VFOB	(RIG_CTRL_SCAN | RIG_VFO_B)
+#define RIG_SCAN_VFOC	(RIG_CTRL_SCAN | RIG_VFO_C)
+#define RIG_SCAN_MEMA	(RIG_CTRL_SCAN | RIG_MEM_A)
+#define RIG_SCAN_MEMB	(RIG_CTRL_SCAN | RIG_MEM_B)
+#define RIG_SCAN_MEMC	(RIG_CTRL_SCAN | RIG_MEM_C)
+#define RIG_SCAN_CALLA	(RIG_CTRL_SCAN | RIG_CALL_A)
+#define RIG_SCAN_CALLB	(RIG_CTRL_SCAN | RIG_CALL_B)
+#define RIG_SCAN_CALLC	(RIG_CTRL_SCAN | RIG_CALL_C)
 
 /* Standard control's for common use */
-#define RIG_VFO_MEM	(RIG_CTRL_MEM | RIG_VFO_VFO)
-#define RIG_VFO_MAIN	RIG_CTRL_MAIN
-#define RIG_VFO_SUB	RIG_CTRL_SUB
+#define RIG_MEM_CURR	(RIG_CTRL_MEM | RIG_CTRL_FAKE | RIG_VFO1)
+#define RIG_VFO_MEM	RIG_MEM_CURR
+#define RIG_VFO_MAIN	(RIG_CTRL_MAIN)
+#define RIG_VFO_SUB	(RIG_CTRL_SUB)
 
 /* pseudo targets */
+// CURR forces get_vfo()
 #define RIG_VFO_CURR	(RIG_CTRL_FAKE | RIG_VFO1)
+// VFO forces off: scan, sat, mem, call, memo
 #define RIG_VFO_VFO	(RIG_CTRL_FAKE | RIG_VFO2)
 
 /* Hopefully, to following will be dropped */
@@ -241,7 +308,7 @@ struct rig_caps {
 
 // Temporary local experimental modification.  Not for general use.
 	/* PM has pointer for menus.  Will grow as development progresses. */
-	const rig_ptr_t pm;	// ts2k PM.  eventually we'll have to do this.
+	const rig_ptr_t **pm;	// ts2k PM.  eventually we'll have to do this.
 	vfo_t vfo_all;		/* Describe which vfo_t bits apply --Dale */
 
 
