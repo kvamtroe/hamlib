@@ -3,7 +3,7 @@
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *  Copyright (c) 2002-2003 by Dale E. Edmons
  *
- *		$Id: ts2k.c,v 1.1.2.3 2003-02-26 19:00:49 dedmons Exp $
+ *		$Id: ts2k.c,v 1.1.2.4 2003-02-27 11:45:46 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -238,17 +238,17 @@ const struct rig_caps ts2k_caps = {
 	set_tone:	ts2k_set_tone,		// "tn;"
 	set_ctcss:	ts2k_set_ctcss,		// "cn;"
 	set_dcs:	ts2k_set_dcs,		// "qc;"
+	reset:		ts2k_reset,		// "sr;"
+	get_split:	ts2k_get_split,
+	set_split:	ts2k_set_split,
+	get_split_freq:	ts2k_get_split_freq,
+	set_split_freq:	ts2k_set_split_freq,
+	get_split_mode:	ts2k_get_split_mode,
+	set_split_mode:	ts2k_set_split_mode,
 
 /* comming soon... */	/* highest */
-//	get_split:	ts2k_get_split,
-//	set_split:	ts2k_set_split,
-//	get_split_freq:	ts2k_get_split_freq,
-//	set_split_freq:	ts2k_set_split_freq,
-//	get_split_mode:	ts2k_get_split_mode,
-//	set_split_mode:	ts2k_set_split_mode,
 //	get_channel:	ts2k_get_channel,	// "qr;", ...
 //	set_channel:	ts2k_set_channel,
-//	reset:		ts2k_reset,		// "sr;"
 //	get_info:	ts2k_get_info,		// "ty;"=firmware, "id;"=019=ts2k
 //	scan:		ts2k_scan,		// "sc;"
 //	get_ts:		ts2k_get_ts,
@@ -582,7 +582,7 @@ int ts2k_get_vfo(RIG * rig, vfo_t * vfo)
  *		mode.  The dnlink freq is *not* F1.
  *		The rig took the last SAT values out
  *		of memory an wrote them to the PLLs,
- *		an overwrote F1 with freq = F2.
+ *		and overwrote F1 with freq = F2.
  *		Thus, *just* writing to the correct
  *		PLL is not enough to ensure that we
  *		have stored F1 as the dnlink freq!
@@ -895,34 +895,6 @@ int ts2k_get_ptt(RIG * rig, vfo_t vfo, ptt_t * ptt)
 
 /*
  */
-int ts2k_set_trn(RIG * rig, int trn)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
-int ts2k_get_trn(RIG * rig, int *trn)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
-int ts2k_set_powerstat(RIG * rig, powerstat_t status)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
-int ts2k_get_powerstat(RIG * rig, powerstat_t * status)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
 int ts2k_reset(RIG * rig, reset_t reset)
 {
 	int i;
@@ -1017,20 +989,6 @@ int ts2k_reset(RIG * rig, reset_t reset)
 	}
 
 	return RIG_OK;
-}
-
-/*
- */
-int ts2k_send_morse(RIG * rig, vfo_t vfo, const char *msg)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- */
-int ts2k_vfo_op(RIG * rig, vfo_t vfo, vfo_op_t op)
-{
-	return -RIG_ENIMPL;
 }
 
 /*
@@ -1146,22 +1104,6 @@ int ts2k_get_mem(RIG * rig, vfo_t vfo, int *ch)
 const char *ts2k_get_info(RIG * rig)
 {
 	return NULL;
-}
-
-/*
- *	status:	untested
- */
-rig_model_t probe_ts2k(port_t * port)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- *	status:	untested
- */
-int ts2k_get_dcd(RIG * rig, vfo_t vfo, dcd_t * dcd)
-{
-	return -RIG_ENIMPL;
 }
 
 /*
@@ -1331,11 +1273,11 @@ int ts2k_get_rit(RIG * rig, vfo_t vfo, shortfreq_t * rit)
 int ts2k_get_ts(RIG * rig, vfo_t vfo, shortfreq_t * ts)
 {
 	STDPARAM;
-	TS2K_TS_T param;
+	TS2K_ST_T param;
 
 	TESTVFO(skip);
 
-	retval = ts2k_g_ts(rig, &param);
+	retval = ts2k_g_st(rig, &param);
 	*ts = param.p1;
 
 	RESETVFO(skip);
@@ -1348,7 +1290,17 @@ int ts2k_get_ts(RIG * rig, vfo_t vfo, shortfreq_t * ts)
  */
 int ts2k_set_ts(RIG * rig, vfo_t vfo, shortfreq_t ts)
 {
-	return -RIG_ENIMPL;
+	STDPARAM;
+	TS2K_ST_T param;
+
+	TESTVFO(skip);
+
+	param.p1 = ts;
+	retval = ts2k_s_st(rig, &param);
+
+	RESETVFO(skip);
+
+	return retval;
 }
 
 /*
@@ -1775,17 +1727,12 @@ int ts2k_set_rptr_shift(RIG * rig, vfo_t vfo, rptr_shift_t rptr_shift)
  */
 int ts2k_get_split(RIG * rig, vfo_t vfo, split_t * split)
 {
-	STDPARAM;
-	TS2K_TN_T param;
+	vfo_t vtmp;
+	int retval;
 
-	TESTVFO(skip);
-
-	retval = ts2k_g_tn(rig, &param);
-	*split = param.p1;
-
-	RESETVFO(skip);
-
-	return retval;
+	retval = rig_get_vfo(rig, &vtmp);
+	
+	return vtmp & RIG_CTRL_SPLIT;	// Why have a function for it?
 }
 
 /*
@@ -1793,7 +1740,7 @@ int ts2k_get_split(RIG * rig, vfo_t vfo, split_t * split)
  */
 int ts2k_set_split(RIG * rig, vfo_t vfo, split_t split)
 {
-	return -RIG_ENIMPL;
+	return rig_set_vfo(rig, RIG_VFO_AB);	// Why have a function for it?
 }
 
 /*
@@ -1802,12 +1749,37 @@ int ts2k_set_split(RIG * rig, vfo_t vfo, split_t split)
 int ts2k_get_split_freq(RIG * rig, vfo_t vfo, freq_t * tx_freq)
 {
 	STDPARAM;
-	TS2K_IF_T param;
+	union {
+		TS2K_MR_T mr;
+		TS2K_FA_T fa;
+	} param;
 
-	TESTVFO(skip);
+	TESTVFO2(skip);
 
-	retval = ts2k_g_if(rig, &param);
-	*tx_freq = param.p1;
+	switch(vfo) {
+	case RIG_VFO_AB:
+	//case RIG_VFO_MB:
+		retval = ts2k_g_fb(rig, &param.fa);
+		CHKERR(retval);
+		*tx_freq = param.fa.p1;
+		break;
+
+	case RIG_VFO_BA:
+	case RIG_VFO_MA:
+		retval = ts2k_g_fa(rig, &param.fa);
+		CHKERR(retval);
+		*tx_freq = param.fa.p1;
+		break;
+
+	case RIG_VFO_AM:
+	case RIG_VFO_BM:	// FIXME:
+		return -RIG_ENIMPL;	// mem/vfo split, if enabled
+		break;
+
+	default:
+		return -RIG_EINVAL;	// Gotta know which VFO!!
+		break;
+	}
 
 	RESETVFO(skip);
 
@@ -1819,31 +1791,38 @@ int ts2k_get_split_freq(RIG * rig, vfo_t vfo, freq_t * tx_freq)
  */
 int ts2k_set_split_freq(RIG * rig, vfo_t vfo, freq_t tx_freq)
 {
-	return -RIG_ENIMPL;
-}
-
-/*
- *	status:	untested
- */
-int ts2k_set_split_mode(RIG * rig,
-			vfo_t vfo, rmode_t txmode, pbwidth_t txwidth)
-{
-	return -RIG_ENIMPL;
-}
-
-/*
- *	status:	untested
- */
-int ts2k_get_split_mode(RIG * rig,
-			vfo_t vfo, rmode_t * txmode, pbwidth_t * txwidth)
-{
 	STDPARAM;
-	TS2K_MD_T param;
+	union {
+		TS2K_MW_T mw;
+		TS2K_FA_T fa;
+	} param;
 
-	TESTVFO(skip);
+	TESTVFO2(skip);
 
-	retval = ts2k_g_md(rig, &param);
-	*txmode = param.p1;
+	switch(vfo) {
+	case RIG_VFO_AB:
+	case RIG_VFO_MB:
+		param.fa.p1 = tx_freq;
+		retval = ts2k_s_fb(rig, &param.fa);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_BA:
+	case RIG_VFO_MA:
+		param.fa.p1 = tx_freq;
+		retval = ts2k_s_fa(rig, &param.fa);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_AM:	// Must be enabled via menu first!
+	case RIG_VFO_BM:	// FIXME:
+		return -RIG_ENIMPL;	// mem/vfo split, if enabled
+		break;
+
+	default:
+		return -RIG_EINVAL;	// Gotta know which VFO!!
+		break;
+	}
 
 	RESETVFO(skip);
 
@@ -1853,9 +1832,95 @@ int ts2k_get_split_mode(RIG * rig,
 /*
  *	status:	untested
  */
+int ts2k_set_split_mode(RIG * rig,
+			vfo_t vfo, rmode_t txmode, pbwidth_t txwidth)
+{
+	STDPARAM;
+/*	union {
+		TS2K_MW_T mw;
+	} param;
+*/
+	TESTVFO2(skip);
+
+	switch(vfo) {
+	case RIG_VFO_AB:
+	case RIG_VFO_MB:
+		retval = rig_set_mode(rig, RIG_VFO_B, txmode, txwidth);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_BA:
+	case RIG_VFO_MA:
+		retval = rig_set_mode(rig, RIG_VFO_A, txmode, txwidth);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_AM:	// Must be enabled via menu first!
+	case RIG_VFO_BM:	// FIXME:
+		return -RIG_ENIMPL;	// mem/vfo split, if enabled
+		break;
+
+	default:
+		return -RIG_EINVAL;	// Gotta know which VFO!!
+		break;
+	}
+
+	RESETVFO(skip);
+
+	return retval;
+
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_split_mode(RIG * rig,
+	vfo_t vfo, rmode_t * txmode, pbwidth_t * txwidth)
+{
+	STDPARAM;
+	union {
+		TS2K_MR_T mr;
+		TS2K_MD_T md;
+	} param;
+
+	TESTVFO2(skip);
+
+	switch(vfo) {
+	case RIG_VFO_AB:	// Have to switch this time.
+	case RIG_VFO_MB:	// FIXME:
+		retval = rig_get_mode(rig, RIG_VFO_B, txmode, txwidth);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_BA:
+	case RIG_VFO_MA:
+		retval = rig_get_mode(rig, RIG_VFO_A, txmode, txwidth);
+		CHKERR(retval);
+		break;
+
+	case RIG_VFO_AM:	// Must be enabled via menu first!
+	case RIG_VFO_BM:
+		return -RIG_ENIMPL;	// mem/vfo split, if enabled
+		break;
+
+	default:
+		return -RIG_EINVAL;	// Gotta know which VFO!!
+		break;
+	}
+
+	RESETVFO(skip);
+
+	return retval;
+}
+
+/**
+ * \brief Get a channel, which includes mode, memory
+ *	offset, etc...
+ *
+ *	status:	untested
+ */
 int ts2k_get_channel(RIG * rig, channel_t * chan)
 {
-	return -RIG_ENIMPL;
 }
 
 /*
@@ -1918,6 +1983,64 @@ int ts2k_get_parm(RIG * rig, setting_t parm, value_t * val)
  *	status:	untested
  */
 int ts2k_set_parm(RIG * rig, setting_t parm, value_t val)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_send_morse(RIG * rig, vfo_t vfo, const char *msg)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_vfo_op(RIG * rig, vfo_t vfo, vfo_op_t op)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_set_trn(RIG * rig, int trn)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_get_trn(RIG * rig, int *trn)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_set_powerstat(RIG * rig, powerstat_t status)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ */
+int ts2k_get_powerstat(RIG * rig, powerstat_t * status)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ *	status:	untested
+ */
+rig_model_t probe_ts2k(port_t * port)
+{
+	return -RIG_ENIMPL;
+}
+
+/*
+ *	status:	untested
+ */
+int ts2k_get_dcd(RIG * rig, vfo_t vfo, dcd_t * dcd)
 {
 	return -RIG_ENIMPL;
 }
@@ -2100,8 +2223,8 @@ int ts2k_uniq_SetSimpleVfo(RIG *rig, vfo_t vfo)
 
 	case RIG_MEM_A:
 	case RIG_MEM_C:
-	//case RIG_VFO_M_A:	// mem/vfo
-	//case RIG_VFO_M_B:	// mem/vfo
+	//case RIG_VFO_MA:	// mem/vfo
+	//case RIG_VFO_MB:	// mem/vfo
 		param.rx.p1 = 2;
 		break;
 
@@ -2125,22 +2248,22 @@ int ts2k_uniq_SetSimpleVfo(RIG *rig, vfo_t vfo)
 	if(vfo & RIG_CTRL_SPLIT) {
 		switch(vfo) {
 		case RIG_VFO_AB:
-		//case RIG_VFO_M_A:	// mem/vfo
+		case RIG_VFO_MA:	// mem/vfo
 			param.tx.p1 = 1;
 			break;
 
 		case RIG_VFO_BA:
-		//case RIG_VFO_M_B:	// mem/vfo
+		case RIG_VFO_MB:	// mem/vfo
 			param.tx.p1 = 0;
 			break;
 
 		// Mem/Vfo split goes here if we ever do it
 		// and Menu 6A is On.
-		/*case RIG_VFO_A_M:	// mem/vfo
-		case RIG_VFO_B_M:
+		case RIG_VFO_AM:	// mem/vfo
+		case RIG_VFO_BM:
 			param.tx.p1 = 2;
 			break;
-		*/
+
 		default:
 			skip = 1;	// Force action to not be taken.
 			break;

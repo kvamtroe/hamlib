@@ -137,9 +137,15 @@ typedef signed long int vfo_t;	// changed to signed to match Stephane's
 #define RIG_VFO_C	(RIG_CTRL_SUB  | RIG_VFO3)
 
 /* More standard VFO's but these are new! */
-// How is it possible for rig_get_vfo() to tell us we're split otherwise?
+/* Split A/B, B/A */ 
 #define RIG_VFO_AB	((RIG_CTRL_SPLIT | RIG_CTRL_MAIN) | (RIG_VFO1 | RIG_VFO2))
 #define RIG_VFO_BA	(RIG_CTRL_REV | RIG_VFO_AB)
+// The following will likely change soon, since I haven't tried it yet.
+/* MEM/VFO split*/
+#define RIG_VFO_AM	(RIG_CTRL_SPLIT | RIG_CTRL_MEM | RIG_VFO_A)
+#define RIG_VFO_MA	(RIG_CTRL_REV | RIG_VFO_AM)
+#define RIG_VFO_BM	(RIG_CTRL_SPLIT | RIG_CTRL_MEM | RIG_VFO_B)
+#define RIG_VFO_MB	(RIG_CTRL_REV | RIG_VFO_BM)
 
 /* Satelite */
 #define RIG_SAT_TRACE	(RIG_CTRL_SAT | RIG_CTRL_TRACE)

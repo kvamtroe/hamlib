@@ -174,6 +174,8 @@ check_PROGRAMS = dumpmem testrig testtrn testbcd testfreq listrigs testloc @RIGM
 
 rigctl_SOURCES = rigctl.c dumpcaps.c
 
+tsctl_SOURCES = tsctl.c dumpcaps.c
+
 EXTRA_PROGRAMS = rigmatrix testts2k 
 
 # all the programs need this
@@ -193,6 +195,7 @@ rigctl_LDFLAGS = @BACKENDLNK@
 rotctl_LDFLAGS = @ROT_BACKENDLNK@
 # added by kd7eni
 testts2k_LDFLAGS = @BACKENDLNK@
+tsctl_LDFLAGS = @BACKENDLNK@
 
 # temporary hack
 testbcd_LDFLAGS = -dlpreopen self
@@ -210,6 +213,7 @@ rotctl_DEPENDENCIES = $(DEPENDENCIES) @ROT_BACKENDEPS@
 rigmatrix_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 # added by kd7eni
 testts2k_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
+tsctl_DEPENDENCIES = $(DEPENDENCIES) @BACKENDEPS@
 
 EXTRA_DIST = rigmatrix_head.html $(man_MANS)
 subdir = tests
@@ -276,12 +280,9 @@ testvfo_LDADD = $(LDADD)
 testvfo_DEPENDENCIES = $(top_builddir)/src/libhamlib.la \
 	$(top_builddir)/lib/libmisc.la lex.rig_yy.o rig.tab.o rigcmd.o
 testvfo_LDFLAGS =
-tsctl_SOURCES = tsctl.c
-tsctl_OBJECTS = tsctl.$(OBJEXT)
+am_tsctl_OBJECTS = tsctl.$(OBJEXT) dumpcaps.$(OBJEXT)
+tsctl_OBJECTS = $(am_tsctl_OBJECTS)
 tsctl_LDADD = $(LDADD)
-tsctl_DEPENDENCIES = $(top_builddir)/src/libhamlib.la \
-	$(top_builddir)/lib/libmisc.la lex.rig_yy.o rig.tab.o rigcmd.o
-tsctl_LDFLAGS =
 
 DEFAULT_INCLUDES =  -I. -I$(srcdir) -I$(top_builddir)/include
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -303,12 +304,12 @@ LINK = $(LIBTOOL) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
 DIST_SOURCES = dumpmem.c listrigs.c $(rigctl_SOURCES) rigmatrix.c \
 	rotctl.c testbcd.c testcmd.c testfreq.c testloc.c testrig.c \
-	testtrn.c testts2k.c testvfo.c tsctl.c
+	testtrn.c testts2k.c testvfo.c $(tsctl_SOURCES)
 
 NROFF = nroff
 MANS = $(man_MANS)
 DIST_COMMON = README Makefile.am Makefile.in
-SOURCES = dumpmem.c listrigs.c $(rigctl_SOURCES) rigmatrix.c rotctl.c testbcd.c testcmd.c testfreq.c testloc.c testrig.c testtrn.c testts2k.c testvfo.c tsctl.c
+SOURCES = dumpmem.c listrigs.c $(rigctl_SOURCES) rigmatrix.c rotctl.c testbcd.c testcmd.c testfreq.c testloc.c testrig.c testtrn.c testts2k.c testvfo.c $(tsctl_SOURCES)
 
 all: all-am
 
