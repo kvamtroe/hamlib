@@ -2,7 +2,7 @@
  *  Hamlib Drake backend - main file
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *	$Id: drake.c,v 1.1 2002-07-08 22:10:43 fillods Exp $
+ *	$Id: drake.c,v 1.1.2.1 2002-07-26 09:41:01 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
