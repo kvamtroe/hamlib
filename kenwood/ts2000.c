@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS2000 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2000.c,v 1.9 2002-06-30 10:20:52 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.1 2002-07-06 16:51:17 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -25,62 +25,9 @@
 #endif
 
 #include <hamlib/rig.h>
-#include "kenwood.h"
+//#include "kenwood.h"
 #include "ts2k.h"
 
-
-#define TS2000_ALL_MODES (RIG_MODE_AM|RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
-	RIG_MODE_RTTY)
-#define TS2000_OTHER_TX_MODES (RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
-	RIG_MODE_RTTY)
-#define TS2000_AM_TX_MODES (RIG_MODE_AM)
-
-// the following might be cond. later
-# define TS2000_RIGVFO (0)
-# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM)
-# define TS2000_SUBVFO (RIG_VFO_C)
-
-#ifndef _NEW_VFO_H
-
-// old / simple
-# define TS2000_FUNC_ALL (RIG_FUNC_TONE | RIG_FUNC_NB)
-# define TS2000_PARM_OP (RIG_PARM_BEEP | RIG_PARM_BACKLIGHT)
-# define TS2000_LEVEL_ALL (RIG_LEVEL_PREAMP | RIG_LEVEL_VOX | RIG_LEVEL_AF)
-# define TS2000_SCAN_OP (RIG_SCAN_STOP | RIG_SCAN_MEM)
-
-#else
-
-// new
-# define TS2000_FUNC_ALL ( RIG_FUNC_ALL & \
-			~(RIG_FUNC_MN | RIG_FUNC_RNF | RIG_FUNC_VSC) ) 
-# define TS2000_PARM_OP (RIG_PARM_EXCLUDE(RIG_PARM_BAT | RIG_PARM_TIME))
-# define TS2000_LEVEL_ALL (RIG_LEVEL_ALL & ~(RIG_LEVEL_APF))
-# define TS2000_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
-// the following uses both Sub and Main for the Major mode
-//# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A | RIG_VFO_CALL_A)
-//# define TS2000_RIGVFO (RIG_VFO_SAT | RIG_VFO_CROSS)
-//# define TS2000_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
-
-#endif
-
-#define TS2000_VFO_ALL (TS2000_RIGVFO | TS2000_MAINVFO | TS2000_SUBVFO)
-#define TS2000_VFO_OP (RIG_OP_UP | RIG_OP_DOWN)
-
-/*
- * 103 available DCS codes
- */
-static const tone_t ts2000_dcs_list[] = {
-       23,  25,  26,  31,   32,  36,  43,  47,       51,  53,
-  54,  65,  71,  72,  73,   74, 114, 115, 116, 122, 125, 131,
-  132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174, 205,
-  212, 223, 225, 226, 243, 244, 245, 246, 251, 252, 255, 261,
-  263, 265, 266, 271, 274, 306, 311, 315, 325, 331, 332, 343,
-  346, 351, 356, 364, 365, 371, 411, 412, 413, 423, 431, 432,
-  445, 446, 452, 454, 455, 462, 464, 465, 466, 503, 506, 516,
-  523, 526, 532, 546, 565, 606, 612, 624, 627, 631, 632, 654,
-  662, 664, 703, 712, 723, 731, 732, 734, 743, 754,
-  0,
-};
 
 const struct ts2k_priv_caps  ts2k_priv_caps  = {
 		cmdtrm: EOM_KEN,
@@ -111,9 +58,10 @@ serial_stop_bits: 1,
 serial_parity: RIG_PARITY_NONE,
 serial_handshake: RIG_HANDSHAKE_NONE,
 write_delay: 0,
-post_write_delay: 0,
-timeout: 20,
-retry: 1,
+// set 1,20,4 and cured timeouts for "if...;" on ts2k_get_freq()	--Dale
+post_write_delay: 1,
+timeout: 15,
+retry: 4,
 
 has_get_func: TS2000_FUNC_ALL,
 has_set_func: TS2000_FUNC_ALL,

@@ -2,7 +2,7 @@
  *  Hamlib TS2000 backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2k.h,v 1.3 2002-06-30 10:17:03 dedmons Exp $
+ *		$Id: ts2k.h,v 1.3.2.1 2002-07-06 16:51:17 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -24,12 +24,12 @@
  * created from kenwood.h	--Dale kd7eni
  */
 
-/*//+kd7eni*/
+#include <hamlib/rig.h>
 
 #ifndef _TS2K_H
 #define _TS2K_H
 
-#undef	_USEVFO
+#define	_USEVFO
 
 // imported from ts2000.h --Dale kd7eni
 /*
@@ -122,12 +122,13 @@ int ts2k_set_trn(RIG *rig, int trn);
 /*
  * functions I've written -- Dale KD7ENI
  */
+int int_n(char *tmp, char *src, int cnt);
 int ts2k_scan(RIG *rig, vfo_t vfo, scan_t scan, int ch);
 int ts2k_scan_on(RIG *rig, char ch);
 int ts2k_scan_off(RIG *rig);
 int ts2k_get_channel(RIG *rig, channel_t *chan); 
-int ts2k_set_channel(RIG *rig, const channel_t *chan); 
-char *ts2k_get_ctrl(RIG *rig);
+int ts2k_set_channel(RIG *rig, channel_t *chan); 
+int ts2k_get_ctrl(RIG *rig, char *dc_buf, int dc_len);
 int ts2k_set_ctrl(RIG *rig, int ptt, int ctrl);
 int ts2k_vfo_ctrl(RIG *rig, vfo_t vfo);
 int ts2k_get_dcs_code(RIG *rig, vfo_t vfo, tone_t *tone); 
@@ -171,5 +172,149 @@ extern const struct rig_caps ts2000_caps;
 
 extern BACKEND_EXPORT(int) initrigs_ts2k(void *be_handle);
 extern BACKEND_EXPORT(rig_model_t) proberigs_ts2k(port_t *port);
+
+/*
+ * Some of the following imported from original ts2000.c	--Dale
+ */
+
+#define TS2000_ALL_MODES (RIG_MODE_AM|RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
+	RIG_MODE_RTTY)
+#define TS2000_OTHER_TX_MODES (RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_FM| \
+	RIG_MODE_RTTY)
+#define TS2000_AM_TX_MODES (RIG_MODE_AM)
+
+// the following might be cond. later
+
+#define _NEW_VFO_H
+#ifndef _NEW_VFO_H
+
+// old / simple
+# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM)
+# define TS2000_SUBVFO (RIG_VFO_C)
+# define TS2000_RIGVFO (0)
+# define TS2000_FUNC_ALL (RIG_FUNC_TONE | RIG_FUNC_NB)
+# define TS2000_PARM_OP (RIG_PARM_BEEP | RIG_PARM_BACKLIGHT)
+# define TS2000_LEVEL_ALL (RIG_LEVEL_PREAMP | RIG_LEVEL_VOX | RIG_LEVEL_AF)
+# define TS2000_SCAN_OP (RIG_SCAN_STOP | RIG_SCAN_MEM)
+
+#else
+
+// new
+# define TS2000_FUNC_ALL ( RIG_FUNC_ALL & \
+			~(RIG_FUNC_MN | RIG_FUNC_RNF | RIG_FUNC_VSC) ) 
+# define TS2000_PARM_OP (RIG_PARM_ALL & ~(RIG_PARM_BAT | RIG_PARM_TIME))
+# define TS2000_LEVEL_ALL (RIG_LEVEL_ALL & ~(RIG_LEVEL_APF))
+# define TS2000_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
+
+// the following uses both Sub and Main for the Major mode
+# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A \
+			| RIG_VFO_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
+# define TS2000_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
+# define TS2000_RIGVFO	RIG_CTRL_MASK 
+
+#endif
+
+#define TS2000_VFO_ALL (TS2000_RIGVFO | TS2000_MAINVFO | TS2000_SUBVFO)
+// FIXME: Shouldn't this be part of rig_caps?!
+
+#define TS2000_VFO_OP (RIG_OP_UP | RIG_OP_DOWN)
+
+/*
+ * 103 available DCS codes
+ */
+static const tone_t ts2000_dcs_list[] = {
+       23,  25,  26,  31,   32,  36,  43,  47,       51,  53,
+  54,  65,  71,  72,  73,   74, 114, 115, 116, 122, 125, 131,
+  132, 134, 143, 145, 152, 155, 156, 162, 165, 172, 174, 205,
+  212, 223, 225, 226, 243, 244, 245, 246, 251, 252, 255, 261,
+  263, 265, 266, 271, 274, 306, 311, 315, 325, 331, 332, 343,
+  346, 351, 356, 364, 365, 371, 411, 412, 413, 423, 431, 432,
+  445, 446, 452, 454, 455, 462, 464, 465, 466, 503, 506, 516,
+  523, 526, 532, 546, 565, 606, 612, 624, 627, 631, 632, 654,
+  662, 664, 703, 712, 723, 731, 732, 734, 743, 754,
+  0,
+};
+
+/*
+ * modes in use by the "MD" command
+ */
+#define MD_NONE	'0'
+#define MD_LSB	'1'
+#define MD_USB	'2'
+#define MD_CW	'3'
+#define MD_FM	'4'
+#define MD_AM	'5'
+#define MD_FSK	'6'
+#define MD_CWR	'7'
+#define MD_FSKR	'9'
+
+
+// Added the following two lists --Dale, kd7eni
+// FIXME: RIG_MODE_[FSKR|CWR] undefined in rig.h
+static const int ts2k_mode_list[] = {
+	RIG_MODE_NONE, RIG_MODE_LSB, RIG_MODE_USB, RIG_MODE_CW,
+	RIG_MODE_FM, RIG_MODE_AM, RIG_MODE_RTTY, RIG_MODE_CW,
+	RIG_MODE_RTTY
+};
+
+static long int ts2k_steps[2][10] = {
+	{1000, 2500, 5000, 10000, 0, 0, 0, 0, 0, 0},	// ssb, cw, fsk
+	{5000, 6250, 10000, 12500, 15000, 20000,
+	 25000, 30000, 50000, 100000}	// am/fm
+};
+
+
+struct ts2k_id {
+	rig_model_t model;
+	int id;
+};
+
+struct ts2k_id_string {
+	rig_model_t model;
+	const char *id;
+};
+
+
+#define UNKNOWN_ID -1
+
+/*
+ * Identification number as returned by "ID;"
+ * Please, if the model number of your rig is listed as UNKNOWN_ID,
+ * send the value to <fillods@users.sourceforge.net> for inclusion. Thanks --SF
+ *
+ * TODO: sort this list with most frequent rigs first.
+ */
+static const struct ts2k_id ts2k_id_list[] = {
+	{RIG_MODEL_R5000, 5},
+	{RIG_MODEL_TS870S, 15},
+	{RIG_MODEL_TS570D, 17},
+	{RIG_MODEL_TS570S, 18},
+	{RIG_MODEL_TS2000, 19},	/* correct --kd7eni */
+	{RIG_MODEL_NONE, UNKNOWN_ID},	/* end marker */
+};
+
+static const struct ts2k_id_string ts2k_id_string_list[] = {
+	{RIG_MODEL_THD7A, "TH-D7"},
+	{RIG_MODEL_THD7AG, "TH-D7G"},
+	{RIG_MODEL_THF6A, "TH-F6"},
+	{RIG_MODEL_THF7E, "TH-F7"},
+	{RIG_MODEL_NONE, NULL},	/* end marker */
+};
+
+
+/*
+ * 38 CTCSS sub-audible tones  (17500 invalid for ctcss --kd7eni)
+  */
+static const int ts2k_ctcss_list[] = {
+	670, 719, 744, 770, 797, 825, 854, 885, 915, 948,
+	974, 1000, 1035, 1072, 1109, 1148, 1188, 1230, 1273, 1318,
+	1365, 1413, 1462, 1514, 1567, 1622, 1679, 1738, 1799, 1862,
+	1928, 2035, 2107, 2181, 2257, 2336, 2418, 2503,	// 17500,
+	/* Note: 17500 is not available as ctcss, only tone. --kd7eni */
+	0,
+};
+
+#define cmd_trm(rig) ((struct ts2k_priv_caps *)(rig)->caps->priv)->cmdtrm
+#define ta_quit	rs->hold_decode = 0; return retval
 
 #endif /* _TS2000_H */
