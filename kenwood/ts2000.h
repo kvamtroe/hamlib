@@ -2,7 +2,7 @@
  *  Hamlib TS2000 backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2000.h,v 1.2.2.1 2002-07-26 09:09:50 dedmons Exp $
+ *		$Id: ts2000.h,v 1.2.2.2 2003-02-25 03:58:50 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -25,6 +25,7 @@
  */
 
 #include <hamlib/rig.h>
+#define _TS_LABEL
 
 #ifndef _TS2000_H
 #define _TS2000_H
@@ -216,6 +217,7 @@ extern const struct rig_caps ts850_caps;
 extern const struct rig_caps ts870s_caps;
 extern const struct rig_caps ts950sdx_caps;
 extern const struct rig_caps ts2000_caps;
+extern const struct rig_caps ts2k_caps;
 
 extern BACKEND_EXPORT(int) initrigs_ts2000(void *be_handle);
 extern BACKEND_EXPORT(rig_model_t) proberigs_ts2000(port_t *port);
@@ -253,9 +255,9 @@ extern BACKEND_EXPORT(rig_model_t) proberigs_ts2000(port_t *port);
 # define TS2000_SCAN_OP (RIG_SCAN_ALL & ~(RIG_SCAN_DELTA))
 
 // the following uses both Sub and Main for the Major mode
-# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_VFO_MEM_A \
-			| RIG_VFO_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
-# define TS2000_SUBVFO (RIG_VFO_C | RIG_VFO_MEM_C | RIG_VFO_CALL_C)
+# define TS2000_MAINVFO (RIG_VFO_A | RIG_VFO_B | RIG_MEM_A \
+			| RIG_CALL_A | RIG_VFO_AB | RIG_VFO_BA)
+# define TS2000_SUBVFO (RIG_VFO_C | RIG_MEM_C | RIG_CALL_C)
 # define TS2000_RIGVFO	RIG_CTRL_MASK 
 
 #endif

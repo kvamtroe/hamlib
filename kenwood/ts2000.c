@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TS2000 description
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: ts2000.c,v 1.9.2.3 2002-08-02 09:29:42 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.4 2003-02-25 03:58:50 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -28,7 +28,8 @@
 #include <hamlib/rig.h>
 //#include "kenwood.h"
 #include "ts2000.h"
-//#include "ts2k_menu.h"
+#include "ts2k/ts2k_cmds.h"
+//#include "ts2k/ts2k_menu.h"
 
 const struct ts2000_priv_caps  ts2000_priv_caps  = {
 		cmdtrm: EOM_KEN,
@@ -316,7 +317,7 @@ set_xit:	ts2000_set_xit,
  *  Copyright (c) 2000-2002 by Stephane Fillod
  * (C) Copyright 2002 by Dale E. Edmons (KD7ENI)
  *
- *		$Id: ts2000.c,v 1.9.2.3 2002-08-02 09:29:42 dedmons Exp $
+ *		$Id: ts2000.c,v 1.9.2.4 2003-02-25 03:58:50 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -577,6 +578,7 @@ int ts2000_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 	unsigned char freqbuf[16];
 	int freq_len, ack_len = 0, retval, spcl, ptt_ctrl, scan;
 	char vfo_letter;
+	TS2K_FA_T fp;
 
 	if (vfo == RIG_VFO_CURR) {
 		retval = rig_get_vfo(rig, &vfo);
@@ -587,6 +589,9 @@ int ts2000_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 	if(vfo == RIG_VFO_VFO) {
 		retval = ts2000_set_basic(rig, RIG_VFO_VFO);
 	}
+
+	// Set parameter to cmd function
+	fp.p1 = freq;
 
 	// Save PTT/CTRL bits as an int
 	ptt_ctrl = (int) (vfo & (RIG_VFO_PTT | RIG_VFO_CTRL));
@@ -607,15 +612,18 @@ int ts2000_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 
 		switch (vfo) {
 		case RIG_VFO_A:
-		case RIG_VFO_AB:
-			vfo_letter = 'a';
+//		case RIG_VFO_AB:
+//			vfo_letter = 'a';
+			retval = ts2k_s_fa(rig, &fp);
 			break;
 		case RIG_VFO_B:
-		case RIG_VFO_BA:
-			vfo_letter = 'b';
+//		case RIG_VFO_BA:
+			retval = ts2k_s_fb(rig, &fp);
+//			vfo_letter = 'b';
 			break;
 		case RIG_VFO_C:
-			vfo_letter = 'c';
+			retval = ts2k_s_fc(rig, &fp);
+//			vfo_letter = 'c';
 			break;
 
 		/* Any other VFO minor is caught here */
@@ -624,10 +632,10 @@ int ts2000_set_freq(RIG * rig, vfo_t vfo, freq_t freq)
 				  ": unsupported VFO = %s\n", strvfo(vfo));
 			return -RIG_EINVAL;
 		}
-		freq_len = sprintf(freqbuf, "f%c%011u;", vfo_letter, (unsigned) freq);
+//		freq_len = sprintf(freqbuf, "f%c%011u;", vfo_letter, (unsigned) freq);
 
-		ack_len = 14;
-		retval = ts2000_transaction(rig, freqbuf, freq_len, NULL, NULL);
+//		ack_len = 14;
+//		retval = ts2000_transaction(rig, freqbuf, freq_len, NULL, NULL);
 	} else {
 		if(vfo & RIG_CTRL_SAT) {	// Sat before MEM!
 		/* Note: The memory BUG below doesn't apply in SAT mode.  It
@@ -2315,7 +2323,7 @@ int ts2000_get_channel(RIG * rig, channel_t * chan)
 	chan->channel_desc[8] = '\0';
 #ifdef _USEVFO
 // if curr mem is changed at top, this'll restore it
-	if ((vfo == RIG_VFO_MEM_A || vfo == RIG_VFO_MEM_C)) {
+	if ((vfo == RIG_MEM_A || vfo == RIG_MEM_C)) {
 		retval = rig_set_vfo(rig, curr_vfo);
 		CHKERR(retval);
 	}
@@ -2419,15 +2427,15 @@ int ts2000_vfo_ctrl(RIG * rig, vfo_t vfo)
 	case RIG_VFO_BA:
 	case RIG_CTRL_SAT:	// Should be PTT on main CTRL on sub (?)
 	case RIG_VFO_MAIN:
-	case RIG_VFO_MEM_A:
-	case RIG_VFO_CALL_A:
+	case RIG_MEM_A:
+	case RIG_CALL_A:
 		ctrl = TS2000_CTRL_ON_MAIN;	// FIXME : these are independent!
 		ptt = TS2000_PTT_ON_MAIN;
 		break;
 	case RIG_VFO_C:
 	case RIG_VFO_SUB:
-	case RIG_VFO_MEM_C:
-	case RIG_VFO_CALL_C:
+	case RIG_MEM_C:
+	case RIG_CALL_C:
 		ctrl = TS2000_CTRL_ON_SUB;
 		ptt = TS2000_PTT_ON_SUB;
 		break;
@@ -2539,8 +2547,8 @@ int ts2000_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 	// set proper vfo first (already done?)
 	switch (v) {
 	case RIG_VFO_MEM:	// Currently selected Main/Sub
-	case RIG_VFO_MEM_A:	// Main
-	case RIG_VFO_MEM_C:	// Sub
+	case RIG_MEM_A:	// Main
+	case RIG_MEM_C:	// Sub
 		// FIXME: we should set the group and fall through
 		/* nobreak */
 //      case RIG_VFO_VFO:         // Currently selected Main/Sub
@@ -2550,8 +2558,8 @@ int ts2000_scan(RIG * rig, vfo_t vfo, scan_t scan, int ch)
 		retval = ts2000_set_vfo(rig, v);	// already set?
 		CHKERR(retval);
 		break;
-	case RIG_VFO_CALL_A:	// 
-	case RIG_VFO_CALL_C:
+	case RIG_CALL_A:	// 
+	case RIG_CALL_C:
 	default:
 		rig_debug(RIG_DEBUG_ERR,
 			  __FUNCTION__ ": vfo 'defaulted'\n");
@@ -2905,13 +2913,13 @@ int ts2000_uniq_GetVfo(RIG *rig, vfo_t *vfo)
 			break;
 	
 		case '2':
-			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_MEM_A;
-			else if(cv & RIG_CTRL_SUB) cv |= RIG_VFO_MEM_C;
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_MEM_A;
+			else if(cv & RIG_CTRL_SUB) cv |= RIG_MEM_C;
 			break;
 	
 		case '3':
-			if(cv & RIG_CTRL_MAIN) cv |= RIG_VFO_CALL_A;
-			else if(cv & RIG_CTRL_SUB) cv |= RIG_VFO_CALL_C;
+			if(cv & RIG_CTRL_MAIN) cv |= RIG_CALL_A;
+			else if(cv & RIG_CTRL_SUB) cv |= RIG_CALL_C;
 			break;
 	
 		default:
@@ -3121,12 +3129,12 @@ int ts2000_uniq_SetMinor(RIG *rig, vfo_t vfo)
 	case RIG_VFO_BA:
 			rx = '1'; tx = '0'; break;
 
-	case RIG_VFO_MEM_A:	/* no break */
-	case RIG_VFO_MEM_C:
+	case RIG_MEM_A:	/* no break */
+	case RIG_MEM_C:
 			rx = tx = '2'; break;
 
-	case RIG_VFO_CALL_A:	/* no break */
-	case RIG_VFO_CALL_C:
+	case RIG_CALL_A:	/* no break */
+	case RIG_CALL_C:
 			rx = tx = '3'; break;
 
 	default:

@@ -1,19 +1,14 @@
 
-Status:	Being Overhauled.  Consider it broken.
-	Temporary kludge to force compile (broke Hamlib!)
+ts2k Status:
+	All modules work and compile.  Many issues still need to be
+	resolved.  Works on my rig with the original eeprom rev.
 
-	The ts2k.[ch] are for the TS-2000.  I'm too lazy to spell it any
-	different.
-
-	Check back here often.  I've been making extensive changes daily
-	(wife permitting).  I'll change the status to working as soon
-	as I get reasonable functionality back.
-
-	This file comes from my private copy of hamlib and not all
-	changes will be made to hamlib's CVS.
-
-	Let me know if you use any of this and find it works!  (It
-	has been working well for me.)
+Build:
+	Copy Makefile.am to Makefile.am.orig
+	Copy ts2k/Makefile.am.ts2k to Makefile.am
+	Edit include/hamlib/rig.h to #define _RIG_NEWVFO by removing
+	the // comment and put // in front of the
+	#undef _RIG_NEWVFO.  Now just build as normal.
 
 	73's
 
@@ -23,29 +18,74 @@ Status:	Being Overhauled.  Consider it broken.
 --------------------------------------------------------------------------
 File change summary:	(Hopefully, I'll keep this updated...)
 
-	Makefile.am	Added ts2k.c, ts2k.h
+	ts2k/		The ts2k stuff now lives in its own directory.
+			The files ts2000.[ch] are still in the main
+			directory and will go back to mainline Hamlib
+			as soon as I have time to put them back to
+			normal.  This way, at least a very basic rig
+			is available to us ts2000 users without having
+			to go through any extra work.
+
+	ts2k_cmds.[ch]	Convert normal c/c++ data to ts2000 commands.
+			All commands except "mr;", "mw;" and "ex;"
+			are implemented.  These three were excluded
+			because they warrant higher level routines
+			and I've been too lazy to write them.  They
+			will eventually be written but not recommended
+			for general use except by the higher level
+			routines.  (e.g. ts2k_menu.[ch])
+
+	tests/rc/*	*Broken*	Undergoing parser rewrite!
+			open, close, help, exit should work.
+
+			Working on a parser to call hamlib functions.
+			I've been able to copy rig-to-rig (ts2k to dummy).
+			It's worth the effort of enabling the ts2k stuff
+			just to play with this.  I've only been able
+			to implement 50% of structure before encountering
+			reduce/reduce and inexplicable shift/reduce
+			errors.  I'm writing detailed syntax diagrams
+			which are pointing out the conflicts.
+
+			After I get a first version of this software
+			I'll be begging for help.  Right now, I'd much
+			rather go it alone as I've learned *very* much
+			in this section!  Comments on the useability of
+			the command structure are welcome but I'd like
+			to sort out the syntax myself.  (Where's "The
+			Dragon Book" when you need it?)
+
+	tests/		Several new or updated commands mostly for the
+			ts2k, but hopefully good for general use!
+
+	ts2k/Makefile.am.ts2k	Added ts2k.[ch], ts2k_menu.[ch],
+		i	ts2k_cmds.[ch]
+	
 	ts2k.status	current status in the form of rigctl help
 			Takes alot of time.  May or may not be kept
 			up to date.  Anybody write an expect script?
-	ts2k.c		New
-	ts2k_menu.c	(not implemented; work to allow menus to set the
+
+	ts2k/ts2k.c	Experimental ts2000 backend.
+	ts2k/ts2k_menu.c	work to allow menus to set the
 			zillions of options we'll never have functions for
 			in hamlib.  The user and calling program will have
 			to do all the work.  Comments will be much appreciated!)
-	ts2k_menu.h	just the actual data and some structs for the rig.
-			(Currently every menu item number and text is entered
-			but the menu default is not set.  For example, grig
-			can't be expected to know every rig's menu's.  in work!)
-			It just occured to me that it would be very nice to
-			have a default hamlib menu.  If a rig don't have any
-			or no menu functions yet, the levels and other items
-			can be presented as a default menu. 
+
+	ts2k/ts2k_menu.h	just the actual data and some structs for the
+			rig.  (Currently every menu item number and text is
+			entered	but the menu default is not set.  For example,
+			grig can't be expected to know every rig's menu's.  (in
+			work!)  It just occured to me that it would be very
+			nice to have a default hamlib menu.  If a rig
+			don't have any or no menu functions yet, the
+			levels and other items can be presented as a
+			default menu. 
 
 	ts2000.c	Inserted my version.  mv'd orig to ts2000.c.orig
 	ts2000.h	renamed ts2000.c to ts2000.h
-	rigctl.c	Added comments: [# | ;] anything... [\n | \r]
+	tests/tsctl.c	Added some formatting.
 
-// rig.h *NOT* modified in CVS!!!!
+// The following is pretty outdated...
 	include/hamlib/rig.h:	(nothing extraordinary.  yet.)
 			added RIG_FUNC_ALL, RIG_PARM_ALL, RIG_LEVEL_ALL.
 			added RIG_FUNC_EXCLUDE, RIG_PARM_EXCLUDE, RIG_LEVEL_EXCLUDE
@@ -56,6 +96,7 @@ File change summary:	(Hopefully, I'll keep this updated...)
 			bitmasks, instead of bitmask and integer const.
 			I'm going to check files and look for stuff that might
 			get broken (mostly in the backends).
+
 		The following are those I've checked manually:
 			alinco/*.[ch]	// ok
 			aor/aor.c	// I need to check RIG_VFO_VFO

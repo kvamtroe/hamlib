@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - main header
  *  Copyright (c) 2000-2002 by Stephane Fillod
  *
- *		$Id: kenwood.h,v 1.21.2.1 2002-07-26 08:53:09 dedmons Exp $
+ *	$Id: kenwood.h,v 1.21.2.2 2003-02-25 03:58:48 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -53,6 +53,10 @@ int kenwood_old_set_vfo(RIG *rig, vfo_t vfo);
 int kenwood_old_get_vfo(RIG *rig, vfo_t *vfo);
 int kenwood_set_freq(RIG *rig, vfo_t vfo, freq_t freq);
 int kenwood_get_freq(RIG *rig, vfo_t vfo, freq_t *freq);
+int kenwood_set_rit(RIG * rig, vfo_t vfo, shortfreq_t rit);
+int kenwood_get_rit(RIG *rig, vfo_t vfo, shortfreq_t * rit);
+int kenwood_set_xit(RIG * rig, vfo_t vfo, shortfreq_t rit);
+int kenwood_get_xit(RIG *rig, vfo_t vfo, shortfreq_t * rit);
 int kenwood_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
 int kenwood_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width);
 int kenwood_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val);
@@ -86,10 +90,11 @@ extern const struct rig_caps ts790_caps;
 extern const struct rig_caps ts850_caps;
 extern const struct rig_caps ts870s_caps;
 extern const struct rig_caps ts2000_caps;
-extern const struct rig_caps ts2k_caps;
 extern const struct rig_caps thd7a_caps;
 extern const struct rig_caps thf7a_caps;
 extern const struct rig_caps thf7e_caps;
+extern const struct rig_caps k2_caps;
+extern const struct rig_caps ts2k_caps;
 
 extern BACKEND_EXPORT(int) initrigs_kenwood(void *be_handle);
 extern BACKEND_EXPORT(rig_model_t) proberigs_kenwood(port_t *port);

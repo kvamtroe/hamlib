@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TH handheld primitives
  *  Copyright (c) 2001-2002 by Stephane Fillod
  *
- *	$Id: th.c,v 1.7.2.1 2002-07-26 08:53:09 dedmons Exp $
+ *	$Id: th.c,v 1.7.2.2 2003-02-25 03:58:49 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -40,7 +40,7 @@
 #include <serial.h>
 
 const struct kenwood_priv_caps  th_priv_caps  = {
-    cmdtrm: EOM_TH,
+    .cmdtrm =  EOM_TH,
 };
 /* Note: Currently the code assumes the command termination is a
  * single character.
