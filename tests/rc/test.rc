@@ -17,7 +17,7 @@ open(rig[1], model[1], port[1]);
 // Real cool stuff
 
 rig[0].freq = rig[1].freq();				// rig->rig copy!
-rig[0].vfo.freq = rig[1].vfo.freq();			// rig->rig copy!
+rig[0].curr.freq = rig[1].curr.freq();			// rig->rig copy!
 rig[0].vfo(VFO_A).freq = rig[1].vfo(VFO_A).freq();	// rig->rig copy!
 
 // (my rig can't do this by itself)
@@ -25,15 +25,22 @@ rig.vfo(VFO_A).freq = rig.vfo(VFO_C).freq();		// A=C
 rig[0].vfo(VFO_A).freq = rig[0].vfo(VFO_C).freq();	// A=C, same
 
 // these are cool, but broken.
-rig.vfo.freq = 147.89MHz;		// set freq on RIG_VFO_CURR
+rig.curr.freq = 147.89MHz;		// set freq on RIG_VFO_CURR
 rig.freq(147.89MHz);			// set freq on RIG_VFO_CURR
-//rig[0].vfo.freq(146.78MHz);		// set freq on RIG_VFO_CURR
+//rig[0].curr.freq(146.78MHz);		// set freq on RIG_VFO_CURR
 //rig[1].vfo(VFO_A).freq(145.67MHz);	// set vfo and freq
 
 // Other stuff eventually will go here.
+freq = 145.33 MHz;
+
+rig.vfo(A){	// Tempory vfo change
+	freq = 147.33 MHz;
+	mode = FM;
+};
+}
 
 rig.close();
 close(rig[1]);
 
-help;
-exit;
+//help;
+//exit;

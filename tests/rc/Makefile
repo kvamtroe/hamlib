@@ -1,13 +1,29 @@
 
-all:	ts2k.tab.c lex.ts2k_yy.c
+YYPREFIX=rig_yy
+FILEPREFIX=rig
 
-ts2k.tab.c:	parser.y 
-	bison -d -t -v -p ts2k_yy -b ts2k parser.y
-	cp ts2k.tab.[ch] ..
+all:	${FILEPREFIX}.tab.c lex.${YYPREFIX}.c
 
-lex.ts2k_yy.c:	scanner.l
-	flex -I -Pts2k_yy  scanner.l
-	cp lex.ts2k_yy.c ..
+${FILEPREFIX}.tab.c:	parser.y 
+	bison -d --defines -t -v -p ${YYPREFIX} -b ${FILEPREFIX} parser.y
+	echo "#define yylval "${YYPREFIX}"lval" >> ${FILEPREFIX}.tab.h
+	echo "#define yylineno "${YYPREFIX}"lineno" >> ${FILEPREFIX}.tab.h
+	echo "#define yyparse "${YYPREFIX}"parse" >> ${FILEPREFIX}.tab.h
+	cp ${FILEPREFIX}.tab.[ch] ..
+
+lex.${YYPREFIX}.c:	scanner.l
+	flex -I -P${YYPREFIX} scanner.l
+	cp lex.${YYPREFIX}.c ..
+
+# Same as parser.y except no code--just grammar
+base:	base.y scanner.l
+	bison -d -t -v base.y
+	flex -I scanner.l
+	gcc lex.yy.c base.tab.c -o base -I../../include
+
+header:
+	cp lex_rigs.h ../
+	cp rigcmd.h ../
 
 clean:
-	rm *tab.[ch] *.output lex.*.c
+	rm *tab.[ch] *.output lex.*.c ../*tab.[ch] ../lex* base

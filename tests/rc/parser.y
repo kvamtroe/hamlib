@@ -15,7 +15,8 @@
 #include <hamlib/rig.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../src/misc.c"
+#include "../src/misc.h"
+#include "rigcmd.h"
 
 #define RIG_YY_MAXRIGS	10
 #define YYERROR_VERBOSE
@@ -23,12 +24,16 @@
 static RIG *rigs[RIG_YY_MAXRIGS];
 static rig_model_t models[RIG_YY_MAXRIGS];
 static char *ports[RIG_YY_MAXRIGS];
-extern int ts2k_yylineno;
+static channel_t chans[RIG_YY_MAXRIGS];
+static int default_idx = 0;	// Default index if none specified.
+static vfo_t default_vfo = RIG_VFO_CURR;	// Default VFO
 
-int setup(RIG *rig, rig_model_t model, char *port);
+extern int yylineno;
+
+//int setup(RIG *rig, rig_model_t model, char *port);
 //int rig_setup(RIG *rig, rig_model_t model, char *port);
 void help(void);
-void ts2k_yyerror(char *);
+void yyerror(char *);
 int s_cpy(RIG *, vfo_t, vfo_t);
 int s_sw(RIG *, vfo_t, vfo_t);
 
@@ -37,15 +42,13 @@ int s_sw(RIG *, vfo_t, vfo_t);
 %union {
 	rig_model_t	model;
 	RIG		*rig;
+	channel_t	*chan;
 	vfo_t		vfo;
 	freq_t		freq;
 	char		*txt;
 	int		val;
 	float		fval;
-	struct {
-		RIG	*rig;
-		vfo_t	vfo;
-	} spec;
+	spec_t		spec;
 }
 
 %left '+' '-'
@@ -54,12 +57,25 @@ int s_sw(RIG *, vfo_t, vfo_t);
 
 
 %token	RIG_TOKEN_CLOSE
+	RIG_TOKEN_CALL
+	RIG_TOKEN_CURR
+	RIG_TOKEN_DEBUG
 	RIG_TOKEN_EXIT
+	RIG_TOKEN_FM
 	RIG_TOKEN_FREQ
 	RIG_TOKEN_HELP
 	RIG_TOKEN_INIT
+	RIG_TOKEN_MAIN
+	RIG_TOKEN_MEM
+	RIG_TOKEN_MODE
+	RIG_TOKEN_MINUSMINUS
+	RIG_TOKEN_OFFSET
 	RIG_TOKEN_OPEN
+	RIG_TOKEN_PLUSPLUS
 	RIG_TOKEN_SETUP
+	RIG_TOKEN_SHIFT
+	RIG_TOKEN_SUB
+	RIG_TOKEN_TONE
 	RIG_TOKEN_AEQB
 	RIG_TOKEN_BEQA
 	RIG_TOKEN_AEQC
@@ -78,40 +94,20 @@ int s_sw(RIG *, vfo_t, vfo_t);
 		RIG_TOKEN_HZ
 
 %token <model>	RIG_TOKEN_MODEL
-		RIG_TOKEN_DUMMY
-		RIG_TOKEN_TS2K
-		RIG_TOKEN_TS2000
+		RIG_LEX_MODEL
 
 %token <rig>	
 
 %token <spec>	
 
 %token <txt>	RIG_TOKEN_STRING
+		RIG_TOKEN_IDENTIFIER
 
 %token <val>	RIG_TOKEN_INT
 		RIG_TOKEN_PORT
 		RIG_TOKEN_RIG
 
 %token <vfo>	RIG_TOKEN_VFO
-		RIG_LEX_CALLA
-		RIG_LEX_CALLC
-		RIG_LEX_MEMA
-		RIG_LEX_MEMC 
-		RIG_LEX_VFOA
-		RIG_LEX_VFOB
-		RIG_LEX_VFOC
-		RIG_LEX_VFOAB
-		RIG_LEX_VFOBA
-		RIG_LEX_CROSS
-		RIG_LEX_FAKE 
-		RIG_LEX_MAIN
-		RIG_LEX_RIT
-		RIG_LEX_SAT
-		RIG_LEX_SCAN
-		RIG_LEX_SUB
-		RIG_LEX_XIT
-		RIG_LEX_CURR
-		RIG_LEX_MEM
 		RIG_LEX_VFO
 
 %type <freq>	freq_val
@@ -134,7 +130,6 @@ int s_sw(RIG *, vfo_t, vfo_t);
 		super_function
 
 %type <vfo>	vfo_id
-		vfo_item
 		vfo_type
 
 %%
@@ -186,7 +181,7 @@ super_function:
 
 freq_lhs:	rig_id '.' RIG_TOKEN_FREQ		{
 			$$.rig = rigs[$1];
-			$$.vfo = RIG_VFO_CURR;
+			$$.vfo = default_vfo;
 		}
 	|	rig_id '.' vfo_id '.' RIG_TOKEN_FREQ	{
 			$$.rig = rigs[$1];
@@ -247,38 +242,17 @@ port_id_rhs:	port_id			{ $$ = ports[$1]; }
 	|	RIG_TOKEN_STRING	{ $$ = $1; }
 	;
 
-model_type:	RIG_TOKEN_DUMMY		{ $$ = $1; }
-	|	RIG_TOKEN_TS2K		{ $$ = $1; }
-	|	RIG_TOKEN_TS2000	{ $$ = $1; }
+model_type:	RIG_LEX_MODEL		{ $$ = $1; }
 	|	RIG_TOKEN_INT		{ $$ = (rig_model_t) $1; }
 	;
 
-vfo_type:	vfo_item		{ $$ = $1; }
-	|	vfo_type '|' vfo_item	{ $$ = $1 | $3; }
+vfo_type:	RIG_LEX_VFO			{ $$ = $1; }
+	|	vfo_type '|' RIG_LEX_VFO	{ $$ = $1 | $3; }
 	;
 
-vfo_item:	RIG_LEX_CALLA
-	|	RIG_LEX_CALLC
-	|	RIG_LEX_MEMA
-	|	RIG_LEX_MEMC 
-	|	RIG_LEX_VFOA
-	|	RIG_LEX_VFOB
-	|	RIG_LEX_VFOC
-	|	RIG_LEX_VFOAB
-	|	RIG_LEX_VFOBA
-	|	RIG_LEX_CROSS
-	|	RIG_LEX_FAKE 
-	|	RIG_LEX_MAIN
-	|	RIG_LEX_RIT
-	|	RIG_LEX_SAT
-	|	RIG_LEX_SCAN
-	|	RIG_LEX_SUB
-	|	RIG_LEX_XIT
-	|	RIG_LEX_CURR
-	|	RIG_LEX_MEM
-	|	RIG_LEX_VFO
+rig_function:
+	RIG_TOKEN_DEBUG '(' RIG_TOKEN_INT ')' {	rig_set_debug( $3 ); $$ = RIG_OK; }
 	;
-
 rig_function:
 	rig_id '.' RIG_TOKEN_OPEN '(' model_id ',' port_id_rhs ')' {
 		if( rigs[$1] == NULL) {
@@ -320,6 +294,7 @@ rig_function:
 			if($$ != RIG_OK)
 				yyerror("close() failed.\n");
 			$$ = rig_cleanup(rigs[$1]);
+			rigs[$1] = NULL;
 			if($$ != RIG_OK)
 				yyerror("cleanup() failed.\n");
 		} else {
@@ -334,6 +309,7 @@ rig_function:
 			if($$ != RIG_OK)
 				yyerror("close() failed.\n");
 			$$ = rig_cleanup(rigs[$3]);
+			rigs[$3] = NULL;
 			if($$ != RIG_OK)
 				yyerror("cleanup() failed.\n");
 		} else {
@@ -370,7 +346,7 @@ int s_sw(RIG *rig, vfo_t dst, vfo_t src)
 void yyerror(char *err)
 {
 	//	fprintf(stderr, __FUNCTION__": %s\n", err);
-	rig_debug(RIG_DEBUG_ERR, "cmd_parse: %s on line %i\n", err, ts2k_yylineno);
+	rig_debug(RIG_DEBUG_ERR, "cmd_parse: %s on line %i\n", err, yylineno);
 }
 
 void help(void)
