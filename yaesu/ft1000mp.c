@@ -4,7 +4,7 @@
  * This shared library provides an API for communicating
  * via serial interface to an FT-1000MP using the "CAT" interface
  *
- *	$Id: ft1000mp.c,v 1.1 2002-12-01 21:49:12 fillods Exp $
+ *	$Id: ft1000mp.c,v 1.1.2.1 2003-02-25 15:34:15 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as

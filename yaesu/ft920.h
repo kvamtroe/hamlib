@@ -9,7 +9,7 @@
  * via serial interface to an FT-920 using the "CAT" interface
  *
  *
- *    $Id: ft920.h,v 1.11 2003-01-19 04:48:00 n0nb Exp $  
+ *    $Id: ft920.h,v 1.11.2.1 2003-02-25 15:34:17 dedmons Exp $  
  *
  *
  *  This library is free software; you can redistribute it and/or

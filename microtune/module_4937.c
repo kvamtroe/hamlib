@@ -2,7 +2,7 @@
  *  Hamlib microtune backend - 4937 file
  *  Copyright (c) 2003 by Stephane Fillod
  *
- *	$Id: module_4937.c,v 1.1 2003-01-29 23:06:30 fillods Exp $
+ *	$Id: module_4937.c,v 1.1.2.1 2003-02-25 15:34:14 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
