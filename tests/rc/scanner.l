@@ -1,59 +1,7 @@
 %{
-#include <hamlib/rig.h>
+//#include <hamlib/rig.h>
 
-//#define _YY_BASE_TEST
-#undef _YY_BASE_TEST
-
-#ifdef _YY_BASE_TEST
-# include "rigcmd.h"
-# include "base.tab.h"
-#else
-# include "rigcmd.h"
-# include "rig.tab.h"
-#endif
-
-#include "lex_rigs.h"
-#include <string.h>
-
-struct {
-	const char *name;
-	vfo_t vfo;
-} lex_vfos[] = {
-	{ "A", RIG_VFO_A}, { "B", RIG_VFO_B}, { "C", RIG_VFO_C},
-	{ "VFOA", RIG_VFO_A}, { "vfoa", RIG_VFO_A}, { "VFO_A", RIG_VFO_A},
-	{ "VFOB", RIG_VFO_B}, { "vfob", RIG_VFO_B}, { "VFO_B", RIG_VFO_B},
-	{ "VFOC", RIG_VFO_C}, { "vfoc", RIG_VFO_C}, { "VFO_C", RIG_VFO_C},
-	{ "VFOAB", RIG_VFO_AB}, { "vfoab", RIG_VFO_AB}, { "VFO_AB", RIG_VFO_AB},
-	{ "VFOBA", RIG_VFO_BA}, { "vfoba", RIG_VFO_BA}, { "VFO_BA", RIG_VFO_BA},
-	{ "MEMA", RIG_VFO_MEM_A}, { "mema", RIG_VFO_MEM_A}, { "MEM_A", RIG_VFO_MEM_A},
-	{ "MEMC", RIG_VFO_MEM_C}, { "memc", RIG_VFO_MEM_C}, { "MEM_C", RIG_VFO_MEM_C},
-	{ "CALLA", RIG_VFO_CALL_A}, { "calla", RIG_VFO_CALL_A}, { "CALL_A", RIG_VFO_CALL_A},
-	{ "CALLC", RIG_VFO_CALL_C}, { "callc", RIG_VFO_CALL_C}, { "CALL_C", RIG_VFO_CALL_C},
-
-	{ "VFO1", RIG_VFO1},
-	{ "VFO2", RIG_VFO2},
-	{ "VFO3", RIG_VFO3},
-	{ "VFO4", RIG_VFO4},
-	{ "VFO5", RIG_VFO5},
-
-	{ "PTT", RIG_VFO_PTT},
-	{ "CTRL", RIG_VFO_CTRL},
-
-	{ "FAKE", RIG_CTRL_FAKE},
-	{ "MAIN", RIG_CTRL_MAIN}, { "Main", RIG_CTRL_MAIN},
-	{ "SUB", RIG_CTRL_SUB}, { "Sub", RIG_CTRL_SUB},
-	{ "MEM", RIG_CTRL_MEM},
-	{ "CALL", RIG_CTRL_CALL},
-	{ "SPLIT", RIG_CTRL_SPLIT},
-	{ "REV", RIG_CTRL_REV},
-	{ "RIT", RIG_CTRL_RIT},
-	{ "SAT", RIG_CTRL_SAT},
-	{ "SCAN", RIG_CTRL_SCAN},
-	{ "XIT", RIG_CTRL_XIT},
-	{ "CROSS", RIG_CTRL_CROSS},
-
-	{ NULL, 0 }
-};
+#include "rigcmd.h"
 
 %}
 
@@ -65,49 +13,142 @@ struct {
 
 [ \t]+	/* empty */;
 	/* Keywords */
+am |
+AM	{ return RIG_TOKEN_AM; }
 call	{ return RIG_TOKEN_CALL; }
-close	{ return RIG_TOKEN_CLOSE; }
+ctcss	{ return RIG_TOKEN_CTCSS; }
 curr	{ return RIG_TOKEN_CURR; }
-debug	{ return RIG_TOKEN_DEBUG; }
+cw |
+CW	{ return RIG_TOKEN_CW; }
 exit	{ return RIG_TOKEN_EXIT; }
-freq	{ return RIG_TOKEN_FREQ; }
+fm |
+FM	{ return RIG_TOKEN_FM; }
+fsk |
+FSK |
+RTTY	{ return RIG_TOKEN_RTTY; }
 help	{ return RIG_TOKEN_HELP; }
 init	{ return RIG_TOKEN_INIT; }
-open	{ return RIG_TOKEN_OPEN; }
-offset	{ return RIG_TOKEN_OFFSET; }
+lsb |
+LSB	{ return RIG_TOKEN_LSB; }
 main	{ return RIG_TOKEN_MAIN; }
 mem	{ return RIG_TOKEN_MEM; }
-mode	{ yylval.val = 0; return RIG_TOKEN_MODE; }
+menu	{ return RIG_TOKEN_MENU; }
 model	{ yylval.val = 0; return RIG_TOKEN_MODEL; }
+offset	{ return RIG_TOKEN_OFFSET; }
 port	{ yylval.val = 0; return RIG_TOKEN_PORT; }
+pm	{ return RIG_TOKEN_PM; }
+print	{ return RIG_TOKEN_PRINT; }
 rig	{ yylval.val = 0; return RIG_TOKEN_RIG; }
 setup	{ return RIG_TOKEN_SETUP; }
 shift	{ return RIG_TOKEN_SHIFT; }
 sub	{ return RIG_TOKEN_SUB; }
 tone	{ return RIG_TOKEN_TONE; }
-vfo	{ return RIG_TOKEN_VFO; }
-FM	{ return RIG_TOKEN_FM; }
+usb |
+USB	{ return RIG_TOKEN_USB; }
+rig_default		{ return RIG_TOKEN_RIGDEFAULT; }
 
 	/* Super functions available only via the parser! */
-"a=b" |
-"A=B"	{ return RIG_TOKEN_AEQB; }
+"a>b" |
+"b<a" |
 "b=a" |
-"B=A"	{ return RIG_TOKEN_BEQA; }
-"a=c" |
-"A=C"	{ return RIG_TOKEN_AEQC; }
+"A>B" |
+"B<A" |
+"B=A"	{ return RIG_TOKEN_BEQA; }	// A copied to B 
+"a>c" |
+"c<a" |
 "c=a" |
-"C=A"	{ return RIG_TOKEN_CEQA; }
-"b=c" |
-"B=C"	{ return RIG_TOKEN_BEQC; }
+"A>C" |
+"C<A" |
+"C=A"	{ return RIG_TOKEN_CEQA; }	// A copied to C
+"b>a" |
+"a<b" |
+"a=b" |
+"B>A" |
+"A<B" |
+"A=B"	{ return RIG_TOKEN_AEQB; }	// B copied to A
+"b>c" |
+"c<b" |
 "c=b" |
-"C=B"	{ return RIG_TOKEN_CEQB; }
+"B>C" |
+"C<B" |
+"C=B"	{ return RIG_TOKEN_CEQB; }	// B copied to C
+"c>a" |
+"a<c" |
+"a=c" |
+"c>A" |
+"A<C" |
+"A=C"	{ return RIG_TOKEN_AEQC; }	// C copied to A
+"b>a" |
+"a<b" |
+"a=b" |
+"B>A" |
+"A<B" |
+"A=B"	{ return RIG_TOKEN_BEQC; }	// C copied to B
+"a>m" |
+"m<a" |
+"m=a" |
+"A>M" |
+"M<A" |
+"M=A"	{ return RIG_TOKEN_MEQA; }	// A copied to M
+"b>m" |
+"m<b" |
+"b=m" |
+"B>M" |
+"M<B" |
+"M=B"	{ return RIG_TOKEN_MEQB; }	// B copied to M
+"c>m" |
+"m<c" |
+"m=c" |
+"C>M" |
+"M<C" |
+"M=C"	{ return RIG_TOKEN_MEQC; }	// C copied to M
+"m>a" |
+"a<m" |
+"m=a" |
+"m>A" |
+"A<M" |
+"M=A"	{ return RIG_TOKEN_AEQM; }	// M copied to A
+"m>b" |
+"b<m" |
+"b=m" |
+"M>B" |
+"B<M" |
+"B=M"	{ return RIG_TOKEN_BEQM; }	// M copied to B
+"m>c" |
+"c<m" |
+"c=m" |
+"M>C" |
+"C<M" |
+"C=M"	{ return RIG_TOKEN_CEQM; }	// M copied to C
 "a/b" |
-"A/B"	{ return RIG_TOKEN_ASWB; }
+"b/a" |
+"A/B" |
+"B/A"	{ return RIG_TOKEN_ASWB; }	// A->tmp, B->A, tmp->B
 "a/c" |
-"A/C"	{ return RIG_TOKEN_ASWC; }
+"c/a" |
+"A/C" |
+"C/A"	{ return RIG_TOKEN_ASWC; }	// A->tmp, C->A, tmp->C
+"b/c" |
+"c/b" |
+"B/C" |
+"C/B"	{ return RIG_TOKEN_BSWC; }	// B->tmp, C->B, tmp->C
+"a/m" |
+"m/a" |
+"A/M" |
+"M/A"	{ return RIG_TOKEN_ASWM; }	// A->tmp, M->A, tmp->M
+"b/m" |
+"m/b" |
+"B/M" |
+"M/B"	{ return RIG_TOKEN_BSWM; }	// B->tmp, M->B, tmp->M
+"c/m" |
+"m/c" |
+"C/M" |
+"M/C"	{ return RIG_TOKEN_CSWM; }	// C->tmp, M->C, tmp->M
 
 "++"	{ return RIG_TOKEN_PLUSPLUS; }
 "--"	{ return RIG_TOKEN_MINUSMINUS; }
+"-="	{ return RIG_TOKEN_MINUSEQ; }
+"+="	{ return RIG_TOKEN_PLUSEQ; }
 
 	/* constants for us lazy people */
 GHz	{ yylval.fval = 1e9; return RIG_TOKEN_GHZ; }
@@ -155,40 +196,3 @@ moonmelter	{ yylval.model = RIG_MODEL_RPC; return RIG_LEX_MODEL; }
 	C++ style comments "//" work in bison but *not* in flex!!
 */
 
-/*
- * Checks any remaining keywords and returns the appropriate info.
- *	I only do a straight linear search.
- */
-int keyword(char * token)
-{
-	int i, j;
-
-	//rig_debug(RIG_DEBUG_VERBOSE, __FUNCTION__": %s\n", token);
-	fprintf(stdout, __FUNCTION__": %s\n", token);
-	// VFOs (often used)
-	for(i=0; lex_vfos[i].name != NULL; i++) {
-		for(j=0; lex_vfos[i].name[j] == token[j]; j++) {
-			if((lex_vfos[i].name[j] == '\0')
-			   && (token[j] == '\0')) {	// exact match only
-				yylval.vfo = lex_vfos[i].vfo;
-				return RIG_LEX_VFO;
-			}
-		}
-	}
-	// Nope, not a vfo_id
-
-	// Models (least used, so last!)
-	for(i=0; lex_riglist[i].name != NULL; i++) {
-		for(j=0; lex_riglist[i].name[j] == token[j]; j++) {
-			if((lex_riglist[i].name[j] == '\0')
-			   && (token[j] == '\0')) {	// exact match only
-				yylval.model = lex_riglist[i].model;
-				return RIG_LEX_MODEL;
-			}
-		}
-	}
-	// Nope, not a model_id
-
-	yylval.txt = strdup(token);
-	return RIG_TOKEN_IDENTIFIER;
-}

@@ -1,22 +1,29 @@
 // Rig command tests
 
+//e denotes error
+
 // The following necessary functions work
 port = "/dev/ttyS1";
 model = ts2k;
 
 rig.open(model, port);
+rig.open(model);	// param_list not working!!
 
 // Alternate uses...
 port[1] = "/dev/null";
 model[1] = dummy;
-open(rig[1], model[1], port[1]);
+open( rig[1], model[1], port[1]);
 
 // The following may work someday but no code is written...
-// rig.open(ts2k, "/dev/ttyS1");
+rig.open(ts2k, "/dev/ttyS1");
+
+// Test error recovery (line 18)
+//['`\\%;
 
 // Real cool stuff
 
-rig[0].freq = rig[1].freq();				// rig->rig copy!
+rig[0].freq = rig[1].freq();
+rig[0].freq = rig[1].freq = rig[1].freq();
 rig[0].curr.freq = rig[1].curr.freq();			// rig->rig copy!
 rig[0].vfo(VFO_A).freq = rig[1].vfo(VFO_A).freq();	// rig->rig copy!
 
@@ -24,23 +31,40 @@ rig[0].vfo(VFO_A).freq = rig[1].vfo(VFO_A).freq();	// rig->rig copy!
 rig.vfo(VFO_A).freq = rig.vfo(VFO_C).freq();		// A=C
 rig[0].vfo(VFO_A).freq = rig[0].vfo(VFO_C).freq();	// A=C, same
 
-// these are cool, but broken.
-rig.curr.freq = 147.89MHz;		// set freq on RIG_VFO_CURR
-rig.freq(147.89MHz);			// set freq on RIG_VFO_CURR
-//rig[0].curr.freq(146.78MHz);		// set freq on RIG_VFO_CURR
-//rig[1].vfo(VFO_A).freq(145.67MHz);	// set vfo and freq
+// these are cool.
+rig.curr.freq = 147.89 MHz;		// set freq on RIG_VFO_CURR
+rig.freq(147.89 MHz);			// set freq on RIG_VFO_CURR
+rig[0].curr.freq(146.78 MHz);		// set freq on RIG_VFO_CURR
+rig[1].vfo(VFO_A).freq(145.67 MHz);	// set vfo and freq
+vfo(VFO_A).freq(145.67 MHz);	// set vfo and freq
 
 // Other stuff eventually will go here.
 freq = 145.33 MHz;
+freq = 145.33 MHz + 1.0 kHz;
+freq += 2.5 kHz;
+//e freq++;
 
-rig.vfo(A){	// Tempory vfo change
-	freq = 147.33 MHz;
-	mode = FM;
-};
-}
+//e rig.vfo( A )
+//e {	// Tempory vfo change
+//e 	freq = 147.33 MHz;
+	//mode = FM;	// I'll need to sort out the semantics for this...
+//e 	rig[0].vfo(B) {
+//e		freq = 146.82 MHz;	// Just to see if it works :)
+//e	};
+//e };
+// Note: trailing ';' is required syntax!
+
+// Complicated, verbose and unsavory expressions :)
+rig[0].main.vfo(MEM|MEMA).chan(100).freq(145330000 Hz);
+rig[0].main.mem(A).chan(100).freq(145330000 Hz);	// shorter form
+rig.main.mem(A).chan(100).freq(145.33 MHz);	// even shorter
+rig.chan(100).freq(145.33 MHz);	// direct mem, rather than mema pointer
+mem(A).freq(145.33 MHz);	// shortest possible direct mem
+chan(100).freq(145.33 MHz);	// shortest possible direct mem
+freq=145.33 MHz;		// shortest possible freq
 
 rig.close();
-close(rig[1]);
+close( rig[1] );
 
-//help;
-//exit;
+help;
+exit;

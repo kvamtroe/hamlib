@@ -2,28 +2,29 @@
 YYPREFIX=rig_yy
 FILEPREFIX=rig
 
-all:	${FILEPREFIX}.tab.c lex.${YYPREFIX}.c
+all:	header ${FILEPREFIX}.tab.c lex.${YYPREFIX}.c ../rigcmd.c
 
-${FILEPREFIX}.tab.c:	parser.y 
+${FILEPREFIX}.tab.c:	parser.y rigcmd.h tree.h
 	bison -d --defines -t -v -p ${YYPREFIX} -b ${FILEPREFIX} parser.y
-	echo "#define yylval "${YYPREFIX}"lval" >> ${FILEPREFIX}.tab.h
-	echo "#define yylineno "${YYPREFIX}"lineno" >> ${FILEPREFIX}.tab.h
-	echo "#define yyparse "${YYPREFIX}"parse" >> ${FILEPREFIX}.tab.h
 	cp ${FILEPREFIX}.tab.[ch] ..
 
-lex.${YYPREFIX}.c:	scanner.l
+lex.${YYPREFIX}.c:	scanner.l rigcmd.h tree.h
 	flex -I -P${YYPREFIX} scanner.l
 	cp lex.${YYPREFIX}.c ..
 
 # Same as parser.y except no code--just grammar
-base:	base.y scanner.l
+base:	base.y scanner.l rigcmd.h rigcmd.c tree.h lex_keywords.h lex_rigs.h
 	bison -d -t -v base.y
 	flex -I scanner.l
-	gcc lex.yy.c base.tab.c -o base -I../../include
+	gcc lex.yy.c base.tab.c rigcmd.c -o base -I../../include
 
-header:
-	cp lex_rigs.h ../
-	cp rigcmd.h ../
+header:	rigcmd.h lex_rigs.h tree.h rigcmd.c parser.y scanner.l lex_rotors.h
+#../rigcmd.c:	rigcmd.h lex_rigs.h rigcmd.c tree.h
+#../rigcmd.c:	rigcmd.h lex_rigs.h tree.h rigcmd.c parser.y scanner.l
+	cp tree.h ../
+	cp lex_*.h ../
+	cp rigcmd.[ch] ../
+	bin/mk_hdr libhamlib.so
 
 clean:
-	rm *tab.[ch] *.output lex.*.c ../*tab.[ch] ../lex* base
+	rm *tab.[ch] *.output lex.*.c ../*tab.[ch] ../lex* base ../tree.h

@@ -15,45 +15,68 @@
 #define	RIG_TOKEN_CLOSE	257
 #define	RIG_TOKEN_CALL	258
 #define	RIG_TOKEN_CURR	259
-#define	RIG_TOKEN_DEBUG	260
-#define	RIG_TOKEN_EXIT	261
-#define	RIG_TOKEN_FM	262
-#define	RIG_TOKEN_FREQ	263
-#define	RIG_TOKEN_HELP	264
-#define	RIG_TOKEN_INIT	265
-#define	RIG_TOKEN_MAIN	266
-#define	RIG_TOKEN_MEM	267
-#define	RIG_TOKEN_MODE	268
-#define	RIG_TOKEN_MINUSMINUS	269
-#define	RIG_TOKEN_OFFSET	270
-#define	RIG_TOKEN_OPEN	271
-#define	RIG_TOKEN_PLUSPLUS	272
-#define	RIG_TOKEN_SETUP	273
-#define	RIG_TOKEN_SHIFT	274
-#define	RIG_TOKEN_SUB	275
-#define	RIG_TOKEN_TONE	276
-#define	RIG_TOKEN_AEQB	277
-#define	RIG_TOKEN_BEQA	278
-#define	RIG_TOKEN_AEQC	279
-#define	RIG_TOKEN_CEQA	280
-#define	RIG_TOKEN_BEQC	281
-#define	RIG_TOKEN_CEQB	282
-#define	RIG_TOKEN_ASWB	283
-#define	RIG_TOKEN_ASWC	284
-#define	RIG_TOKEN_FLOAT	285
-#define	RIG_TOKEN_GHZ	286
-#define	RIG_TOKEN_MHZ	287
-#define	RIG_TOKEN_KHZ	288
-#define	RIG_TOKEN_HZ	289
-#define	RIG_TOKEN_MODEL	290
-#define	RIG_LEX_MODEL	291
-#define	RIG_TOKEN_STRING	292
-#define	RIG_TOKEN_IDENTIFIER	293
-#define	RIG_TOKEN_INT	294
-#define	RIG_TOKEN_PORT	295
-#define	RIG_TOKEN_RIG	296
-#define	RIG_TOKEN_VFO	297
-#define	RIG_LEX_VFO	298
+#define	RIG_TOKEN_CTCSS	260
+#define	RIG_TOKEN_DEBUG	261
+#define	RIG_TOKEN_EXIT	262
+#define	RIG_TOKEN_CW	263
+#define	RIG_TOKEN_AM	264
+#define	RIG_TOKEN_FM	265
+#define	RIG_TOKEN_LSB	266
+#define	RIG_TOKEN_USB	267
+#define	RIG_TOKEN_RTTY	268
+#define	RIG_TOKEN_FREQ	269
+#define	RIG_TOKEN_HELP	270
+#define	RIG_TOKEN_INIT	271
+#define	RIG_TOKEN_MAIN	272
+#define	RIG_TOKEN_MENU	273
+#define	RIG_TOKEN_MEM	274
+#define	RIG_TOKEN_MODE	275
+#define	RIG_TOKEN_MINUSEQ	276
+#define	RIG_TOKEN_MINUSMINUS	277
+#define	RIG_TOKEN_OFFSET	278
+#define	RIG_TOKEN_OPEN	279
+#define	RIG_TOKEN_PLUSEQ	280
+#define	RIG_TOKEN_PLUSPLUS	281
+#define	RIG_TOKEN_PM	282
+#define	RIG_TOKEN_PRINT	283
+#define	RIG_TOKEN_RIGDEFAULT	284
+#define	RIG_TOKEN_SETUP	285
+#define	RIG_TOKEN_SHIFT	286
+#define	RIG_TOKEN_SUB	287
+#define	RIG_TOKEN_TONE	288
+#define	RIG_TOKEN_BEQA	289
+#define	RIG_TOKEN_CEQA	290
+#define	RIG_TOKEN_AEQB	291
+#define	RIG_TOKEN_CEQB	292
+#define	RIG_TOKEN_AEQC	293
+#define	RIG_TOKEN_BEQC	294
+#define	RIG_TOKEN_AEQM	295
+#define	RIG_TOKEN_BEQM	296
+#define	RIG_TOKEN_CEQM	297
+#define	RIG_TOKEN_MEQA	298
+#define	RIG_TOKEN_MEQB	299
+#define	RIG_TOKEN_MEQC	300
+#define	RIG_TOKEN_ASWB	301
+#define	RIG_TOKEN_ASWC	302
+#define	RIG_TOKEN_BSWC	303
+#define	RIG_TOKEN_ASWM	304
+#define	RIG_TOKEN_BSWM	305
+#define	RIG_TOKEN_CSWM	306
+#define	RIG_LEX_HAMLIB	307
+#define	RIG_TOKEN_FLOAT	308
+#define	RIG_TOKEN_GHZ	309
+#define	RIG_TOKEN_MHZ	310
+#define	RIG_TOKEN_KHZ	311
+#define	RIG_TOKEN_HZ	312
+#define	RIG_TOKEN_MODEL	313
+#define	RIG_LEX_MODEL	314
+#define	RIG_TOKEN_STRING	315
+#define	RIG_TOKEN_IDENT	316
+#define	RIG_TOKEN_INT	317
+#define	RIG_TOKEN_PORT	318
+#define	RIG_TOKEN_RIG	319
+#define	RIG_TOKEN_VFO	320
+#define	RIG_LEX_VFO	321
 
 #line 1 "parser.y"
 
@@ -70,14 +93,10 @@
  *	better.  For now, this seems to be working out well.	--Dale
  */
 
-#include <hamlib/rig.h>
-#include <string.h>
-#include <stdlib.h>
-#include "../src/misc.h"
+#define _YY_RIG_PARSER
 #include "rigcmd.h"
 
-#define RIG_YY_MAXRIGS	10
-#define YYERROR_VERBOSE
+#define YYERROR_VERBOSE 1
 
 static RIG *rigs[RIG_YY_MAXRIGS];
 static rig_model_t models[RIG_YY_MAXRIGS];
@@ -86,27 +105,23 @@ static channel_t chans[RIG_YY_MAXRIGS];
 static int default_idx = 0;	// Default index if none specified.
 static vfo_t default_vfo = RIG_VFO_CURR;	// Default VFO
 
-extern int yylineno;
-
-//int setup(RIG *rig, rig_model_t model, char *port);
-//int rig_setup(RIG *rig, rig_model_t model, char *port);
-void help(void);
-void yyerror(char *);
-int s_cpy(RIG *, vfo_t, vfo_t);
-int s_sw(RIG *, vfo_t, vfo_t);
+extern int rig_yylineno;
 
 
-#line 42 "parser.y"
+#line 31 "parser.y"
 typedef union {
+	channel_t	*spec;
+/*	spec_t		spec; */	// FIXME:
+	tree_t		*tree;
 	rig_model_t	model;
 	RIG		*rig;
 	channel_t	*chan;
+	symtab_t	sym;
 	vfo_t		vfo;
 	freq_t		freq;
 	char		*txt;
 	int		val;
 	float		fval;
-	spec_t		spec;
 } YYSTYPE;
 #ifndef YYDEBUG
 #define YYDEBUG 1
@@ -124,24 +139,24 @@ typedef union {
 
 #define	YYFINAL		104
 #define	YYFLAG		-32768
-#define	YYNTBASE	58
+#define	YYNTBASE	81
 
-#define YYTRANSLATE(x) ((unsigned)(x) <= 298 ? yytranslate[x] : 73)
+#define YYTRANSLATE(x) ((unsigned)(x) <= 321 ? yytranslate[x] : 96)
 
 static const char yytranslate[] = {     0,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-     2,     2,     2,     2,     2,     2,     2,     2,     2,    52,
-    53,     5,     3,    57,     4,    51,     6,     2,     2,     2,
-     2,     2,     2,     2,     2,     2,     2,     2,    50,     2,
-     7,     2,     2,     2,     2,     2,     2,     2,     2,     2,
+     2,     2,     2,     2,     2,     2,     2,     2,     2,    75,
+    76,     6,     4,    80,     5,    74,     7,     2,     2,     2,
+     2,     2,     2,     2,     2,     2,     2,     2,    73,     2,
+     3,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-    54,     2,    55,     2,     2,     2,     2,     2,     2,     2,
+    77,     2,    78,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-     2,     2,     2,    56,     2,     2,     2,     2,     2,     2,
+     2,     2,     2,    79,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
      2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -158,7 +173,10 @@ static const char yytranslate[] = {     0,
     12,    13,    14,    15,    16,    17,    18,    19,    20,    21,
     22,    23,    24,    25,    26,    27,    28,    29,    30,    31,
     32,    33,    34,    35,    36,    37,    38,    39,    40,    41,
-    42,    43,    44,    45,    46,    47,    48,    49
+    42,    43,    44,    45,    46,    47,    48,    49,    50,    51,
+    52,    53,    54,    55,    56,    57,    58,    59,    60,    61,
+    62,    63,    64,    65,    66,    67,    68,    69,    70,    71,
+    72
 };
 
 #if YYDEBUG != 0
@@ -171,67 +189,72 @@ static const short yyprhs[] = {     0,
    180,   186
 };
 
-static const short yyrhs[] = {    59,
-     0,    60,    50,     0,    59,    60,    50,     0,    15,     0,
-    12,     0,    72,     0,    61,     0,    62,     0,    65,     7,
-    70,     0,    67,     7,    69,     0,    63,     7,    64,     0,
-    66,    51,    28,     0,    66,    51,    29,     0,    66,    51,
-    30,     0,    66,    51,    31,     0,    66,    51,    32,     0,
-    66,    51,    33,     0,    66,    51,    34,     0,    66,    51,
-    35,     0,    66,    51,    14,     0,    66,    51,    68,    51,
-    14,     0,    45,    37,     0,    45,    38,     0,    45,    39,
-     0,    45,    40,     0,    45,     0,    36,    37,     0,    36,
-    38,     0,    36,    39,     0,    36,    40,     0,    36,     0,
-    66,    51,    14,    52,    53,     0,    66,    51,    68,    51,
-    14,    52,    53,     0,    41,     0,    41,    54,    45,    55,
-     0,    47,     0,    47,    54,    45,    55,     0,    46,     0,
-    46,    54,    45,    55,     0,    48,     0,    48,    52,    71,
-    53,     0,    67,     0,    43,     0,    42,     0,    45,     0,
-    49,     0,    71,    56,    49,     0,    11,    52,    45,    53,
-     0,    66,    51,    22,    52,    65,    57,    69,    53,     0,
-    22,    52,    66,    57,    65,    57,    69,    53,     0,    66,
-    51,     8,    52,    53,     0,     8,    52,    66,    53,     0
+static const short yyrhs[] = {    82,
+     0,    83,    73,     0,    82,    83,    73,     0,    21,     0,
+    13,     0,    95,     0,    84,     0,    85,     0,    88,     3,
+    93,     0,    90,     3,    92,     0,    86,     3,    87,     0,
+    89,    74,    42,     0,    89,    74,    44,     0,    89,    74,
+    40,     0,    89,    74,    45,     0,    89,    74,    41,     0,
+    89,    74,    43,     0,    89,    74,    52,     0,    89,    74,
+    53,     0,    89,    74,    20,     0,    89,    74,    91,    74,
+    20,     0,    68,    60,     0,    68,    61,     0,    68,    62,
+     0,    68,    63,     0,    68,     0,    59,    60,     0,    59,
+    61,     0,    59,    62,     0,    59,    63,     0,    59,     0,
+    89,    74,    20,    75,    76,     0,    89,    74,    91,    74,
+    20,    75,    76,     0,    64,     0,    64,    77,    68,    78,
+     0,    70,     0,    70,    77,    68,    78,     0,    69,     0,
+    69,    77,    68,    78,     0,    71,     0,    71,    75,    94,
+    76,     0,    90,     0,    66,     0,    65,     0,    68,     0,
+    72,     0,    94,    79,    72,     0,    12,    75,    68,    76,
+     0,    89,    74,    30,    75,    88,    80,    92,    76,     0,
+    30,    75,    89,    80,    88,    80,    92,    76,     0,    89,
+    74,     8,    75,    76,     0,     8,    75,    89,    76,     0
 };
 
 #endif
 
 #if YYDEBUG != 0
 static const short yyrline[] = { 0,
-   137,   140,   141,   142,   143,   155,   157,   158,   161,   162,
-   167,   172,   174,   175,   176,   177,   178,   179,   180,   182,
-   186,   192,   193,   194,   195,   196,   197,   198,   199,   200,
-   201,   203,   213,   225,   226,   229,   230,   233,   234,   237,
-   238,   241,   242,   245,   246,   249,   250,   253,   256,   273,
-   290,   305
+   152,   155,   156,   157,   158,   170,   172,   173,   176,   177,
+   182,   189,   191,   192,   193,   194,   195,   196,   197,   200,
+   204,   210,   211,   212,   213,   214,   215,   216,   217,   218,
+   219,   221,   232,   244,   245,   248,   249,   252,   253,   256,
+   257,   260,   261,   264,   265,   268,   269,   272,   275,   292,
+   309,   324
 };
 #endif
 
 
 #if YYDEBUG != 0 || defined (YYERROR_VERBOSE)
 
-static const char * const yytname[] = {   "$","error","$undefined.","'+'","'-'",
-"'*'","'/'","'='","RIG_TOKEN_CLOSE","RIG_TOKEN_CALL","RIG_TOKEN_CURR","RIG_TOKEN_DEBUG",
-"RIG_TOKEN_EXIT","RIG_TOKEN_FM","RIG_TOKEN_FREQ","RIG_TOKEN_HELP","RIG_TOKEN_INIT",
-"RIG_TOKEN_MAIN","RIG_TOKEN_MEM","RIG_TOKEN_MODE","RIG_TOKEN_MINUSMINUS","RIG_TOKEN_OFFSET",
-"RIG_TOKEN_OPEN","RIG_TOKEN_PLUSPLUS","RIG_TOKEN_SETUP","RIG_TOKEN_SHIFT","RIG_TOKEN_SUB",
-"RIG_TOKEN_TONE","RIG_TOKEN_AEQB","RIG_TOKEN_BEQA","RIG_TOKEN_AEQC","RIG_TOKEN_CEQA",
-"RIG_TOKEN_BEQC","RIG_TOKEN_CEQB","RIG_TOKEN_ASWB","RIG_TOKEN_ASWC","RIG_TOKEN_FLOAT",
-"RIG_TOKEN_GHZ","RIG_TOKEN_MHZ","RIG_TOKEN_KHZ","RIG_TOKEN_HZ","RIG_TOKEN_MODEL",
-"RIG_LEX_MODEL","RIG_TOKEN_STRING","RIG_TOKEN_IDENTIFIER","RIG_TOKEN_INT","RIG_TOKEN_PORT",
-"RIG_TOKEN_RIG","RIG_TOKEN_VFO","RIG_LEX_VFO","';'","'.'","'('","')'","'['",
-"']'","'|'","','","top","rig_list","rig_cmd","assign_exp","super_function","freq_lhs",
-"freq_val","model_id","rig_id","port_id","vfo_id","port_id_rhs","model_type",
-"vfo_type","rig_function", NULL
+static const char * const yytname[] = {   "$","error","$undefined.","'='","'+'",
+"'-'","'*'","'/'","RIG_TOKEN_CLOSE","RIG_TOKEN_CALL","RIG_TOKEN_CURR","RIG_TOKEN_CTCSS",
+"RIG_TOKEN_DEBUG","RIG_TOKEN_EXIT","RIG_TOKEN_CW","RIG_TOKEN_AM","RIG_TOKEN_FM",
+"RIG_TOKEN_LSB","RIG_TOKEN_USB","RIG_TOKEN_RTTY","RIG_TOKEN_FREQ","RIG_TOKEN_HELP",
+"RIG_TOKEN_INIT","RIG_TOKEN_MAIN","RIG_TOKEN_MENU","RIG_TOKEN_MEM","RIG_TOKEN_MODE",
+"RIG_TOKEN_MINUSEQ","RIG_TOKEN_MINUSMINUS","RIG_TOKEN_OFFSET","RIG_TOKEN_OPEN",
+"RIG_TOKEN_PLUSEQ","RIG_TOKEN_PLUSPLUS","RIG_TOKEN_PM","RIG_TOKEN_PRINT","RIG_TOKEN_RIGDEFAULT",
+"RIG_TOKEN_SETUP","RIG_TOKEN_SHIFT","RIG_TOKEN_SUB","RIG_TOKEN_TONE","RIG_TOKEN_BEQA",
+"RIG_TOKEN_CEQA","RIG_TOKEN_AEQB","RIG_TOKEN_CEQB","RIG_TOKEN_AEQC","RIG_TOKEN_BEQC",
+"RIG_TOKEN_AEQM","RIG_TOKEN_BEQM","RIG_TOKEN_CEQM","RIG_TOKEN_MEQA","RIG_TOKEN_MEQB",
+"RIG_TOKEN_MEQC","RIG_TOKEN_ASWB","RIG_TOKEN_ASWC","RIG_TOKEN_BSWC","RIG_TOKEN_ASWM",
+"RIG_TOKEN_BSWM","RIG_TOKEN_CSWM","RIG_LEX_HAMLIB","RIG_TOKEN_FLOAT","RIG_TOKEN_GHZ",
+"RIG_TOKEN_MHZ","RIG_TOKEN_KHZ","RIG_TOKEN_HZ","RIG_TOKEN_MODEL","RIG_LEX_MODEL",
+"RIG_TOKEN_STRING","RIG_TOKEN_IDENT","RIG_TOKEN_INT","RIG_TOKEN_PORT","RIG_TOKEN_RIG",
+"RIG_TOKEN_VFO","RIG_LEX_VFO","';'","'.'","'('","')'","'['","']'","'|'","','",
+"top","rig_list","rig_cmd","assign_exp","super_function","freq_lhs","freq_val",
+"model_id","rig_id","port_id","vfo_id","port_id_rhs","model_type","vfo_type",
+"rig_function", NULL
 };
 #endif
 
 static const short yyr1[] = {     0,
-    58,    59,    59,    59,    59,    60,    60,    60,    61,    61,
-    61,    62,    62,    62,    62,    62,    62,    62,    62,    63,
-    63,    64,    64,    64,    64,    64,    64,    64,    64,    64,
-    64,    64,    64,    65,    65,    66,    66,    67,    67,    68,
-    68,    69,    69,    70,    70,    71,    71,    72,    72,    72,
-    72,    72
+    81,    82,    82,    82,    82,    83,    83,    83,    84,    84,
+    84,    85,    85,    85,    85,    85,    85,    85,    85,    86,
+    86,    87,    87,    87,    87,    87,    87,    87,    87,    87,
+    87,    87,    87,    88,    88,    89,    89,    90,    90,    91,
+    91,    92,    92,    93,    93,    94,    94,    95,    95,    95,
+    95,    95
 };
 
 static const short yyr2[] = {     0,
@@ -248,8 +271,8 @@ static const short yydefact[] = {     0,
      7,     8,     0,     0,     0,     0,     6,     0,     0,     0,
      0,     0,     0,     0,     2,     0,     0,     0,     0,     0,
      0,     0,     0,     0,     0,     3,    31,    26,    11,     0,
-    44,    45,     9,     0,    20,     0,    12,    13,    14,    15,
-    16,    17,    18,    19,    40,     0,    43,    42,    10,    52,
+    44,    45,     9,     0,    20,     0,    14,    16,    12,    17,
+    13,    15,    18,    19,    40,     0,    43,    42,    10,    52,
     48,     0,    35,    39,    37,    27,    28,    29,    30,    22,
     23,    24,    25,     0,     0,     0,     0,     0,     0,     0,
      0,    51,     0,    46,     0,    21,     0,     0,     0,     0,
@@ -262,55 +285,55 @@ static const short yydefgoto[] = {   102,
     59,    43,    85,    17
 };
 
-static const short yypact[] = {    -4,
-   -37,   -24,-32768,-32768,   -20,    -6,    -3,    -2,     8,   -16,
--32768,-32768,    39,    43,     2,    57,-32768,    18,    21,    18,
-    22,    24,    25,    26,-32768,     0,   -40,    -8,   -34,    15,
-    20,    14,    17,    27,    28,-32768,    19,    23,-32768,    30,
--32768,-32768,-32768,    32,-32768,    33,-32768,-32768,-32768,-32768,
--32768,-32768,-32768,-32768,    34,    36,-32768,-32768,-32768,-32768,
--32768,    37,-32768,-32768,-32768,-32768,-32768,-32768,-32768,-32768,
--32768,-32768,-32768,   -13,    35,    37,    31,    60,    38,    40,
-    42,-32768,    41,-32768,   -43,-32768,   -34,    44,    61,   -34,
--32768,    45,    46,-32768,    48,    49,-32768,-32768,    50,-32768,
--32768,    77,    79,-32768
+static const short yypact[] = {    -5,
+   -65,   -56,-32768,-32768,   -55,   -53,   -47,   -35,    -3,   -30,
+-32768,-32768,    23,    52,   -18,    54,-32768,   -12,    -6,   -12,
+     0,     1,     2,   -13,-32768,   -57,   -51,    -8,   -38,    -4,
+    -2,    -9,    -1,     4,     5,-32768,   -22,   -14,-32768,     7,
+-32768,-32768,-32768,     9,-32768,    10,-32768,-32768,-32768,-32768,
+-32768,-32768,-32768,-32768,    11,    13,-32768,-32768,-32768,-32768,
+-32768,    12,-32768,-32768,-32768,-32768,-32768,-32768,-32768,-32768,
+-32768,-32768,-32768,   -19,    14,    12,     8,    53,    15,    16,
+    18,-32768,    17,-32768,   -26,-32768,   -38,    20,    55,   -38,
+-32768,    21,    22,-32768,    19,    24,-32768,-32768,    25,-32768,
+-32768,    78,    79,-32768
 };
 
 static const short yypgoto[] = {-32768,
--32768,    80,-32768,-32768,-32768,-32768,   -59,    13,    29,    16,
-   -46,-32768,-32768,-32768
+-32768,    80,-32768,-32768,-32768,-32768,   -58,     3,     6,    28,
+   -36,-32768,-32768,-32768
 };
 
 
-#define	YYLAST		103
+#define	YYLAST		102
 
 
 static const short yytable[] = {    44,
-    80,    41,    79,     1,    42,    45,     2,     3,    57,    91,
-     4,     7,    92,    46,    18,     1,    83,     5,     2,    47,
-    48,    49,    50,    51,    52,    53,    54,    19,    16,     5,
-    30,    20,    32,    25,    55,    37,     6,    16,    40,    55,
-    93,     7,     8,    96,    38,    26,     8,    21,     6,    27,
-    22,    23,    28,     7,     8,    66,    67,    68,    69,    70,
-    71,    72,    73,    29,     8,    31,    33,    60,    34,    35,
-    62,    63,    61,    86,    95,    36,   103,     6,   104,    84,
-    74,    64,    65,    75,    76,    77,    78,    82,    24,    81,
-     0,    88,    89,    97,    87,     0,    94,    90,    98,    99,
-     0,   100,   101
+    80,    37,     1,    79,     1,    16,     2,     3,     2,    18,
+    38,    45,     8,    41,    16,     4,    42,    83,    19,    20,
+    30,    46,    32,    21,     5,    26,     5,    57,    40,    22,
+     7,    47,    48,    49,    50,    51,    52,    66,    67,    68,
+    69,    23,    25,    53,    54,    70,    71,    72,    73,    91,
+    93,    55,    92,    96,    27,    28,    29,     8,     6,    36,
+     6,    31,    55,     7,     8,     7,     8,    33,    34,    35,
+    62,    60,    86,    61,    95,     6,    63,   103,   104,    84,
+    74,    64,    65,    75,    76,    77,    78,     0,    24,    82,
+    88,    89,    97,    99,    87,    94,    90,    98,     0,   100,
+   101,    81
 };
 
 static const short yycheck[] = {     8,
-    14,    42,    62,     8,    45,    14,    11,    12,    43,    53,
-    15,    46,    56,    22,    52,     8,    76,    22,    11,    28,
-    29,    30,    31,    32,    33,    34,    35,    52,     0,    22,
-    18,    52,    20,    50,    48,    36,    41,     9,    26,    48,
-    87,    46,    47,    90,    45,     7,    47,    54,    41,     7,
-    54,    54,    51,    46,    47,    37,    38,    39,    40,    37,
-    38,    39,    40,     7,    47,    45,    45,    53,    45,    45,
-    57,    55,    53,    14,    14,    50,     0,    41,     0,    49,
-    51,    55,    55,    52,    52,    52,    51,    53,     9,    74,
-    -1,    52,    51,    49,    57,    -1,    53,    57,    53,    52,
-    -1,    53,    53
+    20,    59,     8,    62,     8,     0,    12,    13,    12,    75,
+    68,    20,    70,    65,     9,    21,    68,    76,    75,    75,
+    18,    30,    20,    77,    30,     3,    30,    66,    26,    77,
+    69,    40,    41,    42,    43,    44,    45,    60,    61,    62,
+    63,    77,    73,    52,    53,    60,    61,    62,    63,    76,
+    87,    71,    79,    90,     3,    74,     3,    70,    64,    73,
+    64,    68,    71,    69,    70,    69,    70,    68,    68,    68,
+    80,    76,    20,    76,    20,    64,    78,     0,     0,    72,
+    74,    78,    78,    75,    75,    75,    74,    -1,     9,    76,
+    75,    74,    72,    75,    80,    76,    80,    76,    -1,    76,
+    76,    74
 };
 /* -*-C-*-  Note some compilers choke on comments on `#line' lines.  */
 #line 3 "/usr/share/bison.simple"
@@ -856,23 +879,23 @@ yyreduce:
   switch (yyn) {
 
 case 1:
-#line 137 "parser.y"
+#line 152 "parser.y"
 { if(yyvsp[0].val == RIG_OK) YYACCEPT; else YYABORT; ;
     break;}
 case 2:
-#line 140 "parser.y"
+#line 155 "parser.y"
 { yyval.val = yyvsp[-1].val; ;
     break;}
 case 3:
-#line 141 "parser.y"
+#line 156 "parser.y"
 { yyval.val = yyvsp[-1].val; ;
     break;}
 case 4:
-#line 142 "parser.y"
+#line 157 "parser.y"
 { help(); yyval.val = RIG_OK; ;
     break;}
 case 5:
-#line 143 "parser.y"
+#line 158 "parser.y"
 {
 			int i;
 			for( i=0; i<RIG_YY_MAXRIGS; i++) {
@@ -885,11 +908,11 @@ case 5:
 		;
     break;}
 case 9:
-#line 161 "parser.y"
+#line 176 "parser.y"
 { models[yyvsp[-2].val] = yyvsp[0].model; yyval.val = RIG_OK; ;
     break;}
 case 10:
-#line 162 "parser.y"
+#line 177 "parser.y"
 {
 			//if( $1 != NULL) free($1);
 			ports[yyvsp[-2].val] = yyvsp[0].txt;
@@ -897,99 +920,100 @@ case 10:
 		;
     break;}
 case 11:
-#line 167 "parser.y"
+#line 182 "parser.y"
 {
-			yyval.val = rig_set_freq(yyvsp[-2].spec.rig, yyvsp[-2].spec.vfo, yyvsp[0].freq);
+			//$$ = rig_set_freq($1.rig, $1.vfo, $3);
+//			$$ = rig_set_freq($1->rig, $1->vfo, $3);	//FIXME:
 		;
     break;}
 case 12:
-#line 173 "parser.y"
+#line 190 "parser.y"
 { yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_A, RIG_VFO_B); ;
     break;}
 case 13:
-#line 174 "parser.y"
-{ yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_B, RIG_VFO_A); ;
-    break;}
-case 14:
-#line 175 "parser.y"
+#line 191 "parser.y"
 { yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_A, RIG_VFO_C); ;
     break;}
-case 15:
-#line 176 "parser.y"
-{ yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_C, RIG_VFO_A); ;
+case 14:
+#line 192 "parser.y"
+{ yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_B, RIG_VFO_A); ;
     break;}
-case 16:
-#line 177 "parser.y"
+case 15:
+#line 193 "parser.y"
 { yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_B, RIG_VFO_C); ;
     break;}
+case 16:
+#line 194 "parser.y"
+{ yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_C, RIG_VFO_A); ;
+    break;}
 case 17:
-#line 178 "parser.y"
+#line 195 "parser.y"
 { yyval.val = s_cpy(rigs[yyvsp[-2].val], RIG_VFO_C, RIG_VFO_B); ;
     break;}
 case 18:
-#line 179 "parser.y"
+#line 196 "parser.y"
 { yyval.val = s_sw(rigs[yyvsp[-2].val], RIG_VFO_A, RIG_VFO_B); ;
     break;}
 case 19:
-#line 180 "parser.y"
+#line 197 "parser.y"
 { yyval.val = s_sw(rigs[yyvsp[-2].val], RIG_VFO_A, RIG_VFO_C); ;
     break;}
 case 20:
-#line 182 "parser.y"
+#line 200 "parser.y"
 {
-			yyval.spec.rig = rigs[yyvsp[-2].val];
-			yyval.spec.vfo = default_vfo;
+		//	$$.rig = rigs[$1];
+		//	$$.vfo = default_vfo;
 		;
     break;}
 case 21:
-#line 186 "parser.y"
+#line 204 "parser.y"
 {
-			yyval.spec.rig = rigs[yyvsp[-4].val];
-			yyval.spec.vfo = yyvsp[-2].vfo;
+		//	$$.rig = rigs[$1];
+		//	$$.vfo = $3;
 		;
     break;}
 case 22:
-#line 192 "parser.y"
+#line 210 "parser.y"
 { yyval.freq = yyvsp[-1].val * yyvsp[0].fval; ;
     break;}
 case 23:
-#line 193 "parser.y"
+#line 211 "parser.y"
 { yyval.freq = yyvsp[-1].val * yyvsp[0].fval; ;
     break;}
 case 24:
-#line 194 "parser.y"
+#line 212 "parser.y"
 { yyval.freq = yyvsp[-1].val * yyvsp[0].fval; ;
     break;}
 case 25:
-#line 195 "parser.y"
+#line 213 "parser.y"
 { yyval.freq = yyvsp[-1].val; ;
     break;}
 case 26:
-#line 196 "parser.y"
+#line 214 "parser.y"
 { yyval.freq = yyvsp[0].val; ;
     break;}
 case 27:
-#line 197 "parser.y"
+#line 215 "parser.y"
 { yyval.freq = (freq_t)(yyvsp[-1].fval * yyvsp[0].fval); ;
     break;}
 case 28:
-#line 198 "parser.y"
+#line 216 "parser.y"
 { yyval.freq = (freq_t)(yyvsp[-1].fval * yyvsp[0].fval); ;
     break;}
 case 29:
-#line 199 "parser.y"
+#line 217 "parser.y"
 { yyval.freq = (freq_t)(yyvsp[-1].fval * yyvsp[0].fval); ;
     break;}
 case 30:
-#line 200 "parser.y"
+#line 218 "parser.y"
 { yyval.freq = (freq_t)yyvsp[-1].fval; ;
     break;}
 case 31:
-#line 201 "parser.y"
+#line 219 "parser.y"
 { yyval.freq = (freq_t)yyvsp[0].fval; ;
     break;}
 case 32:
-#line 203 "parser.y"
+#line 221 "parser.y"
 {
 			int retval;
 			freq_t ftmp;
@@ -1002,7 +1026,7 @@ case 32:
 		;
     break;}
 case 33:
-#line 213 "parser.y"
+#line 232 "parser.y"
 {
 			int retval;
 			freq_t ftmp;
@@ -1015,67 +1039,67 @@ case 33:
 		;
     break;}
 case 34:
-#line 225 "parser.y"
+#line 244 "parser.y"
 { yyval.val = yyvsp[0].model; ;
     break;}
 case 35:
-#line 226 "parser.y"
+#line 245 "parser.y"
 { yyval.val = yyvsp[-1].val; ;
     break;}
 case 36:
-#line 229 "parser.y"
+#line 248 "parser.y"
 { yyval.val = yyvsp[0].val; ;
     break;}
 case 37:
-#line 230 "parser.y"
+#line 249 "parser.y"
 { yyval.val = yyvsp[-1].val; ;
     break;}
 case 38:
-#line 233 "parser.y"
+#line 252 "parser.y"
 { yyval.val = yyvsp[0].val; ;
     break;}
 case 39:
-#line 234 "parser.y"
+#line 253 "parser.y"
 { yyval.val = yyvsp[-1].val; ;
     break;}
 case 40:
-#line 237 "parser.y"
+#line 256 "parser.y"
 { yyval.vfo = RIG_VFO_CURR; ;
     break;}
 case 41:
-#line 238 "parser.y"
+#line 257 "parser.y"
 { yyval.vfo = yyvsp[-1].vfo; ;
     break;}
 case 42:
-#line 241 "parser.y"
+#line 260 "parser.y"
 { yyval.txt = ports[yyvsp[0].val]; ;
     break;}
 case 43:
-#line 242 "parser.y"
+#line 261 "parser.y"
 { yyval.txt = yyvsp[0].txt; ;
     break;}
 case 44:
-#line 245 "parser.y"
+#line 264 "parser.y"
 { yyval.model = yyvsp[0].model; ;
     break;}
 case 45:
-#line 246 "parser.y"
+#line 265 "parser.y"
 { yyval.model = (rig_model_t) yyvsp[0].val; ;
     break;}
 case 46:
-#line 249 "parser.y"
+#line 268 "parser.y"
 { yyval.vfo = yyvsp[0].vfo; ;
     break;}
 case 47:
-#line 250 "parser.y"
+#line 269 "parser.y"
 { yyval.vfo = yyvsp[-2].vfo | yyvsp[0].vfo; ;
     break;}
 case 48:
-#line 254 "parser.y"
+#line 273 "parser.y"
 {	rig_set_debug( yyvsp[-1].val ); yyval.val = RIG_OK; ;
     break;}
 case 49:
-#line 257 "parser.y"
+#line 276 "parser.y"
 {
 		if( rigs[yyvsp[-7].val] == NULL) {
 			/*$$ = rig_setup(&rigs[$3], models[$5], $7);*/
@@ -1094,7 +1118,7 @@ case 49:
 	;
     break;}
 case 50:
-#line 274 "parser.y"
+#line 293 "parser.y"
 {
 		if( rigs[yyvsp[-5].val] == NULL) {
 			/*$$ = rig_setup(&rigs[$3], models[$5], $7);*/
@@ -1113,7 +1137,7 @@ case 50:
 	;
     break;}
 case 51:
-#line 291 "parser.y"
+#line 310 "parser.y"
 {
 		if(rigs[yyvsp[-4].val] != NULL) {
 			yyval.val = rig_close(rigs[yyvsp[-4].val]);
@@ -1130,7 +1154,7 @@ case 51:
 	;
     break;}
 case 52:
-#line 306 "parser.y"
+#line 325 "parser.y"
 {
 		if(rigs[yyvsp[-1].val] != NULL) {
 			yyval.val = rig_close(rigs[yyvsp[-1].val]);
@@ -1368,52 +1392,6 @@ yyerrhandle:
     }
   return 1;
 }
-#line 322 "parser.y"
+#line 341 "parser.y"
 
 
-int s_cpy(RIG *rig, vfo_t dst, vfo_t src)
-{
-	int retval;
-	channel_t ctmp;
-
-	return -RIG_ENIMPL;	// don't use yet!
-
-	if(dst == src) return RIG_OK;	// trivial
-
-	// currently very broken since my hamlib isn't current
-	//retval = rig_save_channel(rig, src, &ctmp);
-	retval = rig_save_channel(rig, &ctmp);
-	if(retval != RIG_OK) return retval;
-	//return rig_restore_channel(rig, dst, &ctmp);
-	return rig_restore_channel(rig, &ctmp);
-}
-
-int s_sw(RIG *rig, vfo_t dst, vfo_t src)
-{
-	return -RIG_ENIMPL;
-}
-
-void yyerror(char *err)
-{
-	//	fprintf(stderr, __FUNCTION__": %s\n", err);
-	rig_debug(RIG_DEBUG_ERR, "cmd_parse: %s on line %i\n", err, yylineno);
-}
-
-void help(void)
-{
-	//rig_debug(RIG_DEBUG_ERR, "\n"__FUNCTION__":\n"
-	fprintf(stdout, "\n"__FUNCTION__":\n"
-		"Functions:	close, help, open\n"
-		"Arrays:	model[[%i]], port[[%i]], rig[[%i]]\n"
-		"Examples:\n\tport = \"/dev/ttyS1\";\n"
-		"\tmodel = ts2k;\n"
-		"\trig.open(model, port);\n"
-		"\tport[2] = \"/dev/ttyS0\";\n"
-		"\tmodel[2] = ts2k;\n"
-		"\topen(rig[2], model[2], port[2]);\n"
-		"\tclose(rig[0]);\t// rig == rig[0]\n"
-		"\tclose(rig[2]);\t// This is a comment\n",
-		RIG_YY_MAXRIGS, RIG_YY_MAXRIGS, RIG_YY_MAXRIGS
-	);
-	return;
-}

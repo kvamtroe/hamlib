@@ -4,12 +4,12 @@
  *		Need to build a script to autogenerate this!
  */
 
+#ifndef _LEX_RIGS_H
+#define _LEX_RIGS_H
+
 #define LEXRIG(r)	{ #r , RIG_MODEL_ ## r } ,
 
-struct {
-	const char *name;
-	rig_model_t model;
-} lex_riglist[] = {
+struct lexriglist_s lex_riglist[] = {
 	LEXRIG( FT847 )
 	LEXRIG( FT1000 )
 	LEXRIG( FT1000D )
@@ -176,3 +176,6 @@ struct {
 	LEXRIG( MC4020 )
 	{ NULL, 0 }
 };
+
+#endif	// _LEX_RIGS_H
+// end lex_rigs.h

@@ -1,13 +1,20 @@
 
+Testing:
+	Edit rigcmd.h and define _YY_BASE_TEST
+	Edit base.y to reflect new grammatic constructs.
+	Do 'make base'
+	Run base, type new command(s), verify proper operation.
+	Repeat until base grammar is working.
+	Edit rigcmd.h and undefine _YY_BASE_TEST
+	Edit parser.y to reflect *working* grammar.
+
 Build:
 	cd ${SRCDIR}/tests/rc; make	# only if parser has changed
 	cd ${BLDDIR}; make		
-	make install
+	su; make install
 
 Files:	parser.y		# Grammar, semantics, and actions
 	scanner.l		# lexical scanner
-	base.y			# Grammar only (for testing changes)
 	lex_rigs.h		# Model symbols from rig_list.h
 	# all remaining files are generated.  do not edit
-
 

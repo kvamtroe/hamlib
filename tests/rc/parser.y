@@ -12,14 +12,10 @@
  *	better.  For now, this seems to be working out well.	--Dale
  */
 
-#include <hamlib/rig.h>
-#include <string.h>
-#include <stdlib.h>
-#include "../src/misc.h"
+#define _YY_RIG_PARSER
 #include "rigcmd.h"
 
-#define RIG_YY_MAXRIGS	10
-#define YYERROR_VERBOSE
+#define YYERROR_VERBOSE 1
 
 static RIG *rigs[RIG_YY_MAXRIGS];
 static rig_model_t models[RIG_YY_MAXRIGS];
@@ -28,62 +24,81 @@ static channel_t chans[RIG_YY_MAXRIGS];
 static int default_idx = 0;	// Default index if none specified.
 static vfo_t default_vfo = RIG_VFO_CURR;	// Default VFO
 
-extern int yylineno;
-
-//int setup(RIG *rig, rig_model_t model, char *port);
-//int rig_setup(RIG *rig, rig_model_t model, char *port);
-void help(void);
-void yyerror(char *);
-int s_cpy(RIG *, vfo_t, vfo_t);
-int s_sw(RIG *, vfo_t, vfo_t);
+extern int rig_yylineno;
 
 %}
 
 %union {
+	channel_t	*spec;
+/*	spec_t		spec; */	// FIXME:
+	tree_t		*tree;
 	rig_model_t	model;
 	RIG		*rig;
 	channel_t	*chan;
+	symtab_t	sym;
 	vfo_t		vfo;
 	freq_t		freq;
 	char		*txt;
 	int		val;
 	float		fval;
-	spec_t		spec;
 }
 
+%right '='
 %left '+' '-'
 %left '*' '/'
-%right '='
 
 
 %token	RIG_TOKEN_CLOSE
 	RIG_TOKEN_CALL
 	RIG_TOKEN_CURR
+	RIG_TOKEN_CTCSS
 	RIG_TOKEN_DEBUG
 	RIG_TOKEN_EXIT
+	RIG_TOKEN_CW
+	RIG_TOKEN_AM
 	RIG_TOKEN_FM
+	RIG_TOKEN_LSB
+	RIG_TOKEN_USB
+	RIG_TOKEN_RTTY
 	RIG_TOKEN_FREQ
 	RIG_TOKEN_HELP
 	RIG_TOKEN_INIT
 	RIG_TOKEN_MAIN
+	RIG_TOKEN_MENU
 	RIG_TOKEN_MEM
 	RIG_TOKEN_MODE
+	RIG_TOKEN_MINUSEQ
 	RIG_TOKEN_MINUSMINUS
 	RIG_TOKEN_OFFSET
 	RIG_TOKEN_OPEN
+	RIG_TOKEN_PLUSEQ
 	RIG_TOKEN_PLUSPLUS
+	RIG_TOKEN_PM
+	RIG_TOKEN_PRINT
+	RIG_TOKEN_RIGDEFAULT
 	RIG_TOKEN_SETUP
 	RIG_TOKEN_SHIFT
 	RIG_TOKEN_SUB
 	RIG_TOKEN_TONE
-	RIG_TOKEN_AEQB
 	RIG_TOKEN_BEQA
-	RIG_TOKEN_AEQC
 	RIG_TOKEN_CEQA
-	RIG_TOKEN_BEQC
+	RIG_TOKEN_AEQB
 	RIG_TOKEN_CEQB
+	RIG_TOKEN_AEQC
+	RIG_TOKEN_BEQC
+	RIG_TOKEN_AEQM
+	RIG_TOKEN_BEQM
+	RIG_TOKEN_CEQM
+	RIG_TOKEN_MEQA
+	RIG_TOKEN_MEQB
+	RIG_TOKEN_MEQC
 	RIG_TOKEN_ASWB
 	RIG_TOKEN_ASWC
+	RIG_TOKEN_BSWC
+	RIG_TOKEN_ASWM
+	RIG_TOKEN_BSWM
+	RIG_TOKEN_CSWM
+	RIG_LEX_HAMLIB
 
 %token <freq>	
 
@@ -101,7 +116,7 @@ int s_sw(RIG *, vfo_t, vfo_t);
 %token <spec>	
 
 %token <txt>	RIG_TOKEN_STRING
-		RIG_TOKEN_IDENTIFIER
+		RIG_TOKEN_IDENT
 
 %token <val>	RIG_TOKEN_INT
 		RIG_TOKEN_PORT
@@ -165,27 +180,30 @@ assign_exp:	model_id '=' model_type	{ models[$1] = $3; $$ = RIG_OK; }
 			$$ = RIG_OK;
 		}
 	|	freq_lhs '=' freq_val	{
-			$$ = rig_set_freq($1.rig, $1.vfo, $3);
+			//$$ = rig_set_freq($1.rig, $1.vfo, $3);
+//			$$ = rig_set_freq($1->rig, $1->vfo, $3);	//FIXME:
 		}
 	;
+//-verified
 
 super_function:
 		rig_id '.' RIG_TOKEN_AEQB	{ $$ = s_cpy(rigs[$1], RIG_VFO_A, RIG_VFO_B); }
-	|	rig_id '.' RIG_TOKEN_BEQA	{ $$ = s_cpy(rigs[$1], RIG_VFO_B, RIG_VFO_A); }
 	|	rig_id '.' RIG_TOKEN_AEQC	{ $$ = s_cpy(rigs[$1], RIG_VFO_A, RIG_VFO_C); }
-	|	rig_id '.' RIG_TOKEN_CEQA	{ $$ = s_cpy(rigs[$1], RIG_VFO_C, RIG_VFO_A); }
+	|	rig_id '.' RIG_TOKEN_BEQA	{ $$ = s_cpy(rigs[$1], RIG_VFO_B, RIG_VFO_A); }
 	|	rig_id '.' RIG_TOKEN_BEQC	{ $$ = s_cpy(rigs[$1], RIG_VFO_B, RIG_VFO_C); }
+	|	rig_id '.' RIG_TOKEN_CEQA	{ $$ = s_cpy(rigs[$1], RIG_VFO_C, RIG_VFO_A); }
 	|	rig_id '.' RIG_TOKEN_CEQB	{ $$ = s_cpy(rigs[$1], RIG_VFO_C, RIG_VFO_B); }
 	|	rig_id '.' RIG_TOKEN_ASWB	{ $$ = s_sw(rigs[$1], RIG_VFO_A, RIG_VFO_B); }
 	|	rig_id '.' RIG_TOKEN_ASWC	{ $$ = s_sw(rigs[$1], RIG_VFO_A, RIG_VFO_C); }
+	;
 
 freq_lhs:	rig_id '.' RIG_TOKEN_FREQ		{
-			$$.rig = rigs[$1];
-			$$.vfo = default_vfo;
+		//	$$.rig = rigs[$1];
+		//	$$.vfo = default_vfo;
 		}
 	|	rig_id '.' vfo_id '.' RIG_TOKEN_FREQ	{
-			$$.rig = rigs[$1];
-			$$.vfo = $3;
+		//	$$.rig = rigs[$1];
+		//	$$.vfo = $3;
 		}
 	;
 
@@ -209,7 +227,8 @@ freq_val:	rig_id '.' RIG_TOKEN_FREQ '(' ')'		{
 				YYERROR;
 			}
 			$$ = ftmp;
-		};
+		}
+	;
 freq_val:	rig_id '.' vfo_id '.' RIG_TOKEN_FREQ '(' ')'	{
 			int retval;
 			freq_t ftmp;
@@ -321,49 +340,3 @@ rig_function:
 
 %%
 
-int s_cpy(RIG *rig, vfo_t dst, vfo_t src)
-{
-	int retval;
-	channel_t ctmp;
-
-	return -RIG_ENIMPL;	// don't use yet!
-
-	if(dst == src) return RIG_OK;	// trivial
-
-	// currently very broken since my hamlib isn't current
-	//retval = rig_save_channel(rig, src, &ctmp);
-	retval = rig_save_channel(rig, &ctmp);
-	if(retval != RIG_OK) return retval;
-	//return rig_restore_channel(rig, dst, &ctmp);
-	return rig_restore_channel(rig, &ctmp);
-}
-
-int s_sw(RIG *rig, vfo_t dst, vfo_t src)
-{
-	return -RIG_ENIMPL;
-}
-
-void yyerror(char *err)
-{
-	//	fprintf(stderr, __FUNCTION__": %s\n", err);
-	rig_debug(RIG_DEBUG_ERR, "cmd_parse: %s on line %i\n", err, yylineno);
-}
-
-void help(void)
-{
-	//rig_debug(RIG_DEBUG_ERR, "\n"__FUNCTION__":\n"
-	fprintf(stdout, "\n"__FUNCTION__":\n"
-		"Functions:	close, help, open\n"
-		"Arrays:	model[[%i]], port[[%i]], rig[[%i]]\n"
-		"Examples:\n\tport = \"/dev/ttyS1\";\n"
-		"\tmodel = ts2k;\n"
-		"\trig.open(model, port);\n"
-		"\tport[2] = \"/dev/ttyS0\";\n"
-		"\tmodel[2] = ts2k;\n"
-		"\topen(rig[2], model[2], port[2]);\n"
-		"\tclose(rig[0]);\t// rig == rig[0]\n"
-		"\tclose(rig[2]);\t// This is a comment\n",
-		RIG_YY_MAXRIGS, RIG_YY_MAXRIGS, RIG_YY_MAXRIGS
-	);
-	return;
-}
