@@ -2,7 +2,7 @@
  *  Hamlib GNUradio backend - main header
  *  Copyright (c) 2001,2002 by Stephane Fillod
  *
- *	$Id: gnuradio.h,v 1.1 2002-07-06 09:27:38 fillods Exp $
+ *	$Id: gnuradio.h,v 1.1.2.1 2002-07-26 09:09:50 dedmons Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
