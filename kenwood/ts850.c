@@ -2,7 +2,7 @@
 *  Hamlib Kenwood backend - TS850 description
 *  Copyright (c) 2000-2004 by Stephane Fillod
 *
-*	$Id: ts850.c,v 1.25 2007-08-30 17:12:52 y32kn Exp $
+*	$Id: ts850.c,v 1.25.2.1 2009-02-23 21:24:06 fillods Exp $
 *
 *   This library is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -106,7 +106,7 @@ const struct rig_caps ts850_caps = {
 	.serial_handshake =  RIG_HANDSHAKE_HARDWARE,
 	.write_delay =  0,
 	.post_write_delay =  100,
-	.timeout =  480000,  // When you tune a Kenwood, the reply is delayed until you stop.
+	.timeout =  30000,  // When you tune a Kenwood, the reply is delayed until you stop.
 	.retry =  0,
 	
 	.has_get_func =  TS850_FUNC_ALL,
