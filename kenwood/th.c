@@ -2,7 +2,7 @@
  *  Hamlib Kenwood backend - TH handheld primitives
  *  Copyright (c) 2001-2008 by Stephane Fillod
  *
- *	$Id: th.c,v 1.35 2008-11-01 16:30:23 fillods Exp $
+ *	$Id: th.c,v 1.35.2.1 2009-02-23 21:51:19 fillods Exp $
  *
  *   This library is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -236,8 +236,8 @@ th_get_freq (RIG *rig, vfo_t vfo, freq_t *freq)
 int
 th_set_mode (RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
 {
-    char kmode, mdbuf[24], ackbuf[ACKBUF_LEN];
-    int retval;
+    char mdbuf[24], ackbuf[ACKBUF_LEN];
+    int kmode, retval;
     size_t ack_len;
     const struct kenwood_priv_caps *priv=(const struct kenwood_priv_caps *)rig->caps->priv;
 
