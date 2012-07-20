@@ -665,14 +665,14 @@ int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 					__FUNCTION__, lvlbuf);
 			return -RIG_EPROTO;
 		}
-		/* Jupiter returns actual S value in 1/256s of an S unit, but
-		Hamlib wants an integer result.  We return S units * 256 to maintain
-		precision. */
+		/* Jupiter returns actual S value in 1/256s of an S unit, in
+		ascii hex digits.  We convert those digits to binary and return 
+		that integer (S units * 256) */
 		{ 	char hex[5];
 			int i, ival;
 			for (i=0; i<4; i++) hex[i] = lvlbuf[i+1];
 			hex[4] = '\0';
-			sscanf(hex, "%4x", &ival);	/* DEBUG */
+			sscanf(hex, "%4x", &ival);
 			val->i = ival;		/* S-units+fract * 256 */
 		}
 		break;
