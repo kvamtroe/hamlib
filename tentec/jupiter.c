@@ -23,6 +23,7 @@
  * This backend tested with firmware v 1.330.
  * Firmware version >=1.18 is probably required.
  * Reference: Jupiter Model 538 Programmer's Reference Guide Rev. 1.1
+ * v 0.7 - 2012-07-15 - correct RAWSTR processing, add cal table for RIG_LEVEL_STRENGTH
  */
 
 #ifdef HAVE_CONFIG_H
@@ -49,7 +50,7 @@ struct tt538_priv_data {
 
 #define TT538_FUNCS (RIG_FUNC_NR|RIG_FUNC_ANF)
 
-#define TT538_LEVELS (RIG_LEVEL_RAWSTR| \
+#define TT538_LEVELS (RIG_LEVEL_RAWSTR| RIG_LEVEL_STRENGTH| \
 				/*RIG_LEVEL_NB|RIG_LEVEL_NR|RIG_LEVEL_ANF| */ \
 				RIG_LEVEL_SQL| \
 				RIG_LEVEL_RF| \
@@ -78,6 +79,28 @@ struct tt538_priv_data {
 #define TT538_FM  '4'
 #define EOM "\015"      /* CR */
 
+/* Jupiter's RAWSTR is S-meter reading in S value + fractional S value, times 256 */
+#define TT538_STR_CAL  { 18, {	\
+	{ 256, -48 }, \
+	{ 512, -42 }, \
+	{ 768, -36 }, \
+	{ 1024, -30 }, \
+	{ 1280, -24 }, \
+	{ 1536, -18 }, \
+	{ 1792, -12 }, \
+	{ 2048, -6 }, \
+	{ 2304, 0 }, \
+	{ 2560, 6 }, \
+	{ 2816, 12 }, \
+	{ 3072, 18 }, \
+	{ 3328, 24 }, \
+	{ 3584, 30 }, \
+	{ 3840, 36 }, \
+	{ 4096, 42 }, \
+	{ 4352, 48 }, \
+	{ 4608, 54 }, \
+	} }
+
 static int tt538_init(RIG *rig);
 static int tt538_reset(RIG *rig, reset_t reset);
 static int tt538_get_freq(RIG *rig, vfo_t vfo, freq_t *freq);
@@ -100,7 +123,7 @@ const struct rig_caps tt538_caps = {
 .rig_model =  RIG_MODEL_TT538,
 .model_name = "TT-538 Jupiter",
 .mfg_name =  "Ten-Tec",
-.version =  "0.6",
+.version =  "0.7",
 .copyright =  "LGPL",
 .status =  RIG_STATUS_BETA,
 .rig_type =  RIG_TYPE_TRANSCEIVER,
@@ -195,7 +218,7 @@ const struct rig_caps tt538_caps = {
 .set_ptt =  tentec2_set_ptt,
 .reset =  tt538_reset,
 .get_info =  tentec2_get_info,
-
+.str_cal = TT538_STR_CAL,		// This signals front-end support of level STRENGTH
 };
 
 /* Filter table for 538 reciver support. */
@@ -590,8 +613,7 @@ int tt538_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
  */
 int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 {
-	char	sunits[6];
-	float	fwd, refl, sstr;
+	float	fwd, refl;
 	float 	ratio, swr;
 	int 	retval, cmd_len, lvl_len;
 	unsigned char cmdbuf[16],lvlbuf[32];
@@ -643,13 +665,16 @@ int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 					__FUNCTION__, lvlbuf);
 			return -RIG_EPROTO;
 		}
-		/* Jupiter returns actual S value in 1/100s of an S unit, but
-		Hamlib wants an integer result.  We return S units * 100 to maintain
+		/* Jupiter returns actual S value in 1/256s of an S unit, but
+		Hamlib wants an integer result.  We return S units * 256 to maintain
 		precision. */
-		sprintf(sunits, "%c%c.%c%c",
-			lvlbuf[1], lvlbuf[2], lvlbuf[3], lvlbuf[4]);
-		sscanf(sunits, "%f", &sstr);
-		val->i = (int) (100 * sstr);
+		{ 	char hex[5];
+			int i, ival;
+			for (i=0; i<4; i++) hex[i] = lvlbuf[i+1];
+			hex[4] = '\0';
+			sscanf(hex, "%4x", &ival);	/* DEBUG */
+			val->i = ival;		/* S-units+fract * 256 */
+		}
 		break;
 
 	case RIG_LEVEL_AGC:
