@@ -24,8 +24,13 @@
  * Firmware version >=1.18 is probably required.
  * Reference: Jupiter Model 538 Programmer's Reference Guide Rev. 1.1
  * v 0.7 - 2012-07-15 - correct RAWSTR processing, add cal table for RIG_LEVEL_STRENGTH
+ *    2012-08-02 - Add support for "IF" (passband tuning), NB, NR, ANF
  */
-
+ 
+ /* to do:
+  * implement dual VFO & split capability
+  */
+ 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -48,20 +53,16 @@ struct tt538_priv_data {
 #define TT538_MODES (RIG_MODE_FM|RIG_MODE_CW|RIG_MODE_SSB|RIG_MODE_AM)
 #define TT538_RXMODES (TT538_MODES)
 
-#define TT538_FUNCS (RIG_FUNC_NR|RIG_FUNC_ANF)
+#define TT538_FUNCS (RIG_FUNC_NR|RIG_FUNC_ANF|RIG_FUNC_NB)
 
 #define TT538_LEVELS (RIG_LEVEL_RAWSTR| RIG_LEVEL_STRENGTH| \
-				/*RIG_LEVEL_NB|RIG_LEVEL_NR|RIG_LEVEL_ANF| */ \
 				RIG_LEVEL_SQL| \
-				RIG_LEVEL_RF| \
+				RIG_LEVEL_RF|RIG_LEVEL_IF| \
 				RIG_LEVEL_AF|RIG_LEVEL_AGC| \
 				RIG_LEVEL_SWR|RIG_LEVEL_ATT)
 
-/* Note TT538 supports NB, NR, and AN levels -- to be implemented */
-
 #define TT538_LEVELS_SET (RIG_LEVEL_SQL|RIG_LEVEL_RF| \
-				/*RIG_LEVEL_NB|RIG_LEVEL_NR|RIG_LEVEL_ANF| */ \
-				RIG_LEVEL_AF| \
+				RIG_LEVEL_AF|RIG_LEVEL_IF| \
 				RIG_LEVEL_AGC|RIG_LEVEL_ATT)
 
 #define TT538_ANTS (RIG_ANT_1)
@@ -112,6 +113,8 @@ static int tt538_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width);
 static char which_vfo(const RIG *rig, vfo_t vfo);
 static int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val);
 static int tt538_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val);
+static int tt538_get_func(RIG *rig, vfo_t vfo, setting_t func, int *status);
+static int tt538_set_func(RIG *rig, vfo_t vfo, setting_t func, int status);
 
 /*
  * tt538 transceiver capabilities.
@@ -213,12 +216,14 @@ const struct rig_caps tt538_caps = {
 .get_mode =  tt538_get_mode,
 .get_level =  tt538_get_level,
 .set_level = tt538_set_level,
+.get_func = tt538_get_func,
+.set_func = tt538_set_func,
 .set_split_vfo =  tentec2_set_split_vfo,
 .get_split_vfo =  tentec2_get_split_vfo,
 .set_ptt =  tentec2_set_ptt,
 .reset =  tt538_reset,
 .get_info =  tentec2_get_info,
-.str_cal = TT538_STR_CAL,		// This signals front-end support of level STRENGTH
+.str_cal = TT538_STR_CAL,	// This signals front-end support of level STRENGTH
 };
 
 /* Filter table for 538 reciver support. */
@@ -739,6 +744,22 @@ int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
 		val->f = 1 - (float) lvlbuf[1] / 0xff;
 		break;
 
+	case RIG_LEVEL_IF:  /* IF passband tuning, Hz */
+    
+		cmd_len = sprintf((char *) cmdbuf, "?P" EOM);
+		lvl_len = 32;
+		retval = tt538_transaction (rig, (char *) cmdbuf, cmd_len, (char *) lvlbuf,
+			& lvl_len);
+		if (retval != RIG_OK)
+			return retval;
+		if (lvlbuf[0] != 'P' || lvl_len != 4) {
+			rig_debug(RIG_DEBUG_ERR,"%s: unexpected answer '%s'\n",
+					__FUNCTION__, lvlbuf);
+			return -RIG_EPROTO;
+		}
+		val->i = (int) lvlbuf[1] * 256 + (int) lvlbuf[2];
+		break;
+
 	case RIG_LEVEL_ATT:
 
 		cmd_len = sprintf((char *) cmdbuf, "?J" EOM);
@@ -784,7 +805,7 @@ int tt538_get_level(RIG *rig, vfo_t vfo, setting_t level, value_t *val)
  */
 int tt538_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val)
 {
-	char	cc, cmdbuf[32];
+	char	cc, cmdbuf[32], c1, c2;
 	int	cmd_len, retval;
 	
 	switch (level) {
@@ -805,6 +826,12 @@ int tt538_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val)
 	
 		case RIG_LEVEL_RF:
 			cmd_len = sprintf(cmdbuf, "*I%c" EOM, (int)(127 * val.f));
+			break;
+		
+		case RIG_LEVEL_IF:
+			c1 = val.i >> 8;
+			c2 = val.i & 0xff;
+			cmd_len = sprintf(cmdbuf, "*P%c%c" EOM, c1, c2);
 			break;
 	
 		case RIG_LEVEL_ATT:
@@ -828,4 +855,128 @@ int tt538_set_level(RIG *rig, vfo_t vfo, setting_t level, value_t val)
 	if (retval != RIG_OK)
 		return retval;
 	return RIG_OK;
+}
+
+int tt538_get_func(RIG *rig, vfo_t vfo, setting_t func, int *status)
+{
+	char frespbuf[32];
+	int retval, fresplen;
+
+	switch (func) {
+
+		case RIG_FUNC_NR:
+			/* ?K gets nb(0-7), an, nr according to prog ref guide,
+				but it's really nb, nr, an */
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			if (retval != RIG_OK)
+				return retval;
+			*status = frespbuf[ 2 ] == 1; 
+			return RIG_OK;
+	
+		case RIG_FUNC_ANF:
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			if (retval != RIG_OK)
+				return retval;
+			*status = frespbuf[ 3 ] == 1; 
+			return RIG_OK;
+
+		case RIG_FUNC_NB:
+
+	/* Based on research by AA6E -
+	 * Data transferred from rig:  
+	 * 
+	 * |__|__|__| (a 3 bit value, 0 - 7 indicating NB "strength"
+	 *  4  2  1
+	 *
+	 * Apparently the "ON" / "OFF" state ot the NB is NOT available for reading.  This
+	 * state is visible in the Jupiter's menu.  Hamlib does not support a "level" for
+	 * NB.  We only recognize zero (off) or non-zero (on) for this function on read.
+	 */
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			if (retval != RIG_OK)
+				return retval;
+			*status = (frespbuf[ 1 ] != 0); /* non-zero value -> "on" */
+			return RIG_OK;
+
+		default:
+			rig_debug(RIG_DEBUG_ERR,"Unsupported get_func %#x", func);
+			return -RIG_EINVAL;
+	}
+}
+
+int tt538_set_func(RIG *rig, vfo_t vfo, setting_t func, int status)
+{
+	char fcmdbuf[32], frespbuf[32];
+	int retval, fresplen, i;
+	
+	switch (func) {
+
+		case RIG_FUNC_NB:
+			/* Jupiter combines, nb, nr, and anf in one command, so we need to
+			retrieve them all before changing one of them */
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			for (i=0; i < 5; i++)
+				fcmdbuf[i+1] = frespbuf[i];
+			fcmdbuf[0] = '*';
+			fcmdbuf[2] = status ? 5: 1;
+
+	/* Based on AA6E research (no thanks to errors in TT Prog Ref Manual!)
+	 * The "set" function (*K command) uses a different data format from the ?K get function.
+	 * Data transferred to rig:
+	 *   +--+--+----------NB value (0-7)
+	 *   v  v  v  +-------NB "on/off" bit
+	 * |__|__|__|__|
+	 *   8  4  2  1
+	 * The NB on/off bit corresponds to the "Noise Blanker" item in the Jupiter menu.
+	 * The value is show in the "NB selection" item in the Jupiter menu.
+	 * Note that if all zeroes are sent, the NB does shut off, but the NB value
+	 * is unchanged.  If you want to change the NB value, the on/off bit must be set.
+	 * Because the on/off status cannot (apparently) be read back by software, we will
+	 * leave NB always on, but set to zero value when NB "off" is desired.  It is not clear
+	 * if NB on/off makes a difference if the value is zero. (ver 1330-538 firmware)
+	 */
+			/* send data back, with change */
+			retval = tt538_transaction(rig, fcmdbuf, 6, NULL, NULL);
+			if (retval != RIG_OK)
+				return retval;
+			return RIG_OK;
+			break;
+			
+		case RIG_FUNC_NR:
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			for (i=0; i < 5; i++)
+				fcmdbuf[i+1] = frespbuf[i];
+			fcmdbuf[0] = '*';
+			fcmdbuf[3] = status ? 1: 0;
+			/* send data back, with change */
+			retval = tt538_transaction(rig, fcmdbuf, 6, NULL, NULL);
+			if (retval != RIG_OK)
+				return retval;
+			return RIG_OK;
+			break;
+		
+		case RIG_FUNC_ANF:
+			fresplen = sizeof(frespbuf);
+			retval = tt538_transaction(rig, "?K" EOM, 3, frespbuf, &fresplen);
+			for (i=0; i < 5; i++)
+				fcmdbuf[i+1] = frespbuf[i];
+			fcmdbuf[0] = '*';
+			fcmdbuf[4] = status ? 1: 0;
+			/* send data back, with change */
+			retval = tt538_transaction(rig, fcmdbuf, 6, NULL, NULL);
+			if (retval != RIG_OK)
+				return retval;
+			return RIG_OK;
+			break;
+
+		default:
+		        rig_debug(RIG_DEBUG_ERR,"Unsupported set_func %#x", func);
+		        return -RIG_EINVAL;
+	}
+
 }
