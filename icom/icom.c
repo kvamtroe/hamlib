@@ -1498,12 +1498,12 @@ int icom_get_rptr_offs(RIG *rig, vfo_t vfo, shortfreq_t *rptr_offs)
  */
 static int get_split_vfos(const RIG *rig, vfo_t *rx_vfo, vfo_t *tx_vfo)
 {
-    if ((rig->state.vfo_list & (RIG_VFO_A|RIG_VFO_B)) == (RIG_VFO_A|RIG_VFO_B)) {
-        *rx_vfo = RIG_VFO_A;
-        *tx_vfo = RIG_VFO_B;
-    } else if ((rig->state.vfo_list & (RIG_VFO_MAIN|RIG_VFO_SUB)) == (RIG_VFO_MAIN|RIG_VFO_SUB)) {
+    if ((rig->state.vfo_list & (RIG_VFO_MAIN|RIG_VFO_SUB)) == (RIG_VFO_MAIN|RIG_VFO_SUB)) {
         *rx_vfo = RIG_VFO_MAIN;
         *tx_vfo = RIG_VFO_SUB;
+    } else if ((rig->state.vfo_list & (RIG_VFO_A|RIG_VFO_B)) == (RIG_VFO_A|RIG_VFO_B)) {
+        *rx_vfo = RIG_VFO_A;
+        *tx_vfo = RIG_VFO_B;
     } else {
         return -RIG_ENAVAIL;
     }
