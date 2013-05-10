@@ -1524,7 +1524,8 @@ int icom_set_split_freq(RIG *rig, vfo_t vfo, freq_t tx_freq)
 	vfo_t rx_vfo, tx_vfo;
 
 	/* This method works also in memory mode(RIG_VFO_MEM) */
-	if (rig_has_vfo_op(rig, RIG_OP_XCHG)) {
+	if (rig->state.current_vfo == RIG_VFO_MEM &&
+            !rig_has_vfo_op(rig, RIG_OP_XCHG)) {
 		status = icom_vfo_op(rig, vfo, RIG_OP_XCHG);
 		if (status != RIG_OK)
 			return status;
@@ -1571,7 +1572,8 @@ int icom_get_split_freq(RIG *rig, vfo_t vfo, freq_t *tx_freq)
 	vfo_t rx_vfo, tx_vfo;
 
 	/* This method works also in memory mode(RIG_VFO_MEM) */
-	if (rig_has_vfo_op(rig, RIG_OP_XCHG)) {
+	if (rig->state.current_vfo == RIG_VFO_MEM &&
+            !rig_has_vfo_op(rig, RIG_OP_XCHG)) {
 		status = icom_vfo_op(rig, vfo, RIG_OP_XCHG);
 		if (status != RIG_OK)
 			return status;
@@ -1618,7 +1620,8 @@ int icom_set_split_mode(RIG *rig, vfo_t vfo, rmode_t tx_mode, pbwidth_t tx_width
 	vfo_t rx_vfo, tx_vfo;
 
 	/* This method works also in memory mode(RIG_VFO_MEM) */
-	if (rig_has_vfo_op(rig, RIG_OP_XCHG)) {
+	if (rig->state.current_vfo == RIG_VFO_MEM &&
+            !rig_has_vfo_op(rig, RIG_OP_XCHG)) {
 		status = icom_vfo_op(rig, vfo, RIG_OP_XCHG);
 		if (status != RIG_OK)
 			return status;
@@ -1666,7 +1669,8 @@ int icom_get_split_mode(RIG *rig, vfo_t vfo, rmode_t *tx_mode, pbwidth_t *tx_wid
 	vfo_t rx_vfo, tx_vfo;
 
 	/* This method works also in memory mode(RIG_VFO_MEM) */
-	if (rig_has_vfo_op(rig, RIG_OP_XCHG)) {
+	if (rig->state.current_vfo == RIG_VFO_MEM &&
+            !rig_has_vfo_op(rig, RIG_OP_XCHG)) {
 		status = icom_vfo_op(rig, vfo, RIG_OP_XCHG);
 		if (status != RIG_OK)
 			return status;
